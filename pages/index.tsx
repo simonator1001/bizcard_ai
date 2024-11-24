@@ -405,43 +405,59 @@ export default function ScannerPage() {
     }))
   }
 
-  const getFilteredCards = useCallback(() => {
+  const cardMatchesSearch = (card: BusinessCard, term: string): boolean => {
+    const searchTerm = term.toLowerCase();
+    
+    // Check all text fields for matches
+    return (
+      // Name matches (both English and Chinese)
+      card.name?.toLowerCase().includes(searchTerm) ||
+      card.nameZh?.toLowerCase().includes(searchTerm) ||
+      
+      // Title matches
+      card.title?.toLowerCase().includes(searchTerm) ||
+      card.titleZh?.toLowerCase().includes(searchTerm) ||
+      
+      // Company matches
+      card.company?.toLowerCase().includes(searchTerm) ||
+      card.companyZh?.toLowerCase().includes(searchTerm) ||
+      
+      // Contact info matches
+      card.email?.toLowerCase().includes(searchTerm) ||
+      card.phone?.toLowerCase().includes(searchTerm) ||
+      
+      // Address matches
+      card.address?.toLowerCase().includes(searchTerm) ||
+      card.addressZh?.toLowerCase().includes(searchTerm)
+    );
+  };
+
+  const getFilteredCards = useMemo(() => {
     return cards.filter(card => {
-      // Company filter
-      if (selectedFilters.companies.length > 0) {
-        const cardCompanies = [
-          card.company,
-          card.companyZh
-        ].filter((company): company is string => typeof company === 'string');
-
-        const matchesCompany = selectedFilters.companies.some(selectedCompany =>
-          cardCompanies.some(cardCompany =>
-            cardCompany.toLowerCase().includes(selectedCompany.toLowerCase())
-          )
-        );
-
-        if (!matchesCompany) return false;
+      // First apply search filter
+      if (searchTerm && !cardMatchesSearch(card, searchTerm)) {
+        return false;
       }
 
-      // Title filter
-      if (selectedFilters.titles.length > 0) {
-        const cardTitles = [
-          card.title,
-          card.titleZh
-        ].filter((title): title is string => typeof title === 'string');
-
-        const matchesTitle = selectedFilters.titles.some(selectedTitle =>
-          cardTitles.some(cardTitle =>
-            cardTitle.toLowerCase().includes(selectedTitle.toLowerCase())
-          )
+      // Then apply company filters if any are selected
+      if (selectedFilters.companies.length > 0) {
+        const hasMatchingCompany = selectedFilters.companies.some(company => 
+          card.company === company || card.companyZh === company
         );
+        if (!hasMatchingCompany) return false;
+      }
 
-        if (!matchesTitle) return false;
+      // Then apply title filters if any are selected
+      if (selectedFilters.titles.length > 0) {
+        const hasMatchingTitle = selectedFilters.titles.some(title => 
+          card.title === title || card.titleZh === title
+        );
+        if (!hasMatchingTitle) return false;
       }
 
       return true;
     });
-  }, [cards, selectedFilters]);
+  }, [cards, searchTerm, selectedFilters]);
 
   const filteredCards = useMemo(() => {
     return cards.filter(card => {
@@ -743,40 +759,35 @@ export default function ScannerPage() {
                 {/* Filter Button with Sheet */}
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="outline" className="rounded-full">
-                      <Filter className="h-5 w-5 mr-2" />
-                      Filter
+                    <Button variant="outline" size="icon">
+                      <Filter className="h-4 w-4" />
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-[320px]">
+                  <SheetContent side="right" className="w-[400px]">
                     <SheetHeader>
                       <SheetTitle>Filter Business Cards</SheetTitle>
                     </SheetHeader>
-                    <div className="py-6 space-y-6">
-                      {/* Companies Section */}
-                      <div className="space-y-4">
-                        <h4 className="font-medium text-sm">Companies</h4>
-                        <div className="grid gap-2">
-                          {Array.from(new Set(cards.flatMap(card => 
-                            [card.company, card.companyZh].filter((company): company is string => 
-                              typeof company === 'string'
-                            )
-                          ))).map((company) => (
-                            <div key={company} className="flex items-center space-x-2">
-                              <Checkbox 
-                                id={`company-${company}`}
+                    
+                    <div className="py-4">
+                      <h3 className="text-lg font-semibold mb-4">Companies</h3>
+                      <ScrollArea className="h-[300px] rounded-md border p-4">
+                        <div className="space-y-4">
+                          {getUniqueCompanies().map((company, index) => (
+                            <div key={index} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`company-${index}`}
                                 checked={selectedFilters.companies.includes(company)}
-                                onCheckedChange={(checked: boolean) => {
+                                onCheckedChange={(checked) => {
                                   setSelectedFilters(prev => ({
                                     ...prev,
-                                    companies: checked 
+                                    companies: checked
                                       ? [...prev.companies, company]
                                       : prev.companies.filter(c => c !== company)
                                   }));
                                 }}
                               />
                               <label
-                                htmlFor={`company-${company}`}
+                                htmlFor={`company-${index}`}
                                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                               >
                                 {company}
@@ -784,32 +795,27 @@ export default function ScannerPage() {
                             </div>
                           ))}
                         </div>
-                      </div>
+                      </ScrollArea>
 
-                      {/* Titles Section */}
-                      <div className="space-y-4">
-                        <h4 className="font-medium text-sm">Titles</h4>
-                        <div className="grid gap-2">
-                          {Array.from(new Set(cards.flatMap(card => 
-                            [card.title, card.titleZh].filter((title): title is string => 
-                              typeof title === 'string'
-                            )
-                          ))).map((title) => (
-                            <div key={title} className="flex items-center space-x-2">
-                              <Checkbox 
-                                id={`title-${title}`}
+                      <h3 className="text-lg font-semibold mt-6 mb-4">Titles</h3>
+                      <ScrollArea className="h-[300px] rounded-md border p-4">
+                        <div className="space-y-4">
+                          {getUniqueValues().titles.map((title, index) => (
+                            <div key={index} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`title-${index}`}
                                 checked={selectedFilters.titles.includes(title)}
-                                onCheckedChange={(checked: boolean) => {
+                                onCheckedChange={(checked) => {
                                   setSelectedFilters(prev => ({
                                     ...prev,
-                                    titles: checked 
+                                    titles: checked
                                       ? [...prev.titles, title]
                                       : prev.titles.filter(t => t !== title)
                                   }));
                                 }}
                               />
                               <label
-                                htmlFor={`title-${title}`}
+                                htmlFor={`title-${index}`}
                                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                               >
                                 {title}
@@ -817,14 +823,21 @@ export default function ScannerPage() {
                             </div>
                           ))}
                         </div>
-                      </div>
+                      </ScrollArea>
                     </div>
+
                     <SheetFooter>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         onClick={() => setSelectedFilters({ companies: [], titles: [] })}
                       >
                         Clear Filters
+                      </Button>
+                      <Button onClick={() => {
+                        // Apply filters
+                        // Close sheet
+                      }}>
+                        Apply Filters
                       </Button>
                     </SheetFooter>
                   </SheetContent>
@@ -883,7 +896,7 @@ export default function ScannerPage() {
             <CardContent className="flex-1 overflow-hidden">
               <ScrollArea className="h-full pr-4">
                 <AnimatePresence>
-                  {getSortedCards(getFilteredCards()).map((card) => (
+                  {getFilteredCards.map((card) => (
                     <motion.div
                       key={card.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -1152,6 +1165,15 @@ export default function ScannerPage() {
                     </motion.div>
                   ))}
                 </AnimatePresence>
+                {getFilteredCards.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    {searchTerm ? (
+                      <p>No cards match your search for "{searchTerm}"</p>
+                    ) : (
+                      <p>No business cards found</p>
+                    )}
+                  </div>
+                )}
               </ScrollArea>
             </CardContent>
           </Card>
