@@ -1,0 +1,1 @@
+ALTER TABLE business_cards ADD COLUMN fax TEXT; 
