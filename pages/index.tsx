@@ -96,6 +96,7 @@ export default function ScannerPage() {
   const [editingField, setEditingField] = useState<EditableField | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [totalImages, setTotalImages] = useState<number>(0);
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
 
   const getUniqueCompanies = useCallback(() => {
     const companies = new Set<string>();
@@ -600,51 +601,56 @@ export default function ScannerPage() {
     }
   };
 
-  useEffect(() => {
-    async function loadCards() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+  const loadCards = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-        const { data: cards, error } = await supabase
-          .from('business_cards')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+      const { data: cards, error } = await supabase
+        .from('business_cards')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        // Transform the database cards to match our interface
-        const formattedCards: BusinessCard[] = cards.map(card => ({
-          id: card.id,
-          name: card.name,
-          nameZh: card.name_zh || undefined,
-          company: card.company,
-          companyZh: card.company_zh || undefined,
-          title: card.title,
-          titleZh: card.title_zh || undefined,
-          email: card.email,
-          phone: card.phone,
-          address: card.address || undefined,
-          addressZh: card.address_zh || undefined,
-          dateAdded: card.created_at,
-          image_url: card.image_url,
-          rawText: card.raw_text
-        }));
+      // Transform the database cards to match our interface
+      const formattedCards: BusinessCard[] = cards.map(card => ({
+        id: card.id,
+        name: card.name,
+        nameZh: card.name_zh || undefined,
+        company: card.company,
+        companyZh: card.company_zh || undefined,
+        title: card.title,
+        titleZh: card.title_zh || undefined,
+        email: card.email,
+        phone: card.phone,
+        address: card.address || undefined,
+        addressZh: card.address_zh || undefined,
+        dateAdded: card.created_at,
+        image_url: card.image_url,
+        rawText: card.raw_text
+      }));
 
-        setCards(formattedCards);
-      } catch (error) {
-        console.error('Error loading cards:', error);
-        toast.error('Failed to load business cards');
-      }
+      setCards(formattedCards);
+    } catch (error) {
+      console.error('Error loading cards:', error);
+      toast.error('Failed to load business cards');
     }
+  };
 
+  useEffect(() => {
     loadCards();
   }, []);
 
   // Add this helper function to format phone numbers
   const formatPhoneNumber = (phone: string) => {
     return phone.split(',').map(p => p.trim()).join('\n');
+  };
+
+  const toggleEditMode = (cardId: string) => {
+    setEditingCardId(editingCardId === cardId ? null : cardId);
+    setEditError(null);
   };
 
   return (
@@ -957,101 +963,48 @@ export default function ScannerPage() {
                               <div className="space-y-4">
                                 {/* Name Section */}
                                 <div className="border-b pb-2">
-                                  {/* Chinese Name */}
-                                  <div className="flex items-center space-x-2">
-                                    {editingField?.fieldName === 'nameZh' ? (
-                                      <div className="flex items-center space-x-2">
+                                  {card.nameZh && (
+                                    <div className="mb-1">
+                                      {editingCardId === card.id ? (
                                         <Input
-                                          value={editingField.value}
-                                          onChange={(e) => setEditingField({
-                                            ...editingField,
-                                            value: e.target.value
-                                          })}
+                                          value={card.nameZh}
+                                          onChange={(e) => {
+                                            setCards(prevCards =>
+                                              prevCards.map(c =>
+                                                c.id === card.id
+                                                  ? { ...c, nameZh: e.target.value }
+                                                  : c
+                                              )
+                                            );
+                                          }}
                                           className="text-2xl font-bold"
                                         />
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => handleFieldUpdate(card, editingField)}
-                                        >
-                                          <Check className="h-4 w-4 text-green-500" />
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => {
-                                            setEditingField(null);
-                                            setEditError(null);
-                                          }}
-                                        >
-                                          <X className="h-4 w-4 text-red-500" />
-                                        </Button>
-                                      </div>
-                                    ) : (
-                                      <>
+                                      ) : (
                                         <h2 className="text-2xl font-bold">{card.nameZh}</h2>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => setEditingField({
-                                            fieldName: 'nameZh',
-                                            value: card.nameZh || '',
-                                            originalValue: card.nameZh || ''
-                                          })}
-                                        >
-                                          <Edit2 className="h-4 w-4 text-gray-400" />
-                                        </Button>
-                                      </>
-                                    )}
-                                  </div>
-
-                                  {/* English Name */}
-                                  <div className="flex items-center space-x-2">
-                                    {editingField?.fieldName === 'name' ? (
-                                      <div className="flex items-center space-x-2">
+                                      )}
+                                    </div>
+                                  )}
+                                  {card.name && card.name !== card.nameZh && (
+                                    <div>
+                                      {editingCardId === card.id ? (
                                         <Input
-                                          value={editingField.value}
-                                          onChange={(e) => setEditingField({
-                                            ...editingField,
-                                            value: e.target.value
-                                          })}
+                                          value={card.name}
+                                          onChange={(e) => {
+                                            setCards(prevCards =>
+                                              prevCards.map(c =>
+                                                c.id === card.id
+                                                  ? { ...c, name: e.target.value }
+                                                  : c
+                                              )
+                                            );
+                                          }}
                                           className="text-xl font-semibold text-gray-700"
                                         />
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => handleFieldUpdate(card, editingField)}
-                                        >
-                                          <Check className="h-4 w-4 text-green-500" />
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => {
-                                            setEditingField(null);
-                                            setEditError(null);
-                                          }}
-                                        >
-                                          <X className="h-4 w-4 text-red-500" />
-                                        </Button>
-                                      </div>
-                                    ) : (
-                                      <>
+                                      ) : (
                                         <h2 className="text-xl font-semibold text-gray-700">{card.name}</h2>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => setEditingField({
-                                            fieldName: 'name',
-                                            value: card.name || '',
-                                            originalValue: card.name || ''
-                                          })}
-                                        >
-                                          <Edit2 className="h-4 w-4 text-gray-400" />
-                                        </Button>
-                                      </>
-                                    )}
-                                  </div>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
 
                                 {/* Error message */}
@@ -1062,20 +1015,92 @@ export default function ScannerPage() {
                                 {/* Title Section */}
                                 <div className="border-b pb-2">
                                   {card.titleZh && (
-                                    <h3 className="text-xl font-medium mb-1">{card.titleZh}</h3>
+                                    <div className="mb-1">
+                                      {editingCardId === card.id ? (
+                                        <Input
+                                          value={card.titleZh}
+                                          onChange={(e) => {
+                                            setCards(prevCards =>
+                                              prevCards.map(c =>
+                                                c.id === card.id
+                                                  ? { ...c, titleZh: e.target.value }
+                                                  : c
+                                              )
+                                            );
+                                          }}
+                                          className="text-xl font-medium"
+                                        />
+                                      ) : (
+                                        <h3 className="text-xl font-medium">{card.titleZh}</h3>
+                                      )}
+                                    </div>
                                   )}
                                   {card.title && card.title !== card.titleZh && (
-                                    <h3 className="text-lg font-medium text-gray-700">{card.title}</h3>
+                                    <div>
+                                      {editingCardId === card.id ? (
+                                        <Input
+                                          value={card.title}
+                                          onChange={(e) => {
+                                            setCards(prevCards =>
+                                              prevCards.map(c =>
+                                                c.id === card.id
+                                                  ? { ...c, title: e.target.value }
+                                                  : c
+                                              )
+                                            );
+                                          }}
+                                          className="text-lg font-medium text-gray-700"
+                                        />
+                                      ) : (
+                                        <h3 className="text-lg font-medium text-gray-700">{card.title}</h3>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
 
                                 {/* Company Section */}
                                 <div className="border-b pb-2">
                                   {card.companyZh && (
-                                    <h3 className="text-xl font-semibold mb-1">{card.companyZh}</h3>
+                                    <div className="mb-1">
+                                      {editingCardId === card.id ? (
+                                        <Input
+                                          value={card.companyZh}
+                                          onChange={(e) => {
+                                            setCards(prevCards =>
+                                              prevCards.map(c =>
+                                                c.id === card.id
+                                                  ? { ...c, companyZh: e.target.value }
+                                                  : c
+                                              )
+                                            );
+                                          }}
+                                          className="text-xl font-semibold"
+                                        />
+                                      ) : (
+                                        <h3 className="text-xl font-semibold">{card.companyZh}</h3>
+                                      )}
+                                    </div>
                                   )}
                                   {card.company && card.company !== card.companyZh && (
-                                    <h3 className="text-lg font-semibold text-gray-700">{card.company}</h3>
+                                    <div>
+                                      {editingCardId === card.id ? (
+                                        <Input
+                                          value={card.company}
+                                          onChange={(e) => {
+                                            setCards(prevCards =>
+                                              prevCards.map(c =>
+                                                c.id === card.id
+                                                  ? { ...c, company: e.target.value }
+                                                  : c
+                                              )
+                                            );
+                                          }}
+                                          className="text-lg font-semibold text-gray-700"
+                                        />
+                                      ) : (
+                                        <h3 className="text-lg font-semibold text-gray-700">{card.company}</h3>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
 
@@ -1086,7 +1111,23 @@ export default function ScannerPage() {
                                     <div className="flex items-start space-x-2">
                                       <span className="font-medium min-w-[80px]">Tel:</span>
                                       <div className="flex-1">
-                                        <pre className="font-mono">{formatPhoneNumber(card.phone)}</pre>
+                                        {editingCardId === card.id ? (
+                                          <Input
+                                            value={card.phone}
+                                            onChange={(e) => {
+                                              setCards(prevCards =>
+                                                prevCards.map(c =>
+                                                  c.id === card.id
+                                                    ? { ...c, phone: e.target.value }
+                                                    : c
+                                                )
+                                              );
+                                            }}
+                                            className="font-mono"
+                                          />
+                                        ) : (
+                                          <pre className="font-mono">{formatPhoneNumber(card.phone)}</pre>
+                                        )}
                                       </div>
                                     </div>
                                   )}
@@ -1095,7 +1136,23 @@ export default function ScannerPage() {
                                   {card.email && (
                                     <div className="flex items-center space-x-2">
                                       <span className="font-medium min-w-[80px]">Email:</span>
-                                      <span className="font-mono">{card.email}</span>
+                                      {editingCardId === card.id ? (
+                                        <Input
+                                          value={card.email}
+                                          onChange={(e) => {
+                                            setCards(prevCards =>
+                                              prevCards.map(c =>
+                                                c.id === card.id
+                                                  ? { ...c, email: e.target.value }
+                                                  : c
+                                              )
+                                            );
+                                          }}
+                                          className="font-mono"
+                                        />
+                                      ) : (
+                                        <span className="font-mono">{card.email}</span>
+                                      )}
                                     </div>
                                   )}
 
@@ -1105,7 +1162,25 @@ export default function ScannerPage() {
                                       <span className="font-medium min-w-[80px]">Address:</span>
                                       <div className="flex-1">
                                         {card.addressZh && (
-                                          <p className="mb-1">{card.addressZh}</p>
+                                          <div className="mb-1">
+                                            {editingCardId === card.id ? (
+                                              <Input
+                                                value={card.addressZh}
+                                                onChange={(e) => {
+                                                  setCards(prevCards =>
+                                                    prevCards.map(c =>
+                                                      c.id === card.id
+                                                        ? { ...c, addressZh: e.target.value }
+                                                        : c
+                                                    )
+                                                  );
+                                                }}
+                                                className="text-gray-600"
+                                              />
+                                            ) : (
+                                              <p className="mb-1">{card.addressZh}</p>
+                                            )}
+                                          </div>
                                         )}
                                         {card.address && card.address !== card.addressZh && (
                                           <p className="text-gray-600">{card.address}</p>
@@ -1116,48 +1191,78 @@ export default function ScannerPage() {
                                 </div>
 
                                 {/* Edit and Action Buttons */}
-                                <div className="flex justify-end space-x-2 mt-4">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => setEditingField({
-                                      fieldName: 'name',
-                                      value: card.name || '',
-                                      originalValue: card.name || ''
-                                    })}
-                                  >
-                                    <Edit2 className="h-4 w-4 mr-2" />
-                                    Edit
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      const link = document.createElement('a');
-                                      link.href = card.image_url;
-                                      link.download = `${card.name}-business-card.jpg`;
-                                      link.click();
-                                    }}
-                                  >
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Download
-                                  </Button>
+                                <div className="flex space-x-2">
+                                  {editingCardId === card.id ? (
+                                    <>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={async () => {
+                                          try {
+                                            // Save all changes to database
+                                            const { error } = await supabase
+                                              .from('business_cards')
+                                              .update({
+                                                name: card.name,
+                                                name_zh: card.nameZh,
+                                                title: card.title,
+                                                title_zh: card.titleZh,
+                                                company: card.company,
+                                                company_zh: card.companyZh,
+                                                email: card.email,
+                                                phone: card.phone,
+                                                address: card.address,
+                                                address_zh: card.addressZh
+                                              })
+                                              .eq('id', card.id);
+
+                                            if (error) throw error;
+                                            
+                                            toast.success('Changes saved successfully');
+                                            setEditingCardId(null);
+                                          } catch (error) {
+                                            console.error('Failed to save changes:', error);
+                                            toast.error('Failed to save changes');
+                                          }
+                                        }}
+                                      >
+                                        <Check className="h-4 w-4 text-green-500" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => {
+                                          loadCards();
+                                          setEditingCardId(null);
+                                        }}
+                                      >
+                                        <X className="h-4 w-4 text-red-500" />
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => toggleEditMode(card.id)}
+                                      >
+                                        <Edit2 className="h-4 w-4" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon">
+                                        <Share2 className="h-4 w-4" />
+                                      </Button>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon"
+                                        onClick={() => deleteCard(card.id)}
+                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </>
+                                  )}
                                 </div>
                               </div>
-                            </div>
-
-                            <div className="flex space-x-2">
-                              <Button variant="ghost" size="icon">
-                                <Share2 className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => deleteCard(card.id)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
                             </div>
                           </div>
                         </CardContent>
