@@ -1,64 +1,45 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-if (!supabaseUrl || !supabaseKey) {
+if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined
+  }
+})
 
-// Add the test connection function
-export async function testSupabaseConnection() {
+export const getAuthUser = async () => {
   try {
-    // Test basic connection
-    const { data: connectionTest, error: connectionError } = await supabase
-      .from('business_cards')
-      .select('count')
-      .limit(1)
+    const { data: { session }, error } = await supabase.auth.getSession()
+    if (error) throw error
     
-    if (connectionError) throw connectionError;
-
-    // Test auth service
-    const { data: authTest, error: authError } = await supabase.auth.getSession()
-    if (authError) throw authError;
-
-    // Return test results
-    return {
-      connection: true,
-      auth: true,
-      data: {
-        connection: connectionTest,
-        auth: authTest
-      }
+    if (!session?.user) {
+      return null
     }
+
+    return session.user
   } catch (error) {
-    console.error('Supabase connection test failed:', error)
-    return {
-      connection: false,
-      auth: false,
-      error
-    }
+    console.error('Auth status check error:', error)
+    return null
   }
 }
 
-// Type for database business card
-export interface DatabaseBusinessCard {
-  id: string
-  user_id: string
-  name: string
-  name_zh: string | null
-  company: string
-  company_zh: string | null
-  title: string
-  title_zh: string | null
-  email: string
-  phone: string
-  address: string | null
-  address_zh: string | null
-  image_url: string
-  raw_text: string | null
-  created_at: string
-  updated_at: string
+export const debugAuthToken = async () => {
+  const { data: { session }, error } = await supabase.auth.getSession()
+  if (error) {
+    console.error('Session error:', error)
+    return
+  }
+  if (session?.access_token) {
+    const [header, payload, signature] = session.access_token.split('.')
+    console.log('JWT Payload:', JSON.parse(atob(payload)))
+  }
 } 

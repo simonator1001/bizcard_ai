@@ -13,8 +13,9 @@ import { recognizeBusinessCard, preprocessImageForOCR } from '@/lib/ocr-service'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useAuth } from '@/lib/auth-context';
-import { supabase } from '@/lib/supabase-client'
+import { supabase, getAuthUser, debugAuthToken } from '@/lib/supabase-client'
 import { sleep } from '@/lib/utils';
+import { debugAuth } from '@/lib/debug-auth'
 
 interface BusinessCard {
   id: string
@@ -603,45 +604,74 @@ export default function ScannerPage() {
 
   const loadCards = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const user = await getAuthUser()
+      if (!user) {
+        console.error('No authenticated user found')
+        return
+      }
 
-      const { data: cards, error } = await supabase
-        .from('business_cards')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      // Add retry logic
+      let retries = 3
+      let cards = null
+      let cardsError = null
 
-      if (error) throw error;
+      while (retries > 0) {
+        const { data, error } = await supabase
+          .from('business_cards')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
 
-      // Transform the database cards to match our interface
-      const formattedCards: BusinessCard[] = cards.map(card => ({
-        id: card.id,
-        name: card.name,
-        nameZh: card.name_zh || undefined,
-        company: card.company,
-        companyZh: card.company_zh || undefined,
-        title: card.title,
-        titleZh: card.title_zh || undefined,
-        email: card.email,
-        phone: card.phone,
-        address: card.address || undefined,
-        addressZh: card.address_zh || undefined,
-        dateAdded: card.created_at,
-        image_url: card.image_url,
-        rawText: card.raw_text
-      }));
+        if (!error) {
+          cards = data
+          break
+        }
 
-      setCards(formattedCards);
+        cardsError = error
+        retries--
+        await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second before retrying
+      }
+
+      if (cardsError) {
+        console.error('Cards fetch error:', cardsError)
+        throw cardsError
+      }
+
+      if (cards) {
+        const formattedCards: BusinessCard[] = cards.map(card => ({
+          id: card.id,
+          name: card.name || '',
+          nameZh: card.name_zh || undefined,
+          company: card.company || '',
+          companyZh: card.company_zh || undefined,
+          title: card.title || '',
+          titleZh: card.title_zh || undefined,
+          email: card.email || '',
+          phone: card.phone || '',
+          address: card.address || undefined,
+          addressZh: card.address_zh || undefined,
+          dateAdded: card.created_at,
+          image_url: card.image_url,
+          rawText: card.raw_text
+        }))
+
+        setCards(formattedCards)
+      }
     } catch (error) {
-      console.error('Error loading cards:', error);
-      toast.error('Failed to load business cards');
+      console.error('Error loading cards:', error)
+      toast.error('Failed to load business cards')
     }
-  };
+  }
 
   useEffect(() => {
-    loadCards();
-  }, []);
+    const init = async () => {
+      console.log('=== Starting Debug ===')
+      await debugAuth()
+      console.log('=== Debug Complete ===')
+      await loadCards()
+    }
+    init()
+  }, [])
 
   // Add this helper function to format phone numbers
   const formatPhoneNumber = (phone: string) => {
@@ -652,6 +682,47 @@ export default function ScannerPage() {
     setEditingCardId(editingCardId === cardId ? null : cardId);
     setEditError(null);
   };
+
+  useEffect(() => {
+    const refreshSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession()
+      if (error) {
+        console.error('Session refresh error:', error)
+        return
+      }
+      if (session) {
+        loadCards()
+      }
+    }
+
+    refreshSession()
+  }, [])
+
+  const filterCards = (card: BusinessCard, searchTerm: string): boolean => {
+    if (!searchTerm) return true
+    
+    const searchTermLower = searchTerm.toLowerCase()
+    
+    const nameMatch = card.name?.toLowerCase().includes(searchTermLower) ?? false
+    const nameZhMatch = card.nameZh?.toLowerCase().includes(searchTermLower) ?? false
+    const companyMatch = card.company?.toLowerCase().includes(searchTermLower) ?? false
+    const companyZhMatch = card.companyZh?.toLowerCase().includes(searchTermLower) ?? false
+    const titleMatch = card.title?.toLowerCase().includes(searchTermLower) ?? false
+    const titleZhMatch = card.titleZh?.toLowerCase().includes(searchTermLower) ?? false
+    const emailMatch = card.email?.toLowerCase().includes(searchTermLower) ?? false
+    const phoneMatch = card.phone?.toLowerCase().includes(searchTermLower) ?? false
+
+    return (
+      nameMatch ||
+      nameZhMatch ||
+      companyMatch ||
+      companyZhMatch ||
+      titleMatch ||
+      titleZhMatch ||
+      emailMatch ||
+      phoneMatch
+    )
+  }
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">

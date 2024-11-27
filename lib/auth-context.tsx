@@ -109,13 +109,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithProvider = async (provider: 'google' | 'facebook' | 'apple') => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       })
+
       if (error) throw error
+      
+      console.log('OAuth initiated:', data)
     } catch (error) {
       console.error('Social sign in error:', error)
       toast.error(`Failed to sign in with ${provider}`)

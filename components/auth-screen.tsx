@@ -20,7 +20,7 @@ const Icons = {
 
 export function AuthScreen({ mode }: { mode: 'signin' | 'signup' }) {
   const router = useRouter()
-  const { signUp, signIn } = useAuth()
+  const { signUp, signIn, signInWithProvider } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -49,6 +49,22 @@ export function AuthScreen({ mode }: { mode: 'signin' | 'signup' }) {
     } catch (error: any) {
       console.error('Auth error:', error)
       toast.error(error.message || (mode === 'signin' ? 'Failed to sign in' : 'Failed to create account'))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSocialLogin = async (provider: 'google' | 'facebook' | 'apple') => {
+    try {
+      setIsLoading(true)
+      if (provider === 'google') {
+        await signInWithProvider('google')
+      } else {
+        toast.info(`${provider} authentication coming soon`)
+      }
+    } catch (error: any) {
+      console.error('Social login error:', error)
+      toast.error(`Failed to sign in with ${provider}`)
     } finally {
       setIsLoading(false)
     }
@@ -145,17 +161,30 @@ export function AuthScreen({ mode }: { mode: 'signin' | 'signup' }) {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {Object.entries(Icons).map(([name, Icon]) => (
-              <Button 
-                key={name}
-                variant="outline" 
-                onClick={() => toast.info(`${name} authentication coming soon`)}
-                className="flex items-center justify-center"
-              >
-                <Icon className="mr-2 h-4 w-4 icon-flip" />
-                {name.charAt(0).toUpperCase() + name.slice(1)}
-              </Button>
-            ))}
+            <Button 
+              variant="outline" 
+              onClick={() => handleSocialLogin('google')}
+              disabled={isLoading}
+              className="flex items-center justify-center"
+            >
+              <Google className="mr-2 h-4 w-4" />
+              Google
+            </Button>
+            {Object.entries(Icons).map(([name, Icon]) => {
+              if (name === 'google') return null; // Skip Google as it's handled separately
+              return (
+                <Button 
+                  key={name}
+                  variant="outline" 
+                  onClick={() => toast.info(`${name} authentication coming soon`)}
+                  disabled={isLoading}
+                  className="flex items-center justify-center"
+                >
+                  <Icon className="mr-2 h-4 w-4" />
+                  {name.charAt(0).toUpperCase() + name.slice(1)}
+                </Button>
+              );
+            })}
           </div>
 
           <div className="mt-6 text-center text-sm">
@@ -168,17 +197,6 @@ export function AuthScreen({ mode }: { mode: 'signin' | 'signup' }) {
           </div>
         </CardContent>
       </Card>
-      <style jsx global>{`
-        @keyframes iconFlip {
-          0%, 100% { transform: rotateY(0deg); }
-          50% { transform: rotateY(180deg); }
-        }
-        .icon-flip {
-          animation: iconFlip 3s ease-in-out infinite;
-          transform-style: preserve-3d;
-          perspective: 1000px;
-        }
-      `}</style>
     </div>
   )
 } 
