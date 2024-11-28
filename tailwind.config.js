@@ -49,6 +49,15 @@ module.exports = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      animation: {
+        'flip-y': 'iconFlip 3s ease-in-out infinite',
+      },
+      keyframes: {
+        iconFlip: {
+          '0%, 100%': { transform: 'rotateY(0deg)' },
+          '50%': { transform: 'rotateY(180deg)' },
+        },
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

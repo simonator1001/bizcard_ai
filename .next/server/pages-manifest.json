@@ -3,7 +3,6 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
-  "/signin": "pages/signin.js",
-  "/login": "pages/login.js",
-  "/auth/callback": "pages/auth/callback.js"
+  "/signup": "pages/signup.js",
+  "/signin": "pages/signin.js"
 }

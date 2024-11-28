@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
-import { Upload, Camera, CloudLightning, Share2, CheckCircle, Cloud, Search, Filter, SortDesc, Tag, Loader2, Download, Trash2, Edit2, X, Scan, LayoutList, UserCircle, Settings, ScanLine, ArrowUpDown, ArrowDownUp, Check } from 'lucide-react'
+import { Upload, Camera, CloudLightning, Share2, CheckCircle, Cloud, Search, Filter, SortDesc, Tag, Loader2, Download, Trash2, Edit2, X, Scan, LayoutList, LayoutGrid, UserCircle, Settings, ScanLine, Check, ArrowUpDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -98,6 +98,8 @@ export default function ScannerPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [totalImages, setTotalImages] = useState<number>(0);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [currentLayout, setCurrentLayout] = useState<'v1' | 'v2'>('v1')
+  const [isLayoutTransitioning, setIsLayoutTransitioning] = useState(false)
 
   const getUniqueCompanies = useCallback(() => {
     const companies = new Set<string>();
@@ -435,7 +437,7 @@ export default function ScannerPage() {
   };
 
   const getFilteredCards = useMemo(() => {
-    return cards.filter(card => {
+    let filtered = cards.filter(card => {
       // First apply search filter
       if (searchTerm && !cardMatchesSearch(card, searchTerm)) {
         return false;
@@ -459,7 +461,15 @@ export default function ScannerPage() {
 
       return true;
     });
-  }, [cards, searchTerm, selectedFilters]);
+
+    // Apply sorting
+    return [...filtered].sort((a, b) => {
+      const aValue = String(a[sortField] || '')
+      const bValue = String(b[sortField] || '')
+      const compareResult = aValue.localeCompare(bValue, undefined, { numeric: true })
+      return sortDirection === 'asc' ? compareResult : -compareResult
+    })
+  }, [cards, searchTerm, selectedFilters, sortField, sortDirection]);
 
   const filteredCards = useMemo(() => {
     return cards.filter(card => {
@@ -703,25 +713,34 @@ export default function ScannerPage() {
     
     const searchTermLower = searchTerm.toLowerCase()
     
-    const nameMatch = card.name?.toLowerCase().includes(searchTermLower) ?? false
-    const nameZhMatch = card.nameZh?.toLowerCase().includes(searchTermLower) ?? false
-    const companyMatch = card.company?.toLowerCase().includes(searchTermLower) ?? false
-    const companyZhMatch = card.companyZh?.toLowerCase().includes(searchTermLower) ?? false
-    const titleMatch = card.title?.toLowerCase().includes(searchTermLower) ?? false
-    const titleZhMatch = card.titleZh?.toLowerCase().includes(searchTermLower) ?? false
-    const emailMatch = card.email?.toLowerCase().includes(searchTermLower) ?? false
-    const phoneMatch = card.phone?.toLowerCase().includes(searchTermLower) ?? false
+    // Helper function to safely check string inclusion
+    const safeIncludes = (text: string | undefined | null): boolean => {
+      return Boolean(text?.toLowerCase().includes(searchTermLower))
+    }
 
     return (
-      nameMatch ||
-      nameZhMatch ||
-      companyMatch ||
-      companyZhMatch ||
-      titleMatch ||
-      titleZhMatch ||
-      emailMatch ||
-      phoneMatch
+      safeIncludes(card.name) ||
+      safeIncludes(card.nameZh) ||
+      safeIncludes(card.company) ||
+      safeIncludes(card.companyZh) ||
+      safeIncludes(card.title) ||
+      safeIncludes(card.titleZh) ||
+      safeIncludes(card.email) ||
+      safeIncludes(card.phone)
     )
+  }
+
+  const handleLayoutChange = () => {
+    try {
+      setIsLayoutTransitioning(true)
+      setCurrentLayout(current => current === 'v1' ? 'v2' : 'v1')
+    } catch (error) {
+      console.error('Layout change error:', error)
+      toast.error('Failed to switch layout. Reverting to default view.')
+      setCurrentLayout('v1')
+    } finally {
+      setIsLayoutTransitioning(false)
+    }
   }
 
   return (
@@ -921,425 +940,476 @@ export default function ScannerPage() {
                 </Sheet>
 
                 {/* Sort Button with Popover */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="rounded-full">
-                      <SortDesc className="h-5 w-5 mr-2" />
-                      Sort
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-48">
-                    <div className="space-y-2">
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={() => handleSort('dateAdded')}
-                      >
-                        Date Added {sortField === 'dateAdded' && (sortDirection === 'asc' ? '↑' : '↓')}
+                <div className="flex items-center gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="rounded-full">
+                        <ArrowUpDown className="h-5 w-5 mr-2" />
+                        Sort by {sortField.charAt(0).toUpperCase() + sortField.slice(1)}
+                        {sortDirection === 'asc' ? ' (A-Z)' : ' (Z-A)'}
                       </Button>
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={() => handleSort('name')}
-                      >
-                        Name {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={() => handleSort('company')}
-                      >
-                        Company {sortField === 'company' && (sortDirection === 'asc' ? '↑' : '↓')}
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-48">
+                      <div className="space-y-2">
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start"
+                          onClick={() => handleSort('name')}
+                        >
+                          Name {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start"
+                          onClick={() => handleSort('company')}
+                        >
+                          Company {sortField === 'company' && (sortDirection === 'asc' ? '↑' : '↓')}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start"
+                          onClick={() => handleSort('dateAdded')}
+                        >
+                          Date Added {sortField === 'dateAdded' && (sortDirection === 'asc' ? '↑' : '↓')}
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
 
-                {/* Sort Direction Button */}
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  onClick={() => setSortDirection(current => current === 'asc' ? 'desc' : 'asc')}
-                  className="rounded-full"
-                >
-                  {sortDirection === 'asc' ? (
-                    <ArrowUpDown className="h-5 w-5" />
-                  ) : (
-                    <ArrowDownUp className="h-5 w-5" />
-                  )}
-                </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    className={`rounded-full transition-colors duration-200 ${
+                      isLayoutTransitioning ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    onClick={handleLayoutChange}
+                    disabled={isLayoutTransitioning}
+                  >
+                    {currentLayout === 'v1' ? (
+                      <LayoutGrid className="h-5 w-5" />
+                    ) : (
+                      <LayoutList className="h-5 w-5" />
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="flex-1 overflow-hidden">
               <ScrollArea className="h-full pr-4">
-                <AnimatePresence>
-                  {getFilteredCards.map((card) => (
-                    <motion.div
-                      key={card.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <Card className="mb-4">
-                        <CardContent className="p-6">
-                          <div className="flex items-start space-x-4">
-                            <Dialog>
-                              <DialogTrigger>
-                                <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                                  <img 
-                                    src={card.image_url} 
-                                    alt={`${card.name}'s business card`} 
-                                    className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).src = '/placeholder-card.png'
-                                    }}
-                                  />
-                                </div>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogTitle>Business Card Details</DialogTitle>
-                                <DialogDescription>
-                                  Detailed view of the business card image
-                                </DialogDescription>
-                                
-                                <div className="relative mt-4">
-                                  <img 
-                                    src={card.image_url} 
-                                    alt={`${card.name}'s business card`} 
-                                    className="w-full h-auto rounded-lg"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).src = '/placeholder-card.png'
-                                    }}
-                                  />
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    className="absolute top-2 right-2"
-                                    onClick={() => {
-                                      const link = document.createElement('a');
-                                      link.href = card.image_url;
-                                      link.download = `${card.name}-business-card.jpg`;
-                                      link.click();
-                                    }}
-                                  >
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Download
-                                  </Button>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-
-                            <div className="flex-1 min-w-0">
-                              <div className="space-y-4">
-                                {/* Name Section */}
-                                <div className="border-b pb-2">
-                                  {card.nameZh && (
-                                    <div className="mb-1">
-                                      {editingCardId === card.id ? (
-                                        <Input
-                                          value={card.nameZh}
-                                          onChange={(e) => {
-                                            setCards(prevCards =>
-                                              prevCards.map(c =>
-                                                c.id === card.id
-                                                  ? { ...c, nameZh: e.target.value }
-                                                  : c
-                                              )
-                                            );
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentLayout}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {currentLayout === 'v1' ? (
+                      // Original list view
+                      <div className="space-y-4">
+                        {getFilteredCards.map((card) => (
+                          <motion.div
+                            key={card.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                          >
+                            <Card className="mb-4">
+                              <CardContent className="p-6">
+                                <div className="flex items-start space-x-4">
+                                  <Dialog>
+                                    <DialogTrigger>
+                                      <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                        <img 
+                                          src={card.image_url} 
+                                          alt={`${card.name}'s business card`} 
+                                          className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                                          onError={(e) => {
+                                            (e.target as HTMLImageElement).src = '/placeholder-card.png'
                                           }}
-                                          className="text-2xl font-bold"
                                         />
-                                      ) : (
-                                        <h2 className="text-2xl font-bold">{card.nameZh}</h2>
-                                      )}
-                                    </div>
-                                  )}
-                                  {card.name && card.name !== card.nameZh && (
-                                    <div>
-                                      {editingCardId === card.id ? (
-                                        <Input
-                                          value={card.name}
-                                          onChange={(e) => {
-                                            setCards(prevCards =>
-                                              prevCards.map(c =>
-                                                c.id === card.id
-                                                  ? { ...c, name: e.target.value }
-                                                  : c
-                                              )
-                                            );
-                                          }}
-                                          className="text-xl font-semibold text-gray-700"
-                                        />
-                                      ) : (
-                                        <h2 className="text-xl font-semibold text-gray-700">{card.name}</h2>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Error message */}
-                                {editError && (
-                                  <p className="text-sm text-red-500">{editError}</p>
-                                )}
-
-                                {/* Title Section */}
-                                <div className="border-b pb-2">
-                                  {card.titleZh && (
-                                    <div className="mb-1">
-                                      {editingCardId === card.id ? (
-                                        <Input
-                                          value={card.titleZh}
-                                          onChange={(e) => {
-                                            setCards(prevCards =>
-                                              prevCards.map(c =>
-                                                c.id === card.id
-                                                  ? { ...c, titleZh: e.target.value }
-                                                  : c
-                                              )
-                                            );
-                                          }}
-                                          className="text-xl font-medium"
-                                        />
-                                      ) : (
-                                        <h3 className="text-xl font-medium">{card.titleZh}</h3>
-                                      )}
-                                    </div>
-                                  )}
-                                  {card.title && card.title !== card.titleZh && (
-                                    <div>
-                                      {editingCardId === card.id ? (
-                                        <Input
-                                          value={card.title}
-                                          onChange={(e) => {
-                                            setCards(prevCards =>
-                                              prevCards.map(c =>
-                                                c.id === card.id
-                                                  ? { ...c, title: e.target.value }
-                                                  : c
-                                              )
-                                            );
-                                          }}
-                                          className="text-lg font-medium text-gray-700"
-                                        />
-                                      ) : (
-                                        <h3 className="text-lg font-medium text-gray-700">{card.title}</h3>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Company Section */}
-                                <div className="border-b pb-2">
-                                  {card.companyZh && (
-                                    <div className="mb-1">
-                                      {editingCardId === card.id ? (
-                                        <Input
-                                          value={card.companyZh}
-                                          onChange={(e) => {
-                                            setCards(prevCards =>
-                                              prevCards.map(c =>
-                                                c.id === card.id
-                                                  ? { ...c, companyZh: e.target.value }
-                                                  : c
-                                              )
-                                            );
-                                          }}
-                                          className="text-xl font-semibold"
-                                        />
-                                      ) : (
-                                        <h3 className="text-xl font-semibold">{card.companyZh}</h3>
-                                      )}
-                                    </div>
-                                  )}
-                                  {card.company && card.company !== card.companyZh && (
-                                    <div>
-                                      {editingCardId === card.id ? (
-                                        <Input
-                                          value={card.company}
-                                          onChange={(e) => {
-                                            setCards(prevCards =>
-                                              prevCards.map(c =>
-                                                c.id === card.id
-                                                  ? { ...c, company: e.target.value }
-                                                  : c
-                                              )
-                                            );
-                                          }}
-                                          className="text-lg font-semibold text-gray-700"
-                                        />
-                                      ) : (
-                                        <h3 className="text-lg font-semibold text-gray-700">{card.company}</h3>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Contact Information */}
-                                <div className="space-y-2 text-gray-600">
-                                  {/* Phone Numbers */}
-                                  {card.phone && (
-                                    <div className="flex items-start space-x-2">
-                                      <span className="font-medium min-w-[80px]">Tel:</span>
-                                      <div className="flex-1">
-                                        {editingCardId === card.id ? (
-                                          <Input
-                                            value={card.phone}
-                                            onChange={(e) => {
-                                              setCards(prevCards =>
-                                                prevCards.map(c =>
-                                                  c.id === card.id
-                                                    ? { ...c, phone: e.target.value }
-                                                    : c
-                                                )
-                                              );
-                                            }}
-                                            className="font-mono"
-                                          />
-                                        ) : (
-                                          <pre className="font-mono">{formatPhoneNumber(card.phone)}</pre>
-                                        )}
                                       </div>
-                                    </div>
-                                  )}
-
-                                  {/* Email */}
-                                  {card.email && (
-                                    <div className="flex items-center space-x-2">
-                                      <span className="font-medium min-w-[80px]">Email:</span>
-                                      {editingCardId === card.id ? (
-                                        <Input
-                                          value={card.email}
-                                          onChange={(e) => {
-                                            setCards(prevCards =>
-                                              prevCards.map(c =>
-                                                c.id === card.id
-                                                  ? { ...c, email: e.target.value }
-                                                  : c
-                                              )
-                                            );
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogTitle>Business Card Details</DialogTitle>
+                                      <DialogDescription>
+                                        Detailed view of the business card image
+                                      </DialogDescription>
+                                      
+                                      <div className="relative mt-4">
+                                        <img 
+                                          src={card.image_url} 
+                                          alt={`${card.name}'s business card`} 
+                                          className="w-full h-auto rounded-lg"
+                                          onError={(e) => {
+                                            (e.target as HTMLImageElement).src = '/placeholder-card.png'
                                           }}
-                                          className="font-mono"
                                         />
-                                      ) : (
-                                        <span className="font-mono">{card.email}</span>
-                                      )}
-                                    </div>
-                                  )}
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm"
+                                          className="absolute top-2 right-2"
+                                          onClick={() => {
+                                            const link = document.createElement('a');
+                                            link.href = card.image_url;
+                                            link.download = `${card.name}-business-card.jpg`;
+                                            link.click();
+                                          }}
+                                        >
+                                          <Download className="h-4 w-4 mr-2" />
+                                          Download
+                                        </Button>
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
 
-                                  {/* Address */}
-                                  {(card.addressZh || card.address) && (
-                                    <div className="flex items-start space-x-2">
-                                      <span className="font-medium min-w-[80px]">Address:</span>
-                                      <div className="flex-1">
-                                        {card.addressZh && (
+                                  <div className="flex-1 min-w-0">
+                                    <div className="space-y-4">
+                                      {/* Name Section */}
+                                      <div className="border-b pb-2">
+                                        {card.nameZh && (
                                           <div className="mb-1">
                                             {editingCardId === card.id ? (
                                               <Input
-                                                value={card.addressZh}
+                                                value={card.nameZh}
                                                 onChange={(e) => {
                                                   setCards(prevCards =>
                                                     prevCards.map(c =>
                                                       c.id === card.id
-                                                        ? { ...c, addressZh: e.target.value }
+                                                        ? { ...c, nameZh: e.target.value }
                                                         : c
                                                     )
                                                   );
                                                 }}
-                                                className="text-gray-600"
+                                                className="text-2xl font-bold"
                                               />
                                             ) : (
-                                              <p className="mb-1">{card.addressZh}</p>
+                                              <h2 className="text-2xl font-bold">{card.nameZh}</h2>
                                             )}
                                           </div>
                                         )}
-                                        {card.address && card.address !== card.addressZh && (
-                                          <p className="text-gray-600">{card.address}</p>
+                                        {card.name && card.name !== card.nameZh && (
+                                          <div>
+                                            {editingCardId === card.id ? (
+                                              <Input
+                                                value={card.name}
+                                                onChange={(e) => {
+                                                  setCards(prevCards =>
+                                                    prevCards.map(c =>
+                                                      c.id === card.id
+                                                        ? { ...c, name: e.target.value }
+                                                        : c
+                                                    )
+                                                  );
+                                                }}
+                                                className="text-xl font-semibold text-gray-700"
+                                              />
+                                            ) : (
+                                              <h2 className="text-xl font-semibold text-gray-700">{card.name}</h2>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Error message */}
+                                      {editError && (
+                                        <p className="text-sm text-red-500">{editError}</p>
+                                      )}
+
+                                      {/* Title Section */}
+                                      <div className="border-b pb-2">
+                                        {card.titleZh && (
+                                          <div className="mb-1">
+                                            {editingCardId === card.id ? (
+                                              <Input
+                                                value={card.titleZh}
+                                                onChange={(e) => {
+                                                  setCards(prevCards =>
+                                                    prevCards.map(c =>
+                                                      c.id === card.id
+                                                        ? { ...c, titleZh: e.target.value }
+                                                        : c
+                                                    )
+                                                  );
+                                                }}
+                                                className="text-xl font-medium"
+                                              />
+                                            ) : (
+                                              <h3 className="text-xl font-medium">{card.titleZh}</h3>
+                                            )}
+                                          </div>
+                                        )}
+                                        {card.title && card.title !== card.titleZh && (
+                                          <div>
+                                            {editingCardId === card.id ? (
+                                              <Input
+                                                value={card.title}
+                                                onChange={(e) => {
+                                                  setCards(prevCards =>
+                                                    prevCards.map(c =>
+                                                      c.id === card.id
+                                                        ? { ...c, title: e.target.value }
+                                                        : c
+                                                    )
+                                                  );
+                                                }}
+                                                className="text-lg font-medium text-gray-700"
+                                              />
+                                            ) : (
+                                              <h3 className="text-lg font-medium text-gray-700">{card.title}</h3>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Company Section */}
+                                      <div className="border-b pb-2">
+                                        {card.companyZh && (
+                                          <div className="mb-1">
+                                            {editingCardId === card.id ? (
+                                              <Input
+                                                value={card.companyZh}
+                                                onChange={(e) => {
+                                                  setCards(prevCards =>
+                                                    prevCards.map(c =>
+                                                      c.id === card.id
+                                                        ? { ...c, companyZh: e.target.value }
+                                                        : c
+                                                    )
+                                                  );
+                                                }}
+                                                className="text-xl font-semibold"
+                                              />
+                                            ) : (
+                                              <h3 className="text-xl font-semibold">{card.companyZh}</h3>
+                                            )}
+                                          </div>
+                                        )}
+                                        {card.company && card.company !== card.companyZh && (
+                                          <div>
+                                            {editingCardId === card.id ? (
+                                              <Input
+                                                value={card.company}
+                                                onChange={(e) => {
+                                                  setCards(prevCards =>
+                                                    prevCards.map(c =>
+                                                      c.id === card.id
+                                                        ? { ...c, company: e.target.value }
+                                                        : c
+                                                    )
+                                                  );
+                                                }}
+                                                className="text-lg font-semibold text-gray-700"
+                                              />
+                                            ) : (
+                                              <h3 className="text-lg font-semibold text-gray-700">{card.company}</h3>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Contact Information */}
+                                      <div className="space-y-2 text-gray-600">
+                                        {/* Phone Numbers */}
+                                        {card.phone && (
+                                          <div className="flex items-start space-x-2">
+                                            <span className="font-medium min-w-[80px]">Tel:</span>
+                                            <div className="flex-1">
+                                              {editingCardId === card.id ? (
+                                                <Input
+                                                  value={card.phone}
+                                                  onChange={(e) => {
+                                                    setCards(prevCards =>
+                                                      prevCards.map(c =>
+                                                        c.id === card.id
+                                                          ? { ...c, phone: e.target.value }
+                                                          : c
+                                                      )
+                                                  );
+                                                }}
+                                                  className="font-mono"
+                                                />
+                                              ) : (
+                                                <pre className="font-mono">{formatPhoneNumber(card.phone)}</pre>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Email */}
+                                        {card.email && (
+                                          <div className="flex items-center space-x-2">
+                                            <span className="font-medium min-w-[80px]">Email:</span>
+                                            {editingCardId === card.id ? (
+                                              <Input
+                                                value={card.email}
+                                                onChange={(e) => {
+                                                  setCards(prevCards =>
+                                                    prevCards.map(c =>
+                                                      c.id === card.id
+                                                        ? { ...c, email: e.target.value }
+                                                        : c
+                                                    )
+                                                  );
+                                                }}
+                                                className="font-mono"
+                                              />
+                                            ) : (
+                                              <span className="font-mono">{card.email}</span>
+                                            )}
+                                          </div>
+                                        )}
+
+                                        {/* Address */}
+                                        {(card.addressZh || card.address) && (
+                                          <div className="flex items-start space-x-2">
+                                            <span className="font-medium min-w-[80px]">Address:</span>
+                                            <div className="flex-1">
+                                              {card.addressZh && (
+                                                <div className="mb-1">
+                                                  {editingCardId === card.id ? (
+                                                    <Input
+                                                      value={card.addressZh}
+                                                      onChange={(e) => {
+                                                        setCards(prevCards =>
+                                                          prevCards.map(c =>
+                                                            c.id === card.id
+                                                              ? { ...c, addressZh: e.target.value }
+                                                              : c
+                                                          )
+                                                        );
+                                                      }}
+                                                      className="text-gray-600"
+                                                    />
+                                                  ) : (
+                                                    <p className="mb-1">{card.addressZh}</p>
+                                                  )}
+                                                </div>
+                                              )}
+                                              {card.address && card.address !== card.addressZh && (
+                                                <p className="text-gray-600">{card.address}</p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Edit and Action Buttons */}
+                                      <div className="flex space-x-2">
+                                        {editingCardId === card.id ? (
+                                          <>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={async () => {
+                                                try {
+                                                  // Save all changes to database
+                                                  const { error } = await supabase
+                                                    .from('business_cards')
+                                                    .update({
+                                                      name: card.name,
+                                                      name_zh: card.nameZh,
+                                                      title: card.title,
+                                                      title_zh: card.titleZh,
+                                                      company: card.company,
+                                                      company_zh: card.companyZh,
+                                                      email: card.email,
+                                                      phone: card.phone,
+                                                      address: card.address,
+                                                      address_zh: card.addressZh
+                                                    })
+                                                    .eq('id', card.id);
+
+                                                  if (error) throw error;
+                                                  
+                                                  toast.success('Changes saved successfully');
+                                                  setEditingCardId(null);
+                                                } catch (error) {
+                                                  console.error('Failed to save changes:', error);
+                                                  toast.error('Failed to save changes');
+                                                }
+                                              }}
+                                            >
+                                              <Check className="h-4 w-4 text-green-500" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => {
+                                                loadCards();
+                                                setEditingCardId(null);
+                                              }}
+                                            >
+                                              <X className="h-4 w-4 text-red-500" />
+                                            </Button>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => toggleEditMode(card.id)}
+                                            >
+                                              <Edit2 className="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon">
+                                              <Share2 className="h-4 w-4" />
+                                            </Button>
+                                            <Button 
+                                              variant="ghost" 
+                                              size="icon"
+                                              onClick={() => deleteCard(card.id)}
+                                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </>
                                         )}
                                       </div>
                                     </div>
-                                  )}
+                                  </div>
                                 </div>
-
-                                {/* Edit and Action Buttons */}
-                                <div className="flex space-x-2">
-                                  {editingCardId === card.id ? (
-                                    <>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={async () => {
-                                          try {
-                                            // Save all changes to database
-                                            const { error } = await supabase
-                                              .from('business_cards')
-                                              .update({
-                                                name: card.name,
-                                                name_zh: card.nameZh,
-                                                title: card.title,
-                                                title_zh: card.titleZh,
-                                                company: card.company,
-                                                company_zh: card.companyZh,
-                                                email: card.email,
-                                                phone: card.phone,
-                                                address: card.address,
-                                                address_zh: card.addressZh
-                                              })
-                                              .eq('id', card.id);
-
-                                            if (error) throw error;
-                                            
-                                            toast.success('Changes saved successfully');
-                                            setEditingCardId(null);
-                                          } catch (error) {
-                                            console.error('Failed to save changes:', error);
-                                            toast.error('Failed to save changes');
-                                          }
-                                        }}
-                                      >
-                                        <Check className="h-4 w-4 text-green-500" />
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => {
-                                          loadCards();
-                                          setEditingCardId(null);
-                                        }}
-                                      >
-                                        <X className="h-4 w-4 text-red-500" />
-                                      </Button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => toggleEditMode(card.id)}
-                                      >
-                                        <Edit2 className="h-4 w-4" />
-                                      </Button>
-                                      <Button variant="ghost" size="icon">
-                                        <Share2 className="h-4 w-4" />
-                                      </Button>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon"
-                                        onClick={() => deleteCard(card.id)}
-                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </>
-                                  )}
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        ))}
+                      </div>
+                    ) : (
+                      // New grid view
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {getFilteredCards.map((card) => (
+                          <motion.div
+                            key={card.id}
+                            className="group relative"
+                            whileHover={{ scale: 1.02 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <Card className="overflow-hidden h-full">
+                              <CardContent className="p-0">
+                                <div className="relative aspect-[16/10]">
+                                  <img
+                                    src={card.image_url}
+                                    alt={`${card.name}'s business card`}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src = '/placeholder-card.png'
+                                    }}
+                                  />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                                  <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-200">
+                                    <h3 className="font-medium">{card.name}</h3>
+                                    <p className="text-sm opacity-90">{card.title}</p>
+                                    <p className="text-sm opacity-90">{card.company}</p>
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
                 </AnimatePresence>
                 {getFilteredCards.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
