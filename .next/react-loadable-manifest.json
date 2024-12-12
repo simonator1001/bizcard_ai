@@ -14,6 +14,7 @@
   "../node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js -> ws": {
     "id": "../node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js -> ws",
     "files": [
+      "static/chunks/_app-pages-browser_node_modules_ws_browser_js.js",
       "static/chunks/node_modules_ws_browser_js.js"
     ]
   },
