@@ -28,7 +28,7 @@ interface GridViewProps {
 export function GridView({ data, onCardClick }: GridViewProps) {
   return (
     <motion.div 
-      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 p-6"
+      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -36,19 +36,21 @@ export function GridView({ data, onCardClick }: GridViewProps) {
       {data.map((card) => (
         <motion.div
           key={card.id}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
+          variants={{
+            hidden: { opacity: 0, y: 20 },
+            visible: { opacity: 1, y: 0 }
+          }}
+          whileHover={{ y: -5, transition: { duration: 0.2 } }}
         >
           <Card 
-            className="bg-white shadow-md transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer hover:bg-gray-50 overflow-hidden" 
+            className="bg-gradient-to-b from-white to-gray-50/50 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden backdrop-blur-sm border border-gray-100"
             onClick={() => onCardClick(card)}
           >
             <CardContent className="p-4">
               <div className="flex items-start space-x-3">
-                <Avatar className="h-10 w-10 flex-shrink-0">
+                <Avatar className="h-10 w-10 flex-shrink-0 ring-2 ring-primary/10">
                   <AvatarImage src={card.imageUrl} alt={card.name} />
-                  <AvatarFallback>
+                  <AvatarFallback className="bg-primary/5 text-primary">
                     {card.name?.split(' ').map(n => n[0]).join('') || '?'}
                   </AvatarFallback>
                 </Avatar>

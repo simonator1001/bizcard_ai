@@ -30,7 +30,8 @@ import {
   LayoutList,
   ScannerIcon,
   Network2,
-  Settings2
+  Settings2,
+  XMarkIcon
 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
@@ -58,6 +59,9 @@ import { ListView } from '@/components/ListView'
 
 // Import types and mock data
 import { mockNewsData } from '@/lib/mock-data'
+
+// Import the new PremiumButton component
+import { PremiumButton } from "@/components/ui/premium-button"
 
 interface BusinessCard {
   id: string
@@ -446,62 +450,133 @@ export default function Component() {
     setShowRemoveConfirmDialog(true)
   }
 
-  const handleRemoveDuplicates = () => {
+  const handleRemoveDuplicates = async () => {
     try {
-      const uniqueEmails = new Set()
-      const uniqueCards = cards.filter(card => {
-        if (uniqueEmails.has(card.email)) {
-          return false
-        }
-        uniqueEmails.add(card.email)
-        return true
-      })
-
-      setCards(uniqueCards)
-      toast.success(`Removed ${cards.length - uniqueCards.length} duplicate cards`)
-    } catch (error) {
-      console.error('Error removing duplicates:', error)
-      toast.error('Failed to remove duplicates')
-    }
-  }
-
-  const handleMergeCards = () => {
-    try {
-      const emailMap = new Map()
+      const emailMap = new Map<string, BusinessCard[]>();
       
       // Group cards by email
       cards.forEach(card => {
         if (!emailMap.has(card.email)) {
-          emailMap.set(card.email, [])
+          emailMap.set(card.email, []);
         }
-        emailMap.get(card.email).push(card)
-      })
+        emailMap.get(card.email)?.push(card);
+      });
 
-      // Merge cards with the same email
-      const mergedCards = Array.from(emailMap.values()).map(cardGroup => {
-        if (cardGroup.length === 1) return cardGroup[0]
+      // Keep only the latest card for each email
+      const cardsToDelete: string[] = [];
+      emailMap.forEach(cardGroup => {
+        if (cardGroup.length > 1) {
+          // Sort by created_at and keep the latest one
+          const sortedCards = cardGroup.sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          // Add all but the first (latest) card to delete list
+          cardsToDelete.push(...sortedCards.slice(1).map(card => card.id));
+        }
+      });
 
-        // Merge multiple cards into one
-        return cardGroup.reduce((merged, current) => ({
-          ...merged,
-          name: merged.name || current.name,
-          name_zh: merged.name_zh || current.name_zh,
-          company: merged.company || current.company,
-          company_zh: merged.company_zh || current.company_zh,
-          title: merged.title || current.title,
-          title_zh: merged.title_zh || current.title_zh,
-          phone: merged.phone || current.phone,
-          description: merged.description || current.description,
-        }))
-      })
+      if (cardsToDelete.length === 0) {
+        toast.info('No duplicate cards found');
+        return;
+      }
 
-      setCards(mergedCards)
-      toast.success('Cards merged successfully')
+      // Delete cards from database
+      const { error } = await supabase
+        .from('business_cards')
+        .delete()
+        .in('id', cardsToDelete);
+
+      if (error) throw error;
+
+      // Update UI
+      setCards(prevCards => prevCards.filter(card => !cardsToDelete.includes(card.id)));
+      toast.success(`Removed ${cardsToDelete.length} duplicate cards`);
+      setShowRemoveConfirmDialog(false);
+
     } catch (error) {
-      console.error('Error merging cards:', error)
-      toast.error('Failed to merge cards')
+      console.error('Error removing duplicates:', error);
+      toast.error('Failed to remove duplicates');
     }
-  }
+  };
+
+  const handleMergeCards = async () => {
+    try {
+      const emailMap = new Map<string, BusinessCard[]>();
+      
+      // Group cards by email
+      cards.forEach(card => {
+        if (!emailMap.has(card.email)) {
+          emailMap.set(card.email, []);
+        }
+        emailMap.get(card.email)?.push(card);
+      });
+
+      // Process each group of cards
+      for (const [email, cardGroup] of emailMap) {
+        if (cardGroup.length > 1) {
+          // Sort by created_at to keep the latest as base
+          const sortedCards = cardGroup.sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+
+          // Merge card data
+          const mergedCard = sortedCards.reduce((merged, current) => ({
+            ...merged,
+            name: merged.name || current.name,
+            name_zh: merged.name_zh || current.name_zh,
+            company: merged.company || current.company,
+            company_zh: merged.company_zh || current.company_zh,
+            title: merged.title || current.title,
+            title_zh: merged.title_zh || current.title_zh,
+            phone: merged.phone || current.phone,
+            address: merged.address || current.address,
+            address_zh: merged.address_zh || current.address_zh,
+            notes: merged.notes || current.notes,
+            // Collect all images
+            images: [...(merged.images || [merged.imageUrl]), current.imageUrl]
+          }));
+
+          // Update the base card in database
+          const { error: updateError } = await supabase
+            .from('business_cards')
+            .update({
+              name: mergedCard.name,
+              name_zh: mergedCard.name_zh,
+              company: mergedCard.company,
+              company_zh: mergedCard.company_zh,
+              title: mergedCard.title,
+              title_zh: mergedCard.title_zh,
+              phone: mergedCard.phone,
+              address: mergedCard.address,
+              address_zh: mergedCard.address_zh,
+              notes: mergedCard.notes,
+              images: mergedCard.images,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', sortedCards[0].id);
+
+          if (updateError) throw updateError;
+
+          // Delete other cards
+          const { error: deleteError } = await supabase
+            .from('business_cards')
+            .delete()
+            .in('id', sortedCards.slice(1).map(card => card.id));
+
+          if (deleteError) throw deleteError;
+        }
+      }
+
+      // Refresh cards
+      await fetchCards();
+      toast.success('Cards merged successfully');
+      setShowMergeConfirmDialog(false);
+
+    } catch (error) {
+      console.error('Error merging cards:', error);
+      toast.error('Failed to merge cards');
+    }
+  };
 
   const handleMergeCardsClick = () => {
     const emailCounts = cards.reduce((acc, card) => {
@@ -518,6 +593,58 @@ export default function Component() {
   const uniqueCompanies = Array.from(new Set(cards.map(card => card.company))).filter(Boolean)
   const uniquePositions = Array.from(new Set(cards.map(card => card.title))).filter(Boolean)
 
+  // Add this before the return statement
+  const filteredAndSortedCards = cards
+    .filter(card => {
+      const matchesSearch = (
+        (card.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (card.name_zh?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (card.company?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (card.company_zh?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (card.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (card.title_zh?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (card.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+      );
+      
+      const matchesCompany = filterCompany === 'all' || 
+        card.company === filterCompany || 
+        card.company_zh === filterCompany;
+      
+      const matchesPosition = filterPosition === 'all' || 
+        card.title === filterPosition || 
+        card.title_zh === filterPosition;
+      
+      return matchesSearch && matchesCompany && matchesPosition;
+    })
+    .sort((a, b) => {
+      if (sortField === 'createdAt') {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+      }
+
+      // Handle different fields for sorting
+      const getComparisonValue = (card: BusinessCard, field: string) => {
+        switch (field) {
+          case 'name':
+            return card.name_zh || card.name || '';
+          case 'company':
+            return card.company_zh || card.company || '';
+          case 'position':
+            return card.title_zh || card.title || '';
+          default:
+            return (card[field as keyof BusinessCard] as string) || '';
+        }
+      };
+
+      const aValue = getComparisonValue(a, sortField).toLowerCase();
+      const bValue = getComparisonValue(b, sortField).toLowerCase();
+      
+      return sortDirection === 'asc' 
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
+    });
+
   // Wrap the return with ErrorBoundary
   return (
     <ErrorBoundary>
@@ -529,157 +656,126 @@ export default function Component() {
         <main className="flex-1 overflow-auto p-8 pb-20 scroll-smooth">
           <div className="container mx-auto max-w-[calc(100vw-4rem)]">
             {activeView === 'manage' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-3xl font-bold">Manage Business Cards</CardTitle>
-                  <CardDescription className="text-lg">View, edit, and organize your scanned business cards</CardDescription>
-                  <div className="flex items-center justify-between mt-4 space-x-4">
+              <Card className="backdrop-blur-sm bg-white/90 shadow-lg border-0">
+                <CardHeader className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b">
+                  <CardTitle className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                    Manage Business Cards
+                  </CardTitle>
+                  <CardDescription className="text-lg text-gray-600">
+                    View, edit, and organize your scanned business cards
+                  </CardDescription>
+                  <div className="flex items-center justify-between mt-6 space-x-4">
                     <div className="relative flex-grow">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                       <Input
                         placeholder="Search cards..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 py-2 text-sm rounded-md w-full"
+                        className="pl-10 py-2 text-sm rounded-lg border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary/20 transition-all duration-300"
                       />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center space-x-1 border-r pr-2">
-                        <Button
-                          variant="secondary"
+                    <div className="flex items-center gap-3">
+                      <motion.div
+                        className="flex items-center gap-3"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <PremiumButton
+                          icon={Download}
+                          variant="ghost"
                           size="sm"
-                          className="flex items-center gap-2 px-3"
+                          title="Export as CSV"
                           onClick={handleDownloadCSV}
-                          title="Download CSV"
-                        >
-                          <Download className="h-4 w-4" />
-                          CSV
-                        </Button>
-                      </div>
-
-                      <div className="flex items-center space-x-1 border-r pr-2">
-                        <Button
-                          variant="secondary"
+                        />
+                        <PremiumButton
+                          icon={Trash2}
+                          variant="ghost"
                           size="sm"
-                          className="flex items-center gap-2 px-3"
-                          onClick={handleRemoveDuplicatesClick}
                           title="Remove Duplicates"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Remove
-                        </Button>
-                        <Button
-                          variant="secondary"
+                          onClick={handleRemoveDuplicatesClick}
+                        />
+                        <PremiumButton
+                          icon={Merge}
+                          variant="ghost"
                           size="sm"
-                          className="flex items-center gap-2 px-3"
-                          onClick={handleMergeCardsClick}
                           title="Merge Similar Cards"
-                        >
-                          <Merge className="h-4 w-4" />
-                          Merge
-                        </Button>
-                      </div>
-
-                      <div className="flex items-center space-x-1 border-r pr-2">
-                        <Button
-                          variant="secondary"
+                          onClick={handleMergeCardsClick}
+                        />
+                        <PremiumButton
+                          icon={Filter}
+                          variant="ghost"
                           size="sm"
-                          className="flex items-center gap-2 px-3"
-                          onClick={() => setShowFilterDialog(true)}
                           title="Filter Cards"
-                        >
-                          <Filter className="h-4 w-4" />
-                          Filter
-                        </Button>
-                        <Button
-                          variant="secondary"
+                          onClick={() => setShowFilterDialog(true)}
+                        />
+                        <PremiumButton
+                          icon={SortAsc}
+                          variant="ghost"
                           size="sm"
-                          className="flex items-center gap-2 px-3"
-                          onClick={() => setShowSortDialog(true)}
                           title="Sort Cards"
+                          onClick={() => setShowSortDialog(true)}
+                        />
+                        <Select
+                          value={viewMode}
+                          onValueChange={setViewMode}
                         >
-                          <SortAsc className="h-4 w-4" />
-                          Sort
-                        </Button>
-                      </div>
-
-                      <Select value={viewMode} onValueChange={setViewMode}>
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue>
-                            {viewMode === 'grid' ? 'Grid View' : 'List View'}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="grid">Grid View</SelectItem>
-                          <SelectItem value="list">List View</SelectItem>
-                        </SelectContent>
-                      </Select>
+                          <SelectTrigger className="w-[130px] ml-2 bg-white/80 border-gray-200 hover:bg-gray-50/90 backdrop-blur-sm transition-all duration-300 hover:shadow-md">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="grid">Grid View</SelectItem>
+                            <SelectItem value="table">Table View</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </motion.div>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  {viewMode === 'grid' ? (
-                    <GridView 
-                      data={cards
-                        .filter(card => {
-                          const matchesSearch = (
-                            (card.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                            (card.company?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                            (card.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                            (card.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-                          )
-                          
-                          const matchesCompany = filterCompany === 'all' || card.company === filterCompany
-                          const matchesPosition = filterPosition === 'all' || card.title === filterPosition
-                          
-                          return matchesSearch && matchesCompany && matchesPosition
-                        })
-                        .sort((a, b) => {
-                          if (sortField === 'createdAt') {
-                            const dateA = new Date(a.created_at || 0).getTime();
-                            const dateB = new Date(b.created_at || 0).getTime();
-                            return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
-                          }
-                          const aValue = (a[sortField] || '').toLowerCase();
-                          const bValue = (b[sortField] || '').toLowerCase();
-                          return sortDirection === 'asc' 
-                            ? aValue.localeCompare(bValue)
-                            : bValue.localeCompare(aValue);
-                        })
-                      }
-                      onCardClick={handleCardClick}
-                    />
+                <CardContent className="p-6">
+                  {cards.length === 0 ? (
+                    <motion.div 
+                      className="flex flex-col items-center justify-center h-64 text-gray-500"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <Upload className="h-16 w-16 mb-4 text-gray-400" />
+                      <p className="text-lg font-medium mb-2">No business cards found</p>
+                      <p className="text-sm text-gray-500 mb-4">Start by uploading a new card</p>
+                      <Button 
+                        onClick={() => setActiveView('scan')}
+                        className="bg-gradient-to-r from-primary to-primary/80 text-white hover:from-primary/90 hover:to-primary/70"
+                      >
+                        Upload Card
+                      </Button>
+                    </motion.div>
                   ) : (
-                    <ListView
-                      data={cards
-                        .filter(card => {
-                          const matchesSearch = (
-                            (card.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                            (card.company?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                            (card.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                            (card.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-                          )
-                          
-                          const matchesCompany = filterCompany === 'all' || card.company === filterCompany
-                          const matchesPosition = filterPosition === 'all' || card.title === filterPosition
-                          
-                          return matchesSearch && matchesCompany && matchesPosition
-                        })
-                        .sort((a, b) => {
-                          if (sortField === 'createdAt') {
-                            const dateA = new Date(a.created_at || 0).getTime();
-                            const dateB = new Date(b.created_at || 0).getTime();
-                            return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+                    <motion.div
+                      initial="hidden"
+                      animate="visible"
+                      variants={{
+                        hidden: { opacity: 0 },
+                        visible: {
+                          opacity: 1,
+                          transition: {
+                            staggerChildren: 0.1
                           }
-                          const aValue = (a[sortField] || '').toLowerCase();
-                          const bValue = (b[sortField] || '').toLowerCase();
-                          return sortDirection === 'asc' 
-                            ? aValue.localeCompare(bValue)
-                            : bValue.localeCompare(aValue);
-                        })
-                      }
-                      onCardClick={handleCardClick}
-                    />
+                        }
+                      }}
+                    >
+                      {viewMode === 'grid' ? (
+                        <GridView 
+                          data={filteredAndSortedCards}
+                          onCardClick={handleCardClick}
+                        />
+                      ) : (
+                        <ListView
+                          data={filteredAndSortedCards}
+                          onCardClick={handleCardClick}
+                        />
+                      )}
+                    </motion.div>
                   )}
                 </CardContent>
               </Card>

@@ -229,7 +229,7 @@ export async function recognizeBusinessCard(imageBase64: string): Promise<OCRRes
         messages: [
           {
             role: "system",
-            content: "You are a business card OCR system specialized in handling both Chinese and English text. Extract text and return ONLY a valid JSON object with both languages when available."
+            content: "You are a business card OCR system. For names, titles, companies, and addresses, strictly separate English and Chinese text. Never mix them."
           },
           {
             role: "user",
@@ -239,31 +239,31 @@ export async function recognizeBusinessCard(imageBase64: string): Promise<OCRRes
                 text: `Extract text from this business card and return in this EXACT format:
                 {
                   "name": {
-                    "chinese": "中文姓名",
-                    "english": "English Name"
+                    "chinese": "中文姓名 (ONLY Chinese characters)",
+                    "english": "English Name (ONLY English text)"
                   },
                   "title": {
-                    "chinese": "職位名稱",
-                    "english": "Job Title"
+                    "chinese": "職位名稱 (ONLY Chinese characters)",
+                    "english": "Job Title (ONLY English text)"
                   },
                   "company": {
-                    "chinese": "公司名稱",
-                    "english": "Company Name"
+                    "chinese": "公司名稱 (ONLY Chinese characters)",
+                    "english": "Company Name (ONLY English text)"
                   },
                   "contact": {
                     "phone": ["Phone Numbers"],
                     "email": "Email",
                     "address": {
-                      "chinese": "中文地址",
-                      "english": "English Address"
+                      "chinese": "中文地址 (ONLY Chinese characters)",
+                      "english": "English Address (ONLY English text)"
                     }
                   }
                 }
                 IMPORTANT: 
-                1. Return ONLY the JSON object above, no other text
-                2. Preserve all Chinese characters exactly as shown
-                3. Separate Chinese and English text when both are present
-                4. Keep original formatting and spacing`
+                1. Return ONLY the JSON object above
+                2. Keep English and Chinese text strictly separated
+                3. Never mix languages in the same field
+                4. If text is only in one language, leave the other field empty`
               },
               {
                 type: "image_url",
@@ -343,7 +343,7 @@ export async function recognizeBusinessCard(imageBase64: string): Promise<OCRRes
       // Map to our format
       const result: OCRResponse = {
         words_result: {
-          NAME: { words: parsedJson.name?.chinese || '' },
+          NAME: { words: parsedJson.name?.english || '' },
           NAME_ZH: { words: parsedJson.name?.chinese || '' },
           TITLE: { words: parsedJson.title?.english || '' },
           TITLE_ZH: { words: parsedJson.title?.chinese || '' },

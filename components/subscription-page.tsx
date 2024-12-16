@@ -6,6 +6,10 @@ import { Check } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
+import { XMarkIcon } from '@heroicons/react/24/outline'
+import { toast } from 'react-hot-toast'
+import { X } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Plan {
   name: string;
@@ -28,6 +32,62 @@ interface Plan {
   };
   popular?: boolean;
 }
+
+const ShareBusinessCard = ({ url, onClose }: { url: string; onClose: () => void }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl">
+        {/* Close button */}
+        <button 
+          onClick={onClose}
+          className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded-full transition-colors"
+        >
+          <XMarkIcon className="h-5 w-5 text-gray-500" />
+        </button>
+
+        {/* Content container */}
+        <div className="p-6">
+          {/* Title */}
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Share Business Card
+          </h2>
+
+          {/* Link container */}
+          <div className="relative mb-6">
+            <div className="flex items-center border rounded-lg overflow-hidden bg-gray-50">
+              {/* URL display */}
+              <div className="flex-1 min-w-0 px-3 py-2">
+                <p className="text-sm text-gray-600 truncate">
+                  {url}
+                </p>
+              </div>
+              {/* Copy button */}
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(url);
+                  toast.success('Link copied to clipboard');
+                }}
+                className="flex-shrink-0 px-4 py-2 text-sm font-medium text-gray-700 bg-white border-l hover:bg-gray-50 transition-colors"
+              >
+                Copy Link
+              </button>
+            </div>
+          </div>
+
+          {/* Share buttons */}
+          <div className="grid grid-cols-2 gap-3">
+            <button className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg hover:bg-gray-50 transition-colors">
+              Email
+            </button>
+            <button className="w-full px-4 py-2 text-sm font-medium text-white bg-[#25D366] rounded-lg hover:bg-[#22BC5C] transition-colors">
+              WhatsApp
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export function SubscriptionPage() {
   const [isYearly, setIsYearly] = useState(false)

@@ -118,6 +118,38 @@ const saveToDatabase = async (record: BusinessCardRecord): Promise<string> => {
   }
 };
 
+// Add this new PremiumButton component at the top of the file
+interface PremiumButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  icon: React.ElementType;
+  label: string;
+  variant?: 'default' | 'destructive' | 'outline';
+}
+
+const PremiumButton: React.FC<PremiumButtonProps> = ({ 
+  icon: Icon, 
+  label, 
+  variant = 'default',
+  className,
+  ...props 
+}) => {
+  const baseStyles = "flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-400";
+  const variantStyles = {
+    default: "border border-gray-300 text-gray-700 hover:bg-gray-100 hover:shadow-md active:scale-95",
+    destructive: "border border-red-300 text-red-600 hover:bg-red-50 hover:shadow-md active:scale-95",
+    outline: "border border-primary text-primary hover:bg-primary/10 hover:shadow-md active:scale-95"
+  };
+
+  return (
+    <button
+      className={`${baseStyles} ${variantStyles[variant]} ${className}`}
+      {...props}
+    >
+      <Icon className="w-5 h-5 transition-all duration-300" />
+      <span className="text-sm font-medium">{label}</span>
+    </button>
+  );
+};
+
 export function ScanPage({ onAddCard }: ScanPageProps) {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -377,25 +409,30 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
                 {preview ? (
                   <div className="relative">
                     <img src={preview} alt="Business Card Preview" className="max-w-full h-auto mx-auto rounded-md" />
-                    <Button
+                    <PremiumButton
+                      icon={X}
+                      label="Clear"
                       variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2"
+                      className="absolute top-2 right-2 !p-2"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleClear()
                       }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    />
                   </div>
                 ) : (
                   <motion.div
                     whileHover={{ scale: 1.02 }}
                     transition={{ duration: 0.2 }}
+                    className="flex flex-col items-center"
                   >
                     <Upload className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                    <p className="text-lg font-semibold text-gray-700">Click or drag and drop to upload a business card image</p>
+                    <p className="text-lg font-semibold text-gray-700 mb-2">
+                      Click or drag and drop to upload a business card image
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Supports multiple files
+                    </p>
                   </motion.div>
                 )}
                 <input
@@ -416,19 +453,19 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="flex flex-col items-center"
+                    className="flex flex-col items-center bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-sm"
                   >
-                    <Loader2 className="mb-2 h-4 w-4 animate-spin" />
-                    <span className="text-sm">{processingStage}</span>
+                    <Loader2 className="mb-2 h-5 w-5 animate-spin text-primary" />
+                    <span className="text-sm font-medium text-gray-700">{processingStage}</span>
                     {totalFiles > 0 && (
-                      <div className="w-full mt-2">
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div className="w-full mt-3">
+                        <div className="w-full bg-gray-100 rounded-full h-2">
                           <div
-                            className="bg-primary h-2.5 rounded-full transition-all duration-300"
+                            className="bg-primary h-2 rounded-full transition-all duration-300 ease-out"
                             style={{ width: `${uploadProgress}%` }}
                           />
                         </div>
-                        <p className="text-sm text-gray-600 text-center mt-1">
+                        <p className="text-sm text-gray-600 text-center mt-2">
                           Processing {processedFiles} of {totalFiles} files
                         </p>
                       </div>
@@ -444,7 +481,7 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="mt-4 p-2 bg-green-100 text-green-800 rounded-md text-center"
+                  className="mt-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-center font-medium shadow-sm"
                 >
                   Card successfully processed!
                 </motion.div>
