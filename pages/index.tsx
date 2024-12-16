@@ -1,12 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { 
-  Scan, 
-  Users, 
-  Network, 
-  Newspaper, 
-  Star, 
-  Settings,
+  ScanIcon,
+  LayoutGridIcon,
+  NetworkIcon,
+  NewspaperIcon,
+  StarIcon,
+  SettingsIcon,
   Search,
+  Loader2,
+  Users,
+  Network,
+  Newspaper,
+  Star,
+  Settings,
   Filter,
   SortAsc,
   Layers,
@@ -20,9 +26,11 @@ import {
   Check,
   Camera,
   Upload,
-  Loader2,
   ScanLine,
-  LayoutList
+  LayoutList,
+  ScannerIcon,
+  Network2,
+  Settings2
 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
@@ -35,6 +43,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase-client'
 import { recognizeBusinessCard, preprocessImageForOCR } from '@/lib/ocr-service'
+import { saveAs } from 'file-saver'
+import Papa from 'papaparse'
 
 // Import components
 import { GridView } from '@/components/GridView'
@@ -44,6 +54,7 @@ import { NewsView } from '@/components/NewsView'
 import { EnhancedProView } from '@/components/EnhancedProView'
 import { SettingsTab } from '@/components/SettingsTab'
 import { ScanPage } from '@/components/ScanPage'
+import { ListView } from '@/components/ListView'
 
 // Import types and mock data
 import { mockNewsData } from '@/lib/mock-data'
@@ -99,6 +110,20 @@ export default function Component() {
 
   // Add loading state for initial data fetch
   const [isLoading, setIsLoading] = useState(true)
+
+  // Add these state variables
+  const [showFilterDialog, setShowFilterDialog] = useState(false)
+  const [showSortDialog, setShowSortDialog] = useState(false)
+  const [sortField, setSortField] = useState<'name' | 'company' | 'position'>('name')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [filterCompany, setFilterCompany] = useState('all')
+  const [filterPosition, setFilterPosition] = useState('all')
+
+  // Add new state variables
+  const [showRemoveConfirmDialog, setShowRemoveConfirmDialog] = useState(false)
+  const [showMergeConfirmDialog, setShowMergeConfirmDialog] = useState(false)
+  const [duplicateCount, setDuplicateCount] = useState(0)
+  const [mergeableCount, setMergeableCount] = useState(0)
 
   // Fetch cards on component mount
   useEffect(() => {
@@ -275,8 +300,20 @@ export default function Component() {
   }
 
   const handleAddCard = async (newCard: BusinessCard) => {
+    // Ensure all required fields have at least empty strings
+    const sanitizedCard = {
+      ...newCard,
+      name: newCard.name || '',
+      company: newCard.company || '',
+      position: newCard.position || '',
+      email: newCard.email || '',
+      phone: newCard.phone || '',
+      description: newCard.description || '',
+      imageUrl: newCard.imageUrl || ''
+    }
+
     // Optimistically update the UI
-    const optimisticCard = { ...newCard, id: Date.now().toString() }
+    const optimisticCard = { ...sanitizedCard, id: Date.now().toString() }
     setCards(prevCards => [...prevCards, optimisticCard])
 
     try {
@@ -287,13 +324,13 @@ export default function Component() {
         .from('business_cards')
         .insert({
           user_id: user.id,
-          name: newCard.name,
-          company: newCard.company,
-          position: newCard.position,
-          email: newCard.email,
-          phone: newCard.phone,
-          description: newCard.description,
-          image_url: newCard.imageUrl,
+          name: sanitizedCard.name,
+          company: sanitizedCard.company,
+          position: sanitizedCard.position,
+          email: sanitizedCard.email,
+          phone: sanitizedCard.phone,
+          description: sanitizedCard.description,
+          image_url: sanitizedCard.imageUrl,
           created_at: new Date().toISOString()
         })
         .select()
@@ -303,7 +340,10 @@ export default function Component() {
 
       // Update with actual saved card
       setCards(prevCards => prevCards.map(card => 
-        card.id === optimisticCard.id ? savedCard : card
+        card.id === optimisticCard.id ? {
+          ...savedCard,
+          imageUrl: savedCard.image_url
+        } : card
       ))
       setActiveView('manage')
       toast.success('Card added successfully')
@@ -319,15 +359,134 @@ export default function Component() {
     setActiveView('pro')
   }
 
-  // Update the navigation icons
+  // Define the navigation items with their icons
   const navItems = [
-    { icon: <ScanLine className="h-6 w-6" />, label: "Scan", value: "scan" },
-    { icon: <LayoutList className="h-6 w-6" />, label: "Manage", value: "manage" },
-    { icon: <Network className="h-6 w-6" />, label: "Org Chart", value: "orgchart" },
-    { icon: <Newspaper className="h-6 w-6" />, label: "News", value: "news" },
-    { icon: <Star className="h-6 w-6" />, label: "Pro", value: "pro" },
-    { icon: <Settings className="h-6 w-6" />, label: "Settings", value: "settings" },
+    { icon: <ScanIcon className="h-6 w-6" />, label: "Scan", value: "scan" },
+    { icon: <LayoutGridIcon className="h-6 w-6" />, label: "Manage", value: "manage" },
+    { icon: <NetworkIcon className="h-6 w-6" />, label: "Org Chart", value: "orgchart" },
+    { icon: <NewspaperIcon className="h-6 w-6" />, label: "News", value: "news" },
+    { icon: <StarIcon className="h-6 w-6" />, label: "Pro", value: "pro" },
+    { icon: <SettingsIcon className="h-6 w-6" />, label: "Settings", value: "settings" },
   ]
+
+  // Add this before the return statement
+  console.log('Available Icons:', {
+    ScanIcon,
+    LayoutGridIcon,
+    NetworkIcon,
+    NewspaperIcon,
+    StarIcon,
+    SettingsIcon
+  })
+
+  // Add these handler functions
+  const handleDownloadCSV = () => {
+    try {
+      const csvData = cards.map(card => ({
+        Name: card.name,
+        Name_EN: card.name_en,
+        Company: card.company,
+        Company_EN: card.company_en,
+        Position: card.position,
+        Position_EN: card.position_en,
+        Email: card.email,
+        Phone: card.phone,
+      }))
+
+      const csv = Papa.unparse(csvData)
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+      saveAs(blob, 'business_cards.csv')
+      toast.success('CSV downloaded successfully')
+    } catch (error) {
+      console.error('Error downloading CSV:', error)
+      toast.error('Failed to download CSV')
+    }
+  }
+
+  const handleRemoveDuplicatesClick = () => {
+    const uniqueEmails = new Set()
+    const duplicates = cards.filter(card => {
+      if (uniqueEmails.has(card.email)) {
+        return true
+      }
+      uniqueEmails.add(card.email)
+      return false
+    })
+    setDuplicateCount(duplicates.length)
+    setShowRemoveConfirmDialog(true)
+  }
+
+  const handleRemoveDuplicates = () => {
+    try {
+      const uniqueEmails = new Set()
+      const uniqueCards = cards.filter(card => {
+        if (uniqueEmails.has(card.email)) {
+          return false
+        }
+        uniqueEmails.add(card.email)
+        return true
+      })
+
+      setCards(uniqueCards)
+      toast.success(`Removed ${cards.length - uniqueCards.length} duplicate cards`)
+    } catch (error) {
+      console.error('Error removing duplicates:', error)
+      toast.error('Failed to remove duplicates')
+    }
+  }
+
+  const handleMergeCards = () => {
+    try {
+      const emailMap = new Map()
+      
+      // Group cards by email
+      cards.forEach(card => {
+        if (!emailMap.has(card.email)) {
+          emailMap.set(card.email, [])
+        }
+        emailMap.get(card.email).push(card)
+      })
+
+      // Merge cards with the same email
+      const mergedCards = Array.from(emailMap.values()).map(cardGroup => {
+        if (cardGroup.length === 1) return cardGroup[0]
+
+        // Merge multiple cards into one
+        return cardGroup.reduce((merged, current) => ({
+          ...merged,
+          name: merged.name || current.name,
+          name_en: merged.name_en || current.name_en,
+          company: merged.company || current.company,
+          company_en: merged.company_en || current.company_en,
+          position: merged.position || current.position,
+          position_en: merged.position_en || current.position_en,
+          phone: merged.phone || current.phone,
+          description: merged.description || current.description,
+        }))
+      })
+
+      setCards(mergedCards)
+      toast.success('Cards merged successfully')
+    } catch (error) {
+      console.error('Error merging cards:', error)
+      toast.error('Failed to merge cards')
+    }
+  }
+
+  const handleMergeCardsClick = () => {
+    const emailCounts = cards.reduce((acc, card) => {
+      acc[card.email] = (acc[card.email] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+    
+    const mergeableCards = Object.values(emailCounts).filter(count => count > 1).length
+    setMergeableCount(mergeableCards)
+    setShowMergeConfirmDialog(true)
+  }
+
+  // Add these helper functions
+  const uniqueCompanies = Array.from(new Set(cards.map(card => card.company))).filter(Boolean)
+  const uniquePositions = Array.from(new Set(cards.map(card => card.position))).filter(Boolean)
 
   // Wrap the return with ErrorBoundary
   return (
@@ -354,28 +513,134 @@ export default function Component() {
                         className="pl-10 py-2 text-sm rounded-md w-full"
                       />
                     </div>
-                    <Select value={viewMode} onValueChange={setViewMode}>
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue>
-                          {viewMode === 'grid' ? 'Grid View' : 'List View'}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="grid">Grid View</SelectItem>
-                        <SelectItem value="list">List View</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center space-x-1 border-r pr-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="flex items-center gap-2 px-3"
+                          onClick={handleDownloadCSV}
+                          title="Download CSV"
+                        >
+                          <Download className="h-4 w-4" />
+                          CSV
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center space-x-1 border-r pr-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="flex items-center gap-2 px-3"
+                          onClick={handleRemoveDuplicatesClick}
+                          title="Remove Duplicates"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Remove
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="flex items-center gap-2 px-3"
+                          onClick={handleMergeCardsClick}
+                          title="Merge Similar Cards"
+                        >
+                          <Merge className="h-4 w-4" />
+                          Merge
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center space-x-1 border-r pr-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="flex items-center gap-2 px-3"
+                          onClick={() => setShowFilterDialog(true)}
+                          title="Filter Cards"
+                        >
+                          <Filter className="h-4 w-4" />
+                          Filter
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="flex items-center gap-2 px-3"
+                          onClick={() => setShowSortDialog(true)}
+                          title="Sort Cards"
+                        >
+                          <SortAsc className="h-4 w-4" />
+                          Sort
+                        </Button>
+                      </div>
+
+                      <Select value={viewMode} onValueChange={setViewMode}>
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue>
+                            {viewMode === 'grid' ? 'Grid View' : 'List View'}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="grid">Grid View</SelectItem>
+                          <SelectItem value="list">List View</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <GridView 
-                    data={cards.filter(card =>
-                      card.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      card.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      card.position.toLowerCase().includes(searchTerm.toLowerCase())
-                    )} 
-                    onCardClick={handleCardClick}
-                  />
+                  {viewMode === 'grid' ? (
+                    <GridView 
+                      data={cards
+                        .filter(card => {
+                          const matchesSearch = (
+                            (card.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                            (card.company?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                            (card.position?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                            (card.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+                          )
+                          
+                          const matchesCompany = filterCompany === 'all' || card.company === filterCompany
+                          const matchesPosition = filterPosition === 'all' || card.position === filterPosition
+                          
+                          return matchesSearch && matchesCompany && matchesPosition
+                        })
+                        .sort((a, b) => {
+                          const aValue = (a[sortField] || '').toLowerCase()
+                          const bValue = (b[sortField] || '').toLowerCase()
+                          return sortDirection === 'asc' 
+                            ? aValue.localeCompare(bValue)
+                            : bValue.localeCompare(aValue)
+                        })
+                      }
+                      onCardClick={handleCardClick}
+                    />
+                  ) : (
+                    <ListView
+                      data={cards
+                        .filter(card => {
+                          const matchesSearch = (
+                            (card.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                            (card.company?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                            (card.position?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                            (card.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+                          )
+                          
+                          const matchesCompany = filterCompany === 'all' || card.company === filterCompany
+                          const matchesPosition = filterPosition === 'all' || card.position === filterPosition
+                          
+                          return matchesSearch && matchesCompany && matchesPosition
+                        })
+                        .sort((a, b) => {
+                          const aValue = (a[sortField] || '').toLowerCase()
+                          const bValue = (b[sortField] || '').toLowerCase()
+                          return sortDirection === 'asc' 
+                            ? aValue.localeCompare(bValue)
+                            : bValue.localeCompare(aValue)
+                        })
+                      }
+                      onCardClick={handleCardClick}
+                    />
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -400,20 +665,32 @@ export default function Component() {
         <footer className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-sm z-10">
           <div className="container mx-auto max-w-screen-xl px-4 py-2">
             <nav className="flex justify-between items-center">
-              {navItems.map((item) => (
-                <Button
-                  key={item.value}
-                  variant="ghost"
-                  size="sm"
-                  className={`flex flex-col items-center justify-center p-2 ${
-                    activeView === item.value ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                  onClick={() => setActiveView(item.value)}
-                >
-                  {item.icon}
-                  <span className="text-xs font-medium mt-1">{item.label}</span>
-                </Button>
-              ))}
+              {navItems.map((item, index) => {
+                console.log(`Rendering nav item ${index}:`, item);
+                return (
+                  <Button
+                    key={item.value}
+                    variant="ghost"
+                    size="sm"
+                    className={`
+                      flex flex-col items-center justify-center p-2
+                      min-w-[4rem]
+                      ${activeView === item.value 
+                        ? 'text-primary font-medium' 
+                        : 'text-gray-600 hover:text-gray-900'
+                      }
+                      hover:bg-gray-100
+                      transition-colors
+                    `}
+                    onClick={() => setActiveView(item.value)}
+                  >
+                    <div className="w-6 h-6 mb-1 flex items-center justify-center text-current">
+                      {item.icon}
+                    </div>
+                    <span className="text-xs font-medium">{item.label}</span>
+                  </Button>
+                );
+              })}
             </nav>
           </div>
         </footer>
@@ -426,6 +703,155 @@ export default function Component() {
             </p>
             <Button size="sm" onClick={() => setShowTooltip(false)}>Got it</Button>
           </div>
+        )}
+
+        <div className="fixed top-4 right-4">
+          <Button variant="outline" className="flex items-center gap-2">
+            <ScanIcon className="h-4 w-4" />
+            Test Icon
+          </Button>
+        </div>
+
+        {showFilterDialog && (
+          <Dialog open={showFilterDialog} onOpenChange={setShowFilterDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Filter Cards</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Company</Label>
+                  <Select value={filterCompany} onValueChange={setFilterCompany}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Companies</SelectItem>
+                      {uniqueCompanies.map(company => (
+                        <SelectItem key={company} value={company}>{company}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Position</Label>
+                  <Select value={filterPosition} onValueChange={setFilterPosition}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select position" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Positions</SelectItem>
+                      {uniquePositions.map(position => (
+                        <SelectItem key={position} value={position}>{position}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => {
+                  setFilterCompany('all')
+                  setFilterPosition('all')
+                }}>
+                  Reset
+                </Button>
+                <Button onClick={() => setShowFilterDialog(false)}>Apply</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {showSortDialog && (
+          <Dialog open={showSortDialog} onOpenChange={setShowSortDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Sort Cards</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Sort By</Label>
+                  <Select value={sortField} onValueChange={(value: 'name' | 'company' | 'position') => setSortField(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name">Name</SelectItem>
+                      <SelectItem value="company">Company</SelectItem>
+                      <SelectItem value="position">Position</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Direction</Label>
+                  <Select value={sortDirection} onValueChange={(value: 'asc' | 'desc') => setSortDirection(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="asc">Ascending</SelectItem>
+                      <SelectItem value="desc">Descending</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={() => setShowSortDialog(false)}>Apply</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {showRemoveConfirmDialog && (
+          <Dialog open={showRemoveConfirmDialog} onOpenChange={setShowRemoveConfirmDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Remove Duplicate Cards</DialogTitle>
+                <DialogDescription>
+                  Found {duplicateCount} duplicate business cards. Are you sure you want to remove them?
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowRemoveConfirmDialog(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => {
+                    handleRemoveDuplicates()
+                    setShowRemoveConfirmDialog(false)
+                  }}
+                >
+                  Remove {duplicateCount} Cards
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {showMergeConfirmDialog && (
+          <Dialog open={showMergeConfirmDialog} onOpenChange={setShowMergeConfirmDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Merge Similar Cards</DialogTitle>
+                <DialogDescription>
+                  Found {mergeableCount} groups of cards that can be merged. Merging will combine information from cards with the same email address.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowMergeConfirmDialog(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => {
+                    handleMergeCards()
+                    setShowMergeConfirmDialog(false)
+                  }}
+                >
+                  Merge Cards
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         )}
       </div>
     </ErrorBoundary>
