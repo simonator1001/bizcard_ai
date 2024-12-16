@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { recognizeBusinessCard, preprocessImageForOCR } from '@/lib/ocr-service'
 import { supabase } from '@/lib/supabase-client'
 import { toast } from 'sonner'
+import imageCompression from 'browser-image-compression';
 
 interface BusinessCard {
   id: string
@@ -32,80 +33,120 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
   const [extractedInfo, setExtractedInfo] = useState<Partial<BusinessCard> | null>(null)
   const [showTooltip, setShowTooltip] = useState(true)
   const [processingStatus, setProcessingStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [processingStage, setProcessingStage] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0]
-    if (selectedFile) {
-      setFile(selectedFile)
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPreview(reader.result as string)
-      }
-      reader.readAsDataURL(selectedFile)
-    }
-  }
+  const compressImage = async (file: File): Promise<string> => {
+    console.log('[Compression] Original file size:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
+    
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1800,
+      useWebWorker: true,
+      fileType: 'image/jpeg',
+      initialQuality: 0.8,
+    };
 
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    const droppedFile = event.dataTransfer.files[0]
-    if (droppedFile) {
-      setFile(droppedFile)
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPreview(reader.result as string)
-      }
-      reader.readAsDataURL(droppedFile)
+    try {
+      const compressedFile = await imageCompression(file, options);
+      console.log('[Compression] Compressed file size:', (compressedFile.size / 1024 / 1024).toFixed(2) + 'MB');
+
+      // Convert to base64
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(compressedFile);
+      });
+    } catch (error) {
+      console.error('[Compression] Error compressing image:', error);
+      throw error;
     }
-  }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      try {
+        setFile(selectedFile);
+        const compressedBase64 = await compressImage(selectedFile);
+        setPreview(compressedBase64);
+      } catch (error) {
+        console.error('Error processing file:', error);
+        toast.error('Failed to process image');
+      }
+    }
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const droppedFile = event.dataTransfer.files[0];
+    if (droppedFile) {
+      try {
+        setFile(droppedFile);
+        const compressedBase64 = await compressImage(droppedFile);
+        setPreview(compressedBase64);
+      } catch (error) {
+        console.error('Error processing dropped file:', error);
+        toast.error('Failed to process image');
+      }
+    }
+  };
 
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()
   }
 
   const processImage = async () => {
-    if (!preview) return
-    setIsProcessing(true)
+    if (!preview) return;
+    setIsProcessing(true);
+    setProcessingStage('Starting OCR process...');
     
     try {
-      // Get authenticated user
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
 
-      // Process image with OCR
-      const optimizedImage = await preprocessImageForOCR(preview)
-      const result = await recognizeBusinessCard(optimizedImage)
+      // No need for additional preprocessing since image is already compressed
+      setProcessingStage('Processing image...');
+      const result = await recognizeBusinessCard(preview);
 
-      // Upload image to Supabase Storage
-      const fileName = `${user.id}/${Date.now()}-card.jpg`
+      // Upload the compressed image to Supabase Storage
+      const fileName = `${user.id}/${Date.now()}-card.jpg`;
+      
+      // Convert base64 to blob for upload
+      const base64Response = await fetch(preview);
+      const blob = await base64Response.blob();
+      
+      setProcessingStage('Uploading to storage...');
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('business-cards')
-        .upload(fileName, file!, {
+        .upload(fileName, blob, {
           contentType: 'image/jpeg',
           upsert: true
-        })
+        });
 
-      if (uploadError) throw uploadError
+      if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('business-cards')
-        .getPublicUrl(fileName)
+        .getPublicUrl(fileName);
 
+      setProcessingStage('Finalizing...');
       setExtractedInfo({
         ...result,
         imageUrl: publicUrl
-      })
-      setProcessingStatus('success')
+      });
+      setProcessingStatus('success');
     } catch (error) {
-      console.error('Error processing image:', error)
-      setProcessingStatus('error')
-      toast.error('Failed to process image')
+      console.error('Error processing image:', error);
+      setProcessingStatus('error');
+      toast.error('Failed to process image');
     } finally {
-      setIsProcessing(false)
-      setTimeout(() => setProcessingStatus('idle'), 3000)
+      setProcessingStage('');
+      setIsProcessing(false);
+      setTimeout(() => setProcessingStatus('idle'), 3000);
     }
-  }
+  };
 
   const handleSave = () => {
     if (extractedInfo) {
@@ -123,6 +164,43 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     setProcessingStatus('idle')
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
+    }
+  }
+
+  const testOCR = async () => {
+    if (!preview) {
+      toast.error('Please upload an image first')
+      return
+    }
+
+    setIsProcessing(true)
+    try {
+      console.log('[Test] Starting OCR test...')
+      
+      const response = await fetch('/api/test-ocr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageBase64: preview
+        })
+      })
+
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || 'OCR test failed')
+      }
+
+      console.log('[Test] OCR test result:', result)
+      toast.success('OCR test completed successfully')
+
+    } catch (error) {
+      console.error('[Test] OCR test error:', error)
+      toast.error('OCR test failed: ' + error.message)
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -188,25 +266,35 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
             </motion.div>
 
             {file && !extractedInfo && (
-              <Button 
-                className="mt-6 w-full" 
-                onClick={processImage}
-                disabled={isProcessing}
-              >
-                {isProcessing ? (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex items-center"
-                  >
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </motion.div>
-                ) : (
-                  'Extract Information'
-                )}
-              </Button>
+              <div className="space-y-4 mt-6">
+                <Button 
+                  className="w-full" 
+                  onClick={processImage}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex flex-col items-center"
+                    >
+                      <Loader2 className="mb-2 h-4 w-4 animate-spin" />
+                      <span className="text-sm">{processingStage}</span>
+                    </motion.div>
+                  ) : (
+                    'Extract Information'
+                  )}
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="w-full" 
+                  onClick={testOCR}
+                  disabled={isProcessing}
+                >
+                  Test OCR API
+                </Button>
+              </div>
             )}
 
             <AnimatePresence>

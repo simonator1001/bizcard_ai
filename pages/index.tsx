@@ -62,13 +62,19 @@ import { mockNewsData } from '@/lib/mock-data'
 interface BusinessCard {
   id: string
   name: string
+  name_zh: string
   company: string
-  position: string
+  company_zh: string
+  title: string
+  title_zh: string
   email: string
   phone: string
+  address: string
+  address_zh: string
   description: string
   imageUrl: string
-  reportsTo?: string
+  created_at: string
+  updated_at: string
 }
 
 // Add error boundary component
@@ -114,7 +120,7 @@ export default function Component() {
   // Add these state variables
   const [showFilterDialog, setShowFilterDialog] = useState(false)
   const [showSortDialog, setShowSortDialog] = useState(false)
-  const [sortField, setSortField] = useState<'name' | 'company' | 'position'>('name')
+  const [sortField, setSortField] = useState<'name' | 'company' | 'position' | 'createdAt'>('name')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [filterCompany, setFilterCompany] = useState('all')
   const [filterPosition, setFilterPosition] = useState('all')
@@ -152,13 +158,19 @@ export default function Component() {
                 setCards(prevCards => [...prevCards, {
                   id: payload.new.id,
                   name: payload.new.name,
+                  name_zh: payload.new.name_zh,
                   company: payload.new.company,
-                  position: payload.new.position,
+                  company_zh: payload.new.company_zh,
+                  title: payload.new.title,
+                  title_zh: payload.new.title_zh,
                   email: payload.new.email,
                   phone: payload.new.phone,
-                  description: payload.new.description,
+                  address: payload.new.address,
+                  address_zh: payload.new.address_zh,
+                  description: payload.new.notes,
                   imageUrl: payload.new.image_url,
-                  reportsTo: payload.new.reports_to
+                  created_at: payload.new.created_at,
+                  updated_at: payload.new.updated_at
                 }])
               }
               break
@@ -169,13 +181,19 @@ export default function Component() {
                   card.id === payload.new.id ? {
                     ...card,
                     name: payload.new.name,
+                    name_zh: payload.new.name_zh,
                     company: payload.new.company,
-                    position: payload.new.position,
+                    company_zh: payload.new.company_zh,
+                    title: payload.new.title,
+                    title_zh: payload.new.title_zh,
                     email: payload.new.email,
                     phone: payload.new.phone,
-                    description: payload.new.description,
+                    address: payload.new.address,
+                    address_zh: payload.new.address_zh,
+                    description: payload.new.notes,
                     imageUrl: payload.new.image_url,
-                    reportsTo: payload.new.reports_to
+                    created_at: payload.new.created_at,
+                    updated_at: payload.new.updated_at
                   } : card
                 ))
               }
@@ -212,14 +230,20 @@ export default function Component() {
       if (cards) {
         setCards(cards.map(card => ({
           id: card.id,
-          name: card.name,
-          company: card.company,
-          position: card.position,
-          email: card.email,
-          phone: card.phone,
-          description: card.description,
-          imageUrl: card.image_url,
-          reportsTo: card.reports_to
+          name: card.name || '',
+          name_zh: card.name_zh || '',
+          company: card.company || '',
+          company_zh: card.company_zh || '',
+          title: card.title || '',
+          title_zh: card.title_zh || '',
+          email: card.email || '',
+          phone: card.phone || '',
+          address: card.address || '',
+          address_zh: card.address_zh || '',
+          description: card.notes || '',
+          imageUrl: card.image_url || '',
+          created_at: card.created_at,
+          updated_at: card.updated_at
         })))
       }
     } catch (error) {
@@ -259,12 +283,17 @@ export default function Component() {
         .from('business_cards')
         .update({
           name: updatedCard.name,
+          name_zh: updatedCard.name_zh,
           company: updatedCard.company,
-          position: updatedCard.position,
+          company_zh: updatedCard.company_zh,
+          title: updatedCard.title,
+          title_zh: updatedCard.title_zh,
           email: updatedCard.email,
           phone: updatedCard.phone,
+          address: updatedCard.address,
+          address_zh: updatedCard.address_zh,
           description: updatedCard.description,
-          reports_to: updatedCard.reportsTo
+          updated_at: new Date().toISOString()
         })
         .eq('id', updatedCard.id)
 
@@ -304,10 +333,15 @@ export default function Component() {
     const sanitizedCard = {
       ...newCard,
       name: newCard.name || '',
+      name_zh: newCard.name_zh || '',
       company: newCard.company || '',
-      position: newCard.position || '',
+      company_zh: newCard.company_zh || '',
+      title: newCard.title || '',
+      title_zh: newCard.title_zh || '',
       email: newCard.email || '',
       phone: newCard.phone || '',
+      address: newCard.address || '',
+      address_zh: newCard.address_zh || '',
       description: newCard.description || '',
       imageUrl: newCard.imageUrl || ''
     }
@@ -325,13 +359,19 @@ export default function Component() {
         .insert({
           user_id: user.id,
           name: sanitizedCard.name,
+          name_zh: sanitizedCard.name_zh,
           company: sanitizedCard.company,
-          position: sanitizedCard.position,
+          company_zh: sanitizedCard.company_zh,
+          title: sanitizedCard.title,
+          title_zh: sanitizedCard.title_zh,
           email: sanitizedCard.email,
           phone: sanitizedCard.phone,
+          address: sanitizedCard.address,
+          address_zh: sanitizedCard.address_zh,
           description: sanitizedCard.description,
           image_url: sanitizedCard.imageUrl,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .select()
         .single()
@@ -369,26 +409,16 @@ export default function Component() {
     { icon: <SettingsIcon className="h-6 w-6" />, label: "Settings", value: "settings" },
   ]
 
-  // Add this before the return statement
-  console.log('Available Icons:', {
-    ScanIcon,
-    LayoutGridIcon,
-    NetworkIcon,
-    NewspaperIcon,
-    StarIcon,
-    SettingsIcon
-  })
-
   // Add these handler functions
   const handleDownloadCSV = () => {
     try {
       const csvData = cards.map(card => ({
         Name: card.name,
-        Name_EN: card.name_en,
+        Name_EN: card.name_zh,
         Company: card.company,
-        Company_EN: card.company_en,
-        Position: card.position,
-        Position_EN: card.position_en,
+        Company_EN: card.company_zh,
+        Position: card.title,
+        Position_EN: card.title_zh,
         Email: card.email,
         Phone: card.phone,
       }))
@@ -455,11 +485,11 @@ export default function Component() {
         return cardGroup.reduce((merged, current) => ({
           ...merged,
           name: merged.name || current.name,
-          name_en: merged.name_en || current.name_en,
+          name_zh: merged.name_zh || current.name_zh,
           company: merged.company || current.company,
-          company_en: merged.company_en || current.company_en,
-          position: merged.position || current.position,
-          position_en: merged.position_en || current.position_en,
+          company_zh: merged.company_zh || current.company_zh,
+          title: merged.title || current.title,
+          title_zh: merged.title_zh || current.title_zh,
           phone: merged.phone || current.phone,
           description: merged.description || current.description,
         }))
@@ -486,7 +516,7 @@ export default function Component() {
 
   // Add these helper functions
   const uniqueCompanies = Array.from(new Set(cards.map(card => card.company))).filter(Boolean)
-  const uniquePositions = Array.from(new Set(cards.map(card => card.position))).filter(Boolean)
+  const uniquePositions = Array.from(new Set(cards.map(card => card.title))).filter(Boolean)
 
   // Wrap the return with ErrorBoundary
   return (
@@ -595,21 +625,26 @@ export default function Component() {
                           const matchesSearch = (
                             (card.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                             (card.company?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                            (card.position?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                            (card.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                             (card.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
                           )
                           
                           const matchesCompany = filterCompany === 'all' || card.company === filterCompany
-                          const matchesPosition = filterPosition === 'all' || card.position === filterPosition
+                          const matchesPosition = filterPosition === 'all' || card.title === filterPosition
                           
                           return matchesSearch && matchesCompany && matchesPosition
                         })
                         .sort((a, b) => {
-                          const aValue = (a[sortField] || '').toLowerCase()
-                          const bValue = (b[sortField] || '').toLowerCase()
+                          if (sortField === 'createdAt') {
+                            const dateA = new Date(a.created_at || 0).getTime();
+                            const dateB = new Date(b.created_at || 0).getTime();
+                            return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+                          }
+                          const aValue = (a[sortField] || '').toLowerCase();
+                          const bValue = (b[sortField] || '').toLowerCase();
                           return sortDirection === 'asc' 
                             ? aValue.localeCompare(bValue)
-                            : bValue.localeCompare(aValue)
+                            : bValue.localeCompare(aValue);
                         })
                       }
                       onCardClick={handleCardClick}
@@ -621,21 +656,26 @@ export default function Component() {
                           const matchesSearch = (
                             (card.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                             (card.company?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                            (card.position?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                            (card.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                             (card.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
                           )
                           
                           const matchesCompany = filterCompany === 'all' || card.company === filterCompany
-                          const matchesPosition = filterPosition === 'all' || card.position === filterPosition
+                          const matchesPosition = filterPosition === 'all' || card.title === filterPosition
                           
                           return matchesSearch && matchesCompany && matchesPosition
                         })
                         .sort((a, b) => {
-                          const aValue = (a[sortField] || '').toLowerCase()
-                          const bValue = (b[sortField] || '').toLowerCase()
+                          if (sortField === 'createdAt') {
+                            const dateA = new Date(a.created_at || 0).getTime();
+                            const dateB = new Date(b.created_at || 0).getTime();
+                            return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+                          }
+                          const aValue = (a[sortField] || '').toLowerCase();
+                          const bValue = (b[sortField] || '').toLowerCase();
                           return sortDirection === 'asc' 
                             ? aValue.localeCompare(bValue)
-                            : bValue.localeCompare(aValue)
+                            : bValue.localeCompare(aValue);
                         })
                       }
                       onCardClick={handleCardClick}
@@ -666,7 +706,6 @@ export default function Component() {
           <div className="container mx-auto max-w-screen-xl px-4 py-2">
             <nav className="flex justify-between items-center">
               {navItems.map((item, index) => {
-                console.log(`Rendering nav item ${index}:`, item);
                 return (
                   <Button
                     key={item.value}
@@ -704,13 +743,6 @@ export default function Component() {
             <Button size="sm" onClick={() => setShowTooltip(false)}>Got it</Button>
           </div>
         )}
-
-        <div className="fixed top-4 right-4">
-          <Button variant="outline" className="flex items-center gap-2">
-            <ScanIcon className="h-4 w-4" />
-            Test Icon
-          </Button>
-        </div>
 
         {showFilterDialog && (
           <Dialog open={showFilterDialog} onOpenChange={setShowFilterDialog}>
@@ -770,7 +802,7 @@ export default function Component() {
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label>Sort By</Label>
-                  <Select value={sortField} onValueChange={(value: 'name' | 'company' | 'position') => setSortField(value)}>
+                  <Select value={sortField} onValueChange={(value: 'name' | 'company' | 'position' | 'createdAt') => setSortField(value)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -778,6 +810,7 @@ export default function Component() {
                       <SelectItem value="name">Name</SelectItem>
                       <SelectItem value="company">Company</SelectItem>
                       <SelectItem value="position">Position</SelectItem>
+                      <SelectItem value="createdAt">Date Added</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

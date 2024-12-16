@@ -4,24 +4,24 @@ import { TOGETHER_API_KEY, VISION_MODEL } from './ocr-config';
 interface OCRResponse {
   words_result: {
     NAME?: { words: string };
-    NAME_EN?: { words: string };
+    NAME_ZH?: { words: string };
     TITLE?: { words: string };
-    TITLE_EN?: { words: string };
+    TITLE_ZH?: { words: string };
     COMPANY?: { words: string };
-    COMPANY_EN?: { words: string };
+    COMPANY_ZH?: { words: string };
     EMAIL?: { words: string };
     MOBILE?: { words: string };
     ADDR?: { words: string };
-    ADDR_EN?: { words: string };
+    ADDR_ZH?: { words: string };
   };
   raw_text?: string;
 }
 
 // Constants for retry logic
 const MAX_RETRIES = 3;
-const INITIAL_DELAY = 1000;
-const MAX_DELAY = 10000;
-const TIMEOUT = 30000;
+const INITIAL_DELAY = 2000;
+const MAX_DELAY = 15000;
+const TIMEOUT = 60000;
 
 // Create a stable axios instance with proper configuration
 const axiosInstance = axios.create({
@@ -31,9 +31,20 @@ const axiosInstance = axios.create({
     'Authorization': `Bearer ${TOGETHER_API_KEY}`,
     'Content-Type': 'application/json',
   },
+  // Increase maxContentLength and maxBodyLength
+  maxContentLength: Infinity,
+  maxBodyLength: Infinity,
   // Important: Enable keep-alive to maintain connection
-  httpAgent: new (require('http')).Agent({ keepAlive: true }),
-  httpsAgent: new (require('https')).Agent({ keepAlive: true }),
+  httpAgent: new (require('http')).Agent({ 
+    keepAlive: true,
+    timeout: TIMEOUT,
+    keepAliveMsecs: 3000
+  }),
+  httpsAgent: new (require('https')).Agent({ 
+    keepAlive: true,
+    timeout: TIMEOUT,
+    keepAliveMsecs: 3000
+  }),
 });
 
 // Add request interceptor for logging
@@ -199,15 +210,26 @@ export async function recognizeBusinessCard(imageBase64: string): Promise<OCRRes
   
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      console.log(`Attempt ${attempt + 1}: Starting OCR request...`);
+      console.log(`[OCR] Attempt ${attempt + 1}: Starting OCR request...`);
       
-      const base64Data = imageBase64.split(',')[1];
+      // Validate and clean the base64 string
+      const base64Data = imageBase64.includes('base64,') 
+        ? imageBase64.split('base64,')[1] 
+        : imageBase64;
+
+      const sizeInBytes = Math.ceil((base64Data.length * 3) / 4);
+      console.log(`[OCR] Image size: ${(sizeInBytes / 1024 / 1024).toFixed(2)}MB`);
+
+      // Add request ID for tracking
+      const requestId = Date.now().toString();
+      console.log(`[OCR] Request ID: ${requestId}`);
+
       const requestBody = {
         model: VISION_MODEL,
         messages: [
           {
             role: "system",
-            content: "You are a business card OCR system. Extract text and return ONLY a valid JSON object."
+            content: "You are a business card OCR system specialized in handling both Chinese and English text. Extract text and return ONLY a valid JSON object with both languages when available."
           },
           {
             role: "user",
@@ -233,11 +255,15 @@ export async function recognizeBusinessCard(imageBase64: string): Promise<OCRRes
                     "email": "Email",
                     "address": {
                       "chinese": "中文地址",
-                      "english": "Address"
+                      "english": "English Address"
                     }
                   }
                 }
-                IMPORTANT: Return ONLY the JSON object above, no other text.`
+                IMPORTANT: 
+                1. Return ONLY the JSON object above, no other text
+                2. Preserve all Chinese characters exactly as shown
+                3. Separate Chinese and English text when both are present
+                4. Keep original formatting and spacing`
               },
               {
                 type: "image_url",
@@ -248,37 +274,88 @@ export async function recognizeBusinessCard(imageBase64: string): Promise<OCRRes
             ]
           }
         ],
-        max_tokens: 1000,
-        temperature: 0
+        max_tokens: 1500,
+        temperature: 0,
+        request_id: requestId,
+        stream: false, // Explicitly disable streaming
       };
 
-      const response = await axiosInstance.post('/v1/chat/completions', requestBody);
+      console.log(`[OCR] Making API request to ${VISION_MODEL}`);
+      console.time(`OCR Request ${requestId}`);
+      
+      let response;
+      try {
+        response = await axiosInstance.post('/v1/chat/completions', requestBody, {
+          timeout: TIMEOUT,
+          onUploadProgress: (progressEvent) => {
+            console.log(`[OCR] Upload progress: ${Math.round((progressEvent.loaded * 100) / progressEvent.total)}%`);
+          },
+          validateStatus: (status) => status < 500, // Don't reject if status < 500
+        });
+        
+        console.timeEnd(`OCR Request ${requestId}`);
+        console.log(`[OCR] Response status: ${response.status}`);
+
+        // Check for rate limiting
+        if (response.status === 429) {
+          const retryAfter = parseInt(response.headers['retry-after'] || '5');
+          console.log(`[OCR] Rate limited. Waiting ${retryAfter} seconds...`);
+          await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+          throw new Error('Rate limited');
+        }
+
+        // Check for other error responses
+        if (response.status !== 200) {
+          console.error('[OCR] API Error Response:', response.data);
+          throw new Error(`API returned status ${response.status}`);
+        }
+
+      } catch (error: any) {
+        if (error.code === 'ECONNABORTED') {
+          console.log('[OCR] Request timed out, will retry with increased timeout');
+          axiosInstance.defaults.timeout = axiosInstance.defaults.timeout * 1.5;
+        }
+        throw error;
+      }
+
+      if (!response.data?.choices?.[0]?.message?.content) {
+        throw new Error('Invalid API response structure');
+      }
+
       const extractedText = response.data.choices[0].message.content.trim();
-      console.log(`Attempt ${attempt + 1}: Raw response:`, extractedText);
+      console.log(`[OCR] Raw response:`, extractedText);
+
+      // Validate JSON structure
+      try {
+        JSON.parse(extractedText);
+      } catch (e) {
+        console.error('[OCR] Invalid JSON response:', extractedText);
+        throw new Error('Invalid JSON response from API');
+      }
 
       // Clean and parse the response
       const cleanedJson = cleanOCRResponse(extractedText);
-      console.log(`Attempt ${attempt + 1}: Cleaned JSON:`, cleanedJson);
+      console.log(`[OCR] Cleaned JSON:`, cleanedJson);
       
       const parsedJson = JSON.parse(cleanedJson);
-      console.log(`Attempt ${attempt + 1}: Parsed JSON:`, parsedJson);
+      console.log(`[OCR] Parsed JSON:`, parsedJson);
 
       // Map to our format
       const result: OCRResponse = {
         words_result: {
           NAME: { words: parsedJson.name?.chinese || '' },
-          NAME_EN: { words: parsedJson.name?.english || '' },
-          TITLE: { words: parsedJson.title?.chinese || '' },
-          TITLE_EN: { words: parsedJson.title?.english || '' },
-          COMPANY: { words: parsedJson.company?.chinese || '' },
-          COMPANY_EN: { words: parsedJson.company?.english || '' },
+          NAME_ZH: { words: parsedJson.name?.chinese || '' },
+          TITLE: { words: parsedJson.title?.english || '' },
+          TITLE_ZH: { words: parsedJson.title?.chinese || '' },
+          COMPANY: { words: parsedJson.company?.english || '' },
+          COMPANY_ZH: { words: parsedJson.company?.chinese || '' },
           EMAIL: { words: parsedJson.contact?.email || '' },
           MOBILE: { words: Array.isArray(parsedJson.contact?.phone) 
             ? parsedJson.contact.phone.join(', ') 
             : parsedJson.contact?.phone || '' 
           },
-          ADDR: { words: parsedJson.contact?.address?.chinese || '' },
-          ADDR_EN: { words: parsedJson.contact?.address?.english || '' }
+          ADDR: { words: parsedJson.contact?.address?.english || '' },
+          ADDR_ZH: { words: parsedJson.contact?.address?.chinese || '' }
         },
         raw_text: cleanedJson
       };
@@ -291,16 +368,21 @@ export async function recognizeBusinessCard(imageBase64: string): Promise<OCRRes
 
       return result;
 
-    } catch (error) {
-      lastError = error as Error;
-      console.error(`Attempt ${attempt + 1} failed:`, error);
+    } catch (error: any) {
+      lastError = error;
+      console.error(`[OCR] Attempt ${attempt + 1} failed:`, {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status
+      });
 
       if (attempt === MAX_RETRIES - 1) {
-        throw new Error(`Failed after ${MAX_RETRIES} attempts. Last error: ${lastError.message}`);
+        throw new Error(`OCR failed after ${MAX_RETRIES} attempts. Last error: ${lastError.message}`);
       }
 
-      // Wait before retrying
       const delay = Math.min(INITIAL_DELAY * Math.pow(2, attempt), MAX_DELAY);
+      console.log(`[OCR] Waiting ${delay}ms before retry...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
