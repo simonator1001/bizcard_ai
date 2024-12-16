@@ -10,12 +10,19 @@ import { motion, AnimatePresence } from 'framer-motion'
 interface BusinessCard {
   id: string
   name: string
+  name_zh: string
   company: string
-  position: string
+  company_zh: string
+  title: string
+  title_zh: string
   email: string
   phone: string
-  description: string
+  address: string
+  address_zh: string
   imageUrl: string
+  notes: string
+  created_at: string
+  updated_at: string
 }
 
 interface CardDetailViewProps {
@@ -114,7 +121,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
             <Input
               id="position"
               name="position"
-              value={editedCard.position}
+              value={editedCard.title}
               onChange={handleInputChange}
               className="col-span-3"
               readOnly={!isEditing}
@@ -147,15 +154,16 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="description" className="text-right">
-              Description
+            <Label htmlFor="notes" className="text-right">
+              Remarks
             </Label>
             <Textarea
-              id="description"
-              name="description"
-              value={editedCard.description}
+              id="notes"
+              name="notes"
+              value={editedCard.notes}
               onChange={handleInputChange}
               className="col-span-3"
+              rows={3}
               readOnly={!isEditing}
             />
           </div>

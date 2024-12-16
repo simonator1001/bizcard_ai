@@ -14,17 +14,109 @@ import imageCompression from 'browser-image-compression';
 interface BusinessCard {
   id: string
   name: string
+  name_zh: string
   company: string
-  position: string
+  company_zh: string
+  title: string
+  title_zh: string
   email: string
   phone: string
-  description: string
+  address: string
+  address_zh: string
   imageUrl: string
+  notes: string
+  created_at: string
+  updated_at: string
 }
 
 interface ScanPageProps {
   onAddCard: (card: BusinessCard) => void
 }
+
+// Add this interface for the database record
+interface BusinessCardRecord {
+  user_id: string
+  name: string
+  name_zh: string
+  company: string
+  company_zh: string
+  title: string
+  title_zh: string
+  email: string
+  phone: string
+  address: string
+  address_zh: string
+  image_url: string
+  notes: string
+  created_at?: string
+  updated_at?: string
+}
+
+// Add this function to map OCR result to database record
+const mapOCRToRecord = (
+  result: any, 
+  userId: string, 
+  imageUrl: string
+): BusinessCardRecord => {
+  const record = {
+    user_id: userId,
+    name: result.words_result.NAME?.words || '',
+    name_zh: result.words_result.NAME_ZH?.words || '',
+    company: result.words_result.COMPANY?.words || '',
+    company_zh: result.words_result.COMPANY_ZH?.words || '',
+    title: result.words_result.TITLE?.words || '',
+    title_zh: result.words_result.TITLE_ZH?.words || '',
+    email: result.words_result.EMAIL?.words || '',
+    phone: result.words_result.MOBILE?.words || '',
+    address: result.words_result.ADDR?.words || '',
+    address_zh: result.words_result.ADDR_ZH?.words || '',
+    image_url: imageUrl,
+    notes: result.raw_text || ''
+  };
+
+  console.log('[OCR] Mapped record:', record);
+  return record;
+};
+
+// Add this function to save to database
+const saveToDatabase = async (record: BusinessCardRecord): Promise<string> => {
+  try {
+    // Create a clean record object with only the fields we want to save
+    const dbRecord = {
+      user_id: record.user_id,
+      name: record.name,
+      name_zh: record.name_zh,
+      company: record.company,
+      company_zh: record.company_zh,
+      title: record.title,
+      title_zh: record.title_zh,
+      email: record.email,
+      phone: record.phone,
+      address: record.address,
+      address_zh: record.address_zh,
+      image_url: record.image_url,
+      notes: record.notes
+    };
+
+    console.log('[Database] Saving record:', dbRecord);
+
+    const { data, error } = await supabase
+      .from('business_cards')
+      .insert(dbRecord)
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('[Database] Error details:', error);
+      throw error;
+    }
+
+    return data.id;
+  } catch (error) {
+    console.error('[Database] Error saving to database:', error);
+    throw error;
+  }
+};
 
 export function ScanPage({ onAddCard }: ScanPageProps) {
   const [file, setFile] = useState<File | null>(null)
@@ -35,6 +127,11 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
   const [processingStatus, setProcessingStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [processingStage, setProcessingStage] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Add state for bulk upload progress
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [totalFiles, setTotalFiles] = useState<number>(0);
+  const [processedFiles, setProcessedFiles] = useState<number>(0);
 
   const compressImage = async (file: File): Promise<string> => {
     console.log('[Compression] Original file size:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
@@ -65,30 +162,87 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0];
-    if (selectedFile) {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      setTotalFiles(files.length);
+      setProcessedFiles(0);
+      
       try {
-        setFile(selectedFile);
-        const compressedBase64 = await compressImage(selectedFile);
-        setPreview(compressedBase64);
+        // Convert FileList to Array
+        const fileArray = Array.from(files);
+        
+        // Process files sequentially
+        for (let i = 0; i < fileArray.length; i++) {
+          const file = fileArray[i];
+          setFile(file);
+          
+          // Compress and get base64
+          const compressedBase64 = await compressImage(file);
+          setPreview(compressedBase64);
+          
+          // Process image
+          await processImage(compressedBase64);
+          
+          // Update progress
+          setProcessedFiles(i + 1);
+          setUploadProgress(((i + 1) / fileArray.length) * 100);
+        }
+        
+        // Clear states after all files are processed
+        setFile(null);
+        setPreview(null);
+        setExtractedInfo(null);
+        toast.success(`Successfully processed ${fileArray.length} business cards`);
+        
       } catch (error) {
-        console.error('Error processing file:', error);
-        toast.error('Failed to process image');
+        console.error('Error processing files:', error);
+        toast.error('Failed to process some images');
+      } finally {
+        setTotalFiles(0);
+        setProcessedFiles(0);
+        setUploadProgress(0);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       }
     }
   };
 
   const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    const droppedFile = event.dataTransfer.files[0];
-    if (droppedFile) {
+    const files = event.dataTransfer.files;
+    if (files && files.length > 0) {
+      setTotalFiles(files.length);
+      setProcessedFiles(0);
+      
       try {
-        setFile(droppedFile);
-        const compressedBase64 = await compressImage(droppedFile);
-        setPreview(compressedBase64);
+        const fileArray = Array.from(files);
+        
+        for (let i = 0; i < fileArray.length; i++) {
+          const file = fileArray[i];
+          setFile(file);
+          
+          const compressedBase64 = await compressImage(file);
+          setPreview(compressedBase64);
+          
+          await processImage(compressedBase64);
+          
+          setProcessedFiles(i + 1);
+          setUploadProgress(((i + 1) / fileArray.length) * 100);
+        }
+        
+        setFile(null);
+        setPreview(null);
+        setExtractedInfo(null);
+        toast.success(`Successfully processed ${fileArray.length} business cards`);
+        
       } catch (error) {
-        console.error('Error processing dropped file:', error);
-        toast.error('Failed to process image');
+        console.error('Error processing dropped files:', error);
+        toast.error('Failed to process some images');
+      } finally {
+        setTotalFiles(0);
+        setProcessedFiles(0);
+        setUploadProgress(0);
       }
     }
   };
@@ -97,27 +251,30 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     event.preventDefault()
   }
 
-  const processImage = async () => {
-    if (!preview) return;
+  const processImage = async (base64Image: string) => {
+    if (!base64Image) return;
     setIsProcessing(true);
     setProcessingStage('Starting OCR process...');
     
     try {
+      // Log the current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
+      console.log('[Process] Current user:', user.id);
 
-      // No need for additional preprocessing since image is already compressed
+      // Process image with OCR
       setProcessingStage('Processing image...');
-      const result = await recognizeBusinessCard(preview);
+      const result = await recognizeBusinessCard(base64Image);
+      console.log('[Process] OCR result:', result);
 
-      // Upload the compressed image to Supabase Storage
+      // Upload image to storage
+      setProcessingStage('Uploading to storage...');
       const fileName = `${user.id}/${Date.now()}-card.jpg`;
       
       // Convert base64 to blob for upload
-      const base64Response = await fetch(preview);
+      const base64Response = await fetch(base64Image);
       const blob = await base64Response.blob();
       
-      setProcessingStage('Uploading to storage...');
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('business-cards')
         .upload(fileName, blob, {
@@ -127,35 +284,58 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
 
       if (uploadError) throw uploadError;
 
+      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('business-cards')
         .getPublicUrl(fileName);
 
+      // Map OCR result to database record
+      setProcessingStage('Saving to database...');
+      const record = mapOCRToRecord(result, user.id, publicUrl);
+      
+      // Auto-save to database
+      const savedId = await saveToDatabase(record);
+      
+      // Update UI
       setProcessingStage('Finalizing...');
       setExtractedInfo({
+        id: savedId,
         ...result,
         imageUrl: publicUrl
       });
+      
       setProcessingStatus('success');
+      toast.success('Business card saved successfully');
+      
+      // Notify parent component
+      onAddCard({
+        id: savedId,
+        name: record.name,
+        name_zh: record.name_zh,
+        company: record.company,
+        company_zh: record.company_zh,
+        title: record.title,
+        title_zh: record.title_zh,
+        email: record.email,
+        phone: record.phone,
+        address: record.address,
+        address_zh: record.address_zh,
+        notes: record.notes,
+        imageUrl: record.image_url,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
     } catch (error) {
       console.error('Error processing image:', error);
       setProcessingStatus('error');
-      toast.error('Failed to process image');
+      toast.error('Failed to process and save business card');
     } finally {
       setProcessingStage('');
       setIsProcessing(false);
       setTimeout(() => setProcessingStatus('idle'), 3000);
     }
   };
-
-  const handleSave = () => {
-    if (extractedInfo) {
-      onAddCard(extractedInfo as BusinessCard)
-      setFile(null)
-      setPreview(null)
-      setExtractedInfo(null)
-    }
-  }
 
   const handleClear = () => {
     setFile(null)
@@ -164,43 +344,6 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     setProcessingStatus('idle')
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
-    }
-  }
-
-  const testOCR = async () => {
-    if (!preview) {
-      toast.error('Please upload an image first')
-      return
-    }
-
-    setIsProcessing(true)
-    try {
-      console.log('[Test] Starting OCR test...')
-      
-      const response = await fetch('/api/test-ocr', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          imageBase64: preview
-        })
-      })
-
-      const result = await response.json()
-      
-      if (!result.success) {
-        throw new Error(result.error || 'OCR test failed')
-      }
-
-      console.log('[Test] OCR test result:', result)
-      toast.success('OCR test completed successfully')
-
-    } catch (error) {
-      console.error('[Test] OCR test error:', error)
-      toast.error('OCR test failed: ' + error.message)
-    } finally {
-      setIsProcessing(false)
     }
   }
 
@@ -260,6 +403,7 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
                   ref={fileInputRef}
                   onChange={handleFileChange}
                   accept="image/*"
+                  multiple
                   className="hidden"
                 />
               </div>
@@ -267,33 +411,30 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
 
             {file && !extractedInfo && (
               <div className="space-y-4 mt-6">
-                <Button 
-                  className="w-full" 
-                  onClick={processImage}
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="flex flex-col items-center"
-                    >
-                      <Loader2 className="mb-2 h-4 w-4 animate-spin" />
-                      <span className="text-sm">{processingStage}</span>
-                    </motion.div>
-                  ) : (
-                    'Extract Information'
-                  )}
-                </Button>
-                <Button 
-                  variant="outline"
-                  className="w-full" 
-                  onClick={testOCR}
-                  disabled={isProcessing}
-                >
-                  Test OCR API
-                </Button>
+                {isProcessing && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex flex-col items-center"
+                  >
+                    <Loader2 className="mb-2 h-4 w-4 animate-spin" />
+                    <span className="text-sm">{processingStage}</span>
+                    {totalFiles > 0 && (
+                      <div className="w-full mt-2">
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div
+                            className="bg-primary h-2.5 rounded-full transition-all duration-300"
+                            style={{ width: `${uploadProgress}%` }}
+                          />
+                        </div>
+                        <p className="text-sm text-gray-600 text-center mt-1">
+                          Processing {processedFiles} of {totalFiles} files
+                        </p>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
               </div>
             )}
 
@@ -320,11 +461,14 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
                 <h3 className="text-xl font-semibold mb-4">Extracted Information</h3>
                 <div className="space-y-4">
                   {Object.entries(extractedInfo).map(([key, value]) => {
-                    if (key !== 'id' && key !== 'imageUrl') {
+                    if (key !== 'id' && key !== 'imageUrl' && key !== 'raw_text') {
+                      const displayLabel = key === 'notes' ? 'Remarks' : 
+                                          key.includes('_zh') ? `${key.replace('_zh', '')} (Chinese)` : 
+                                          key;
                       return (
                         <div key={key} className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor={key} className="text-right capitalize">
-                            {key}
+                            {displayLabel}
                           </Label>
                           <Input
                             id={key}
@@ -338,9 +482,6 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
                     return null
                   })}
                 </div>
-                <Button className="mt-6 w-full" onClick={handleSave}>
-                  Save Business Card
-                </Button>
               </motion.div>
             )}
           </CardContent>
