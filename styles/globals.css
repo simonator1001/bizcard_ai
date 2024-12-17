@@ -86,4 +86,47 @@
 
 .animate-fade-in-up {
   animation: fade-in-up 0.5s ease-out;
+}
+
+.w-\[--trigger-width\] {
+  width: var(--trigger-width);
+}
+
+[cmdk-group] {
+  overflow: hidden;
+  padding: 0;
+}
+
+[cmdk-input] {
+  border: none;
+  width: 100%;
+  font-size: 14px;
+  padding: 8px 16px;
+  outline: none;
+  background: transparent;
+}
+
+[cmdk-item] {
+  content-visibility: auto;
+  padding: 8px 16px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  border-radius: 0;
+}
+
+/* Add these styles */
+.cmd-input {
+  @apply w-full border-none bg-transparent p-2 outline-none;
+}
+
+.cmd-list {
+  @apply max-h-[300px] overflow-y-auto p-0;
+}
+
+.cmd-item {
+  @apply relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground;
 } 

@@ -42,4 +42,31 @@ export const debugAuthToken = async () => {
     const [header, payload, signature] = session.access_token.split('.')
     console.log('JWT Payload:', JSON.parse(atob(payload)))
   }
-} 
+}
+
+export const debugBusinessCards = async () => {
+  const { data, error } = await supabase
+    .from('business_cards')
+    .select(`
+      id,
+      name,
+      title,
+      title_zh,
+      company,
+      company_zh,
+      email,
+      phone,
+      created_at,
+      updated_at
+    `)
+    .order('company', { ascending: true })
+    .order('title', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching business cards:', error);
+    return;
+  }
+
+  console.table(data);
+  return data;
+}; 
