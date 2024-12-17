@@ -1,0 +1,96 @@
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Mail, Phone } from 'lucide-react'
+import { BusinessCard } from '@/types/business-card'
+
+interface BusinessCardDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  card: BusinessCard
+  mode: 'view' | 'edit'
+}
+
+export function BusinessCardDialog({ 
+  open, 
+  onOpenChange, 
+  card,
+  mode 
+}: BusinessCardDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[800px] p-0 bg-white">
+        <div className="flex">
+          {/* Left side - Card Image */}
+          <div className="w-1/2 p-6 border-r border-gray-200">
+            <div className="aspect-[1.586/1] relative bg-gray-100 rounded-lg overflow-hidden">
+              {card.imageUrl ? (
+                <img 
+                  src={card.imageUrl} 
+                  alt={`${card.name}'s business card`}
+                  className="object-cover w-full h-full"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-400">
+                  No image available
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right side - Card Details */}
+          <div className="w-1/2 p-6">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold">Business Card Details</DialogTitle>
+            </DialogHeader>
+            
+            <div className="mt-6 space-y-6">
+              {/* Basic Info */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16 border border-gray-200">
+                    <AvatarImage src={card.imageUrl} alt={card.name} />
+                    <AvatarFallback>{card.name?.substring(0, 2) || 'NA'}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-lg font-semibold">{card.name}</h3>
+                    <p className="text-sm text-gray-500">{card.position}</p>
+                    <p className="text-sm text-gray-500">{card.company}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Info */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-gray-500">Contact Information</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-gray-400" />
+                    <span>{card.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-gray-400" />
+                    <span>{card.phone}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Details */}
+              {card.title && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-gray-500">Title</h4>
+                  <p className="text-sm">{card.title}</p>
+                </div>
+              )}
+              {card.title_zh && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-gray-500">Chinese Title</h4>
+                  <p className="text-sm">{card.title_zh}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+} 

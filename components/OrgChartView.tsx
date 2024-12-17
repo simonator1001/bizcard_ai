@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, memo } from 'react'
+import { useState, useCallback, useEffect, memo, useMemo } from 'react'
 import ReactFlow, { 
   Background, 
   Controls, 
@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { analyzeOrgStructure, testPerplexityAPI } from '@/lib/org-chart-analyzer'
 import { Mail, Phone } from 'lucide-react'
+import { BusinessCardDialog } from '@/components/BusinessCardDialog'
 
 interface BusinessCard {
   id: string
@@ -33,6 +34,14 @@ interface BusinessCard {
   phone: string
   imageUrl?: string
   reportsTo?: string
+}
+
+// Add these styles at the top of the file
+const nodeStyles = {
+  topLevel: 'bg-gradient-to-br from-blue-50 to-blue-100',
+  midLevel: 'bg-gradient-to-br from-purple-50 to-purple-100',
+  staffLevel: 'bg-gradient-to-br from-gray-50 to-gray-100',
+  common: 'transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl'
 }
 
 // Add node sizes based on seniority
@@ -50,88 +59,122 @@ const getNodeSize = (position?: string): string => {
   return 'h-14 w-14' // Default size for other positions
 }
 
+// Update the getNodeStyle function
+const getNodeStyle = (position?: string): string => {
+  if (!position) return nodeStyles.staffLevel;
+  
+  const positionLower = position.toLowerCase();
+  if (positionLower.includes('ceo') || 
+      positionLower.includes('chief') || 
+      positionLower.includes('president') || 
+      positionLower.includes('director')) {
+    return nodeStyles.topLevel;
+  } else if (positionLower.includes('manager') || 
+             positionLower.includes('lead') || 
+             positionLower.includes('head')) {
+    return nodeStyles.midLevel;
+  }
+  return nodeStyles.staffLevel;
+}
+
 // Custom Node Component
 const CustomNode = memo(({ data }: { data: BusinessCard }) => {
   const [showDetails, setShowDetails] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
   
-  console.log('🎯 Rendering node with data:', {
-    name: data.name,
-    position: data.position,
-    title: data.title,
-    title_zh: data.title_zh,
-    data
-  });
-
+  const nodeStyle = getNodeStyle(data.position)
+  const avatarSize = getNodeSize(data.position)
+  
+  // Get the display title (prefer Chinese if available)
+  const displayTitle = data.title_zh || data.title || data.position
+  
   return (
-    <div className="group">
+    <div className="group"
+         onMouseEnter={() => setIsHovered(true)}
+         onMouseLeave={() => setIsHovered(false)}>
       <Handle
         type="target"
         position={Position.Top}
-        id={`target-${data.id}`}
-        style={{ background: '#555' }}
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id={`source-${data.id}`}
-        style={{ background: '#555' }}
+        className="!bg-blue-400 !w-3 !h-3"
+        style={{ transition: 'all 0.3s ease' }}
       />
       
       <motion.div
         whileHover={{ scale: 1.05 }}
-        className="bg-white rounded-lg shadow-md p-4 min-w-[180px] cursor-pointer border border-gray-200"
+        className={`
+          rounded-xl p-4 min-w-[200px] cursor-pointer
+          ${nodeStyle} ${nodeStyles.common}
+          ${isHovered ? 'ring-2 ring-blue-400 ring-opacity-50' : ''}
+        `}
         onClick={() => setShowDetails(true)}
       >
-        <div className="flex items-center space-x-3">
-          <Avatar className={`border border-gray-200 ${getNodeSize(data.position)}`}>
-            <AvatarImage src={data.imageUrl} alt={data.name} />
-            <AvatarFallback>{data.name?.substring(0, 2) || 'NA'}</AvatarFallback>
-          </Avatar>
-          <div>
-            <div className="font-medium text-sm">{data.name || 'Unknown'}</div>
-            <div className="text-xs text-gray-500">{data.position}</div>
+        <div className="flex items-center space-x-4">
+          <div className={`relative ${avatarSize}`}>
+            <Avatar className={`
+              border-2 transition-colors duration-300
+              ${isHovered ? 'border-blue-400' : 'border-gray-200'}
+              ${avatarSize}
+            `}>
+              <AvatarImage src={data.imageUrl} alt={data.name} />
+              <AvatarFallback className="bg-gradient-to-br from-gray-100 to-gray-200">
+                {data.name?.substring(0, 2) || 'NA'}
+              </AvatarFallback>
+            </Avatar>
+            {getPositionIcon(data.position)}
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-gray-900 truncate">
+              {data.name || 'Unknown'}
+            </div>
+            <div className="text-sm text-gray-500 truncate">
+              {data.position}
+            </div>
+            <div className="mt-2 text-xs text-gray-400 truncate">
+              {displayTitle}
+            </div>
           </div>
         </div>
       </motion.div>
 
-      {showDetails && (
-        <Dialog open={showDetails} onOpenChange={setShowDetails}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Business Card Details</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="flex items-start gap-4">
-                <Avatar className="h-20 w-20 border border-gray-200">
-                  <AvatarImage src={data.imageUrl} alt={data.name} />
-                  <AvatarFallback>{data.name[0]}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="text-lg font-semibold">{data.name}</h3>
-                  <p className="text-sm text-gray-500">{data.position}</p>
-                  <p className="text-sm text-gray-500">{data.company}</p>
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4" />
-                  <span>{data.email}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="h-4 w-4" />
-                  <span>{data.phone}</span>
-                </div>
-                {data.description && (
-                  <p className="text-sm mt-2">{data.description}</p>
-                )}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!bg-blue-400 !w-3 !h-3"
+        style={{ transition: 'all 0.3s ease' }}
+      />
+
+      <BusinessCardDialog 
+        open={showDetails}
+        onOpenChange={setShowDetails}
+        card={data}
+        mode="view"
+      />
     </div>
   )
 })
+
+// Helper function to get position icons
+function getPositionIcon(position?: string) {
+  const iconClass = "absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white shadow-md flex items-center justify-center"
+  
+  if (!position) return null;
+  const pos = position.toLowerCase();
+  
+  if (pos.includes('ceo') || pos.includes('chief')) {
+    return <div className={iconClass}>👑</div>
+  }
+  if (pos.includes('director')) {
+    return <div className={iconClass}>🎯</div>
+  }
+  if (pos.includes('manager')) {
+    return <div className={iconClass}>👨‍💼</div>
+  }
+  if (pos.includes('engineer') || pos.includes('developer')) {
+    return <div className={iconClass}>👨‍💻</div>
+  }
+  return null;
+}
 
 CustomNode.displayName = 'CustomNode'
 
@@ -329,267 +372,217 @@ const createHierarchicalLayout = (cards: BusinessCard[]) => {
   return { nodes, edges };
 };
 
+// Add this interface at the top with other interfaces
 interface OrgChartViewProps {
   data: BusinessCard[]
 }
 
 export function OrgChartView({ data }: OrgChartViewProps) {
   const [selectedCompany, setSelectedCompany] = useState<string>('placeholder')
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const companies = Array.from(new Set(data.map(card => {
-    console.log('Processing card company:', card.company);
-    return card.company;
-  }))).filter(Boolean);
+  // Memoize getCompanyCards to prevent unnecessary recreations
+  const getCompanyCards = useCallback((companyName: string) => {
+    if (!companyName || companyName === 'placeholder') {
+      return [];
+    }
 
-  console.log('📋 Available companies:', companies);
-
-  const filteredCompanies = companies.filter(company => 
-    company.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const getCompanyCards = useCallback((company: string) => {
-    console.log('🏢 Getting cards for company:', company);
-    console.log('📊 All available cards:', data);
-    
-    // Case-insensitive company matching
-    const cards = data.filter(card => {
-      const matches = card.company?.toLowerCase() === company.toLowerCase();
-      console.log(`Checking card:`, {
-        cardId: card.id,
-        cardCompany: card.company,
-        selectedCompany: company,
-        matches
+    return data.filter(card => {
+      // Add null checks and logging
+      console.log('Filtering card:', {
+        id: card.id,
+        company: card.company,
+        companyName,
+        matches: card.company?.toLowerCase() === companyName?.toLowerCase()
       });
-      return matches;
+
+      // Safe null check before toLowerCase
+      return card.company && 
+             companyName && 
+             card.company.toLowerCase() === companyName.toLowerCase();
     });
-    
-    console.log(`📇 Found ${cards.length} cards for ${company}:`, cards);
-    return cards;
   }, [data]);
 
-  const updateOrgChart = useCallback(async () => {
-    setError(null);
-    setIsLoading(true);
+  // Memoize companies list
+  const companies = useMemo(() => {
+    // Get unique companies and filter out any null/undefined values
+    const uniqueCompanies = Array.from(new Set(
+      data
+        .map(card => card.company)
+        .filter((company): company is string => !!company) // Type guard to ensure non-null
+    )).sort();
     
-    if (selectedCompany === 'placeholder') {
-      console.log('No company selected, skipping analysis');
-      return;
+    // Apply search filter if there's a query
+    if (!searchQuery) return uniqueCompanies;
+    
+    return uniqueCompanies.filter(company => 
+      company.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [data, searchQuery]);
+
+  // Add the missing updateOrgChart function
+  const updateOrgChart = useCallback(async (company: string) => {
+    if (company === 'placeholder') {
+      setNodes([])
+      setEdges([])
+      return
     }
 
-    console.log('🔄 Starting org chart update for company:', selectedCompany);
-    
-    // Filter cards for selected company
-    const companyCards = data.filter(card => {
-      const matches = card.company === selectedCompany;
-      console.log('Checking card:', {
-        id: card.id,
-        name: card.name,
-        company: card.company,
-        selectedCompany,
-        matches,
-        title: card.title,
-        title_zh: card.title_zh,
-        position: card.position
-      });
-      return matches;
-    });
-
-    if (companyCards.length === 0) {
-      console.warn('⚠️ No cards found for company:', selectedCompany);
-      return;
-    }
+    setIsLoading(true)
+    setError(null)
 
     try {
-      console.log('🤖 Sending to Perplexity for analysis...');
-      const analyzedCards = await analyzeOrgStructure(companyCards);
-      console.log('✅ Analysis results:', analyzedCards);
-
-      const { nodes: newNodes, edges: newEdges } = createFlowElements(analyzedCards, selectedCompany);
+      console.log('🔄 Updating org chart for:', company)
+      const companyCards = getCompanyCards(company)
       
-      setNodes(newNodes);
-      setEdges(newEdges);
-    } catch (error) {
-      console.error('❌ Error in updateOrgChart:', error);
-      setError('Failed to update organization chart');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedCompany, data, setNodes, setEdges]);
+      if (!companyCards.length) {
+        console.log('⚠️ No cards found for company:', company)
+        setError('No data available for this company')
+        return
+      }
 
+      // Analyze relationships
+      const cardsWithRelationships = await analyzeOrgStructure(companyCards)
+      console.log('📊 Cards with relationships:', cardsWithRelationships)
+
+      // Create flow elements using the hierarchical layout
+      const { nodes: newNodes, edges: newEdges } = createHierarchicalLayout(cardsWithRelationships)
+
+      console.log('🎨 Setting flow elements:', { nodes: newNodes, edges: newEdges })
+      setNodes(newNodes)
+      setEdges(newEdges)
+
+    } catch (err) {
+      console.error('❌ Error updating org chart:', err)
+      setError('Failed to generate organization chart')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [getCompanyCards, setNodes, setEdges])
+
+  // Remove the duplicate useEffect
   useEffect(() => {
-    console.log('useEffect triggered with selectedCompany:', selectedCompany);
-    updateOrgChart();
+    if (selectedCompany !== 'placeholder') {
+      updateOrgChart(selectedCompany);
+    }
   }, [selectedCompany, updateOrgChart]);
 
+  // Debug logging
   useEffect(() => {
-    const apiKey = process.env.NEXT_PUBLIC_PERPLEXITY_API_KEY;
-    console.log('Perplexity API Key available:', apiKey ? 'Yes' : 'No');
-    if (!apiKey) {
-      console.warn('No Perplexity API key found in environment variables');
-    }
-  }, []);
-
-  useEffect(() => {
-    console.log('🔄 OrgChartView mounted');
-    console.log('📊 Initial data:', data);
-  }, []);
-
-  useEffect(() => {
-    console.log('📊 Data updated:', {
+    console.log('Component mounted with data:', {
       totalCards: data.length,
-      sampleCard: data[0],
-      companies: Array.from(new Set(data.map(card => card.company))).filter(Boolean)
+      companies: companies,
+      selectedCompany,
     });
-  }, [data]);
-
-  useEffect(() => {
-    async function testAPI() {
-      console.log('🧪 Testing Perplexity API...');
-      const working = await testPerplexityAPI();
-      console.log('🧪 API Test Result:', working ? 'Working' : 'Failed');
-    }
-    testAPI();
-  }, []);
-
-  useEffect(() => {
-    console.log('Raw data from Supabase:', data.map(card => ({
-      id: card.id,
-      name: card.name,
-      title: card.title,       // From Supabase
-      position: card.position, // What's actually used in frontend
-      company: card.company
-    })));
-  }, [data]);
+  }, [data, companies, selectedCompany]);
 
   return (
-    <div className="h-[calc(100vh-280px)]">
-      <div className="p-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">Organization Chart</h2>
-            <div className="space-y-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search companies..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-[280px]"
-                />
-              </div>
-              <Select 
-                value={selectedCompany} 
-                onValueChange={(value) => {
-                  console.log('🏢 Company selected:', value);
-                  setSelectedCompany(value);
-                }}
-              >
-                <SelectTrigger className="w-[280px]">
-                  <SelectValue>
-                    {selectedCompany === 'placeholder' ? 'Select a company' : selectedCompany}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px] overflow-y-auto">
-                  <ScrollArea className="h-[200px]">
-                    <SelectItem value="placeholder">Select a company</SelectItem>
-                    {filteredCompanies.map(company => (
-                      company && (
-                        <SelectItem 
-                          key={company} 
-                          value={company}
-                          className="cursor-pointer hover:bg-accent hover:text-accent-foreground"
-                        >
-                          {company}
-                        </SelectItem>
-                      )
-                    ))}
-                  </ScrollArea>
-                </SelectContent>
-              </Select>
-            </div>
+    <div className="space-y-6">
+      {/* Search and Company Select */}
+      <div className="flex flex-col space-y-4">
+        <div className="flex items-center space-x-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            <Input
+              placeholder="Search companies..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
-
-          <div className="h-[600px] border rounded-lg bg-white">
-            {selectedCompany !== 'placeholder' ? (
-              <ReactFlowProvider>
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mb-4" />
-                      <p>Loading organization chart...</p>
-                    </div>
-                  </div>
-                ) : error ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center text-red-500">
-                      <p>{error}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    nodeTypes={nodeTypes}
-                    fitView
-                    fitViewOptions={{
-                      padding: 1,
-                      minZoom: 0.5,
-                      maxZoom: 1.5,
-                    }}
-                    minZoom={0.2}
-                    maxZoom={1.5}
-                    defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
-                    connectionLineType={ConnectionLineType.SmoothStep}
-                    defaultEdgeOptions={{
-                      type: 'smoothstep',
-                      animated: true,
-                      style: { 
-                        stroke: '#94a3b8', 
-                        strokeWidth: 2,
-                        strokeDasharray: '5,5'  // Add dashed line effect
-                      },
-                      markerEnd: {
-                        type: 'arrowclosed',
-                        width: 20,
-                        height: 20,
-                        color: '#94a3b8',
-                      },
-                    }}
-                    nodesDraggable={false}
-                    nodesConnectable={false}
-                    elementsSelectable={true}
-                  >
-                    <Background color="#f0f0f0" gap={16} variant="dots" />
-                    <Controls />
-                  </ReactFlow>
-                )}
-              </ReactFlowProvider>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex items-center justify-center h-full"
-              >
-                <div className="text-center">
-                  <ChevronDown className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg text-gray-500">
-                    Select a company to view its organization chart
-                  </p>
-                </div>
-              </motion.div>
-            )}
+          <div className="w-[300px]">
+            <Select
+              value={selectedCompany}
+              onValueChange={setSelectedCompany}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a company" />
+              </SelectTrigger>
+              <SelectContent>
+                <ScrollArea className="h-[200px]">
+                  <SelectItem value="placeholder">Select a company</SelectItem>
+                  {companies.map(company => (
+                    company && (
+                      <SelectItem key={company} value={company}>
+                        {company}
+                      </SelectItem>
+                    )
+                  ))}
+                </ScrollArea>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
+
+      {/* Chart Container */}
+      <div className="h-[600px] border rounded-lg bg-white">
+        <ReactFlowProvider>
+          {selectedCompany !== 'placeholder' ? (
+            isLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mb-4" />
+                  <p>Loading organization chart...</p>
+                </div>
+              </div>
+            ) : error ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center text-red-500">
+                  <p>{error}</p>
+                </div>
+              </div>
+            ) : (
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                nodeTypes={nodeTypes}
+                fitView
+                fitViewOptions={{ padding: 0.5 }}
+                defaultEdgeOptions={{
+                  type: 'smoothstep',
+                  animated: true,
+                  style: { 
+                    stroke: '#94a3b8', 
+                    strokeWidth: 2,
+                    strokeDasharray: '5,5'
+                  },
+                  markerEnd: {
+                    type: 'arrowclosed',
+                    width: 20,
+                    height: 20,
+                    color: '#94a3b8',
+                  },
+                }}
+              >
+                <Background color="#f0f0f0" gap={16} variant="dots" />
+                <Controls />
+              </ReactFlow>
+            )
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center justify-center h-full"
+            >
+              <div className="text-center">
+                <ChevronDown className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg text-gray-500">
+                  Select a company to view its organization chart
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </ReactFlowProvider>
+      </div>
     </div>
-  )
+  );
 }
 
 export default OrgChartView 

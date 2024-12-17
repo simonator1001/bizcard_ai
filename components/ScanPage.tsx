@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Upload, X, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { recognizeBusinessCard, preprocessImageForOCR } from '@/lib/ocr-service'
+import { recognizeBusinessCard, preprocessImageForOCR, OCRError } from '@/lib/ocr-service'
 import { supabase } from '@/lib/supabase-client'
 import { toast } from 'sonner'
 import imageCompression from 'browser-image-compression';
@@ -195,47 +195,54 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (files && files.length > 0) {
-      setTotalFiles(files.length);
-      setProcessedFiles(0);
+    if (!files?.length) return;
+
+    setTotalFiles(files.length);
+    setProcessedFiles(0);
+    
+    try {
+      const fileArray = Array.from(files);
       
-      try {
-        // Convert FileList to Array
-        const fileArray = Array.from(files);
+      for (let i = 0; i < fileArray.length; i++) {
+        const file = fileArray[i];
         
-        // Process files sequentially
-        for (let i = 0; i < fileArray.length; i++) {
-          const file = fileArray[i];
-          setFile(file);
-          
-          // Compress and get base64
+        // Validate file type and size
+        if (!file.type.startsWith('image/')) {
+          throw new Error(`File "${file.name}" is not an image`);
+        }
+
+        const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+        if (file.size > MAX_SIZE) {
+          throw new Error(`File "${file.name}" exceeds 5MB size limit`);
+        }
+
+        setFile(file);
+        
+        try {
           const compressedBase64 = await compressImage(file);
           setPreview(compressedBase64);
-          
-          // Process image
           await processImage(compressedBase64);
-          
-          // Update progress
-          setProcessedFiles(i + 1);
-          setUploadProgress(((i + 1) / fileArray.length) * 100);
+        } catch (error) {
+          console.error(`Error processing ${file.name}:`, error);
+          toast.error(`Failed to process "${file.name}"`);
         }
         
-        // Clear states after all files are processed
-        setFile(null);
-        setPreview(null);
-        setExtractedInfo(null);
-        toast.success(`Successfully processed ${fileArray.length} business cards`);
-        
-      } catch (error) {
-        console.error('Error processing files:', error);
-        toast.error('Failed to process some images');
-      } finally {
-        setTotalFiles(0);
-        setProcessedFiles(0);
-        setUploadProgress(0);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
+        setProcessedFiles(i + 1);
+        setUploadProgress(((i + 1) / fileArray.length) * 100);
+      }
+      
+    } catch (error) {
+      console.error('File handling error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to process files');
+    } finally {
+      // Clean up
+      setFile(null);
+      setPreview(null);
+      setTotalFiles(0);
+      setProcessedFiles(0);
+      setUploadProgress(0);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
     }
   };
@@ -289,79 +296,92 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     setProcessingStage('Starting OCR process...');
     
     try {
-      // Log the current user
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-      console.log('[Process] Current user:', user.id);
+      if (!user) {
+        throw new Error('Authentication required');
+      }
 
-      // Process image with OCR
       setProcessingStage('Processing image...');
-      const result = await recognizeBusinessCard(base64Image);
-      console.log('[Process] OCR result:', result);
+      try {
+        const result = await recognizeBusinessCard(base64Image);
+        
+        if (!result) {
+          throw new Error('Failed to extract data from the image');
+        }
 
-      // Upload image to storage
-      setProcessingStage('Uploading to storage...');
-      const fileName = `${user.id}/${Date.now()}-card.jpg`;
-      
-      // Convert base64 to blob for upload
-      const base64Response = await fetch(base64Image);
-      const blob = await base64Response.blob();
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('business-cards')
-        .upload(fileName, blob, {
-          contentType: 'image/jpeg',
-          upsert: true
-        });
+        // Continue with storage upload only if OCR succeeds
+        setProcessingStage('Uploading to storage...');
+        const fileName = `${user.id}/${Date.now()}-card.jpg`;
+        
+        try {
+          const base64Response = await fetch(base64Image);
+          const blob = await base64Response.blob();
+          
+          const { error: uploadError } = await supabase.storage
+            .from('business-cards')
+            .upload(fileName, blob, {
+              contentType: 'image/jpeg',
+              upsert: true
+            });
 
-      if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('business-cards')
-        .getPublicUrl(fileName);
+          // Process successful upload
+          const { data: { publicUrl } } = supabase.storage
+            .from('business-cards')
+            .getPublicUrl(fileName);
 
-      // Map OCR result to database record
-      setProcessingStage('Saving to database...');
-      const record = mapOCRToRecord(result, user.id, publicUrl);
-      
-      // Auto-save to database
-      const savedId = await saveToDatabase(record);
-      
-      // Update UI
-      setProcessingStage('Finalizing...');
-      setExtractedInfo({
-        id: savedId,
-        ...result,
-        imageUrl: publicUrl
-      });
-      
-      setProcessingStatus('success');
-      toast.success('Business card saved successfully');
-      
-      // Notify parent component
-      onAddCard({
-        id: savedId,
-        name: record.name,
-        name_zh: record.name_zh,
-        company: record.company,
-        company_zh: record.company_zh,
-        title: record.title,
-        title_zh: record.title_zh,
-        email: record.email,
-        phone: record.phone,
-        address: record.address,
-        address_zh: record.address_zh,
-        notes: record.notes,
-        imageUrl: record.image_url,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
+          setProcessingStage('Saving to database...');
+          const record = mapOCRToRecord(result, user.id, publicUrl);
+          const savedId = await saveToDatabase(record);
+
+          setProcessingStage('Finalizing...');
+          setExtractedInfo({
+            id: savedId,
+            ...result,
+            imageUrl: publicUrl
+          });
+          
+          setProcessingStatus('success');
+          toast.success('Business card saved successfully');
+          
+          // Notify parent
+          onAddCard({
+            id: savedId,
+            ...record,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+
+        } catch (storageError) {
+          console.error('[Storage] Error:', storageError);
+          throw new Error('Failed to save the image. Please try again.');
+        }
+
+      } catch (ocrError) {
+        if (ocrError instanceof OCRError) {
+          console.error('[OCR] Error details:', ocrError.details);
+          
+          const errorMessage = ocrError.message.includes('No readable text')
+            ? 'No text could be detected. Please ensure the image is clear and contains readable text.'
+            : 'Unable to read the business card. Please ensure the image is clear and try again.';
+          
+          toast.error(errorMessage, { duration: 5000 });
+          return;
+        }
+        throw ocrError;
+      }
 
     } catch (error) {
-      console.error('Error processing image:', error);
+      console.error('[Process] Error:', error);
       setProcessingStatus('error');
-      toast.error('Failed to process and save business card');
+      
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Failed to process the image. Please try again.';
+      
+      toast.error(errorMessage, { duration: 5000 });
+      handleClear();
     } finally {
       setProcessingStage('');
       setIsProcessing(false);

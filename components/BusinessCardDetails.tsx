@@ -56,6 +56,13 @@ export const BusinessCardDetails: React.FC<BusinessCardDetailsProps> = ({
     .join('')
     .toUpperCase()
 
+  const handleDelete = () => {
+    const confirmed = window.confirm('Are you sure you want to delete this business card?')
+    if (confirmed && onDelete) {
+      onDelete(card.id)
+    }
+  }
+
   return (
     <Card className="relative hover:shadow-md transition-shadow">
       <CardContent className="p-6">
@@ -93,7 +100,7 @@ export const BusinessCardDetails: React.FC<BusinessCardDetailsProps> = ({
                 <Button variant="ghost" size="icon" onClick={() => onEdit?.(card.id)}>
                   <Edit2 className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => onDelete?.(card.id)}>
+                <Button variant="ghost" size="icon" onClick={handleDelete}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="icon">

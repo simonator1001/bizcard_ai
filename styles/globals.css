@@ -129,4 +129,48 @@
 
 .cmd-item {
   @apply relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground;
+}
+
+.bg-dot-pattern {
+  background-color: #ffffff;
+  background-image: radial-gradient(#94a3b8 0.5px, transparent 0.5px);
+  background-size: 10px 10px;
+}
+
+.react-flow__edge-path {
+  stroke: #94a3b8;
+  stroke-width: 2;
+  transition: all 0.3s ease;
+}
+
+.react-flow__edge.animated path {
+  stroke-dasharray: 5,5;
+  animation: flowAnimation 1s linear infinite;
+}
+
+@keyframes flowAnimation {
+  from {
+    stroke-dashoffset: 10;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.react-flow__handle {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.react-flow__handle:hover,
+.react-flow__node:hover .react-flow__handle {
+  opacity: 1;
+}
+
+.react-flow__node {
+  transition: transform 0.3s ease;
+}
+
+.react-flow__node:hover {
+  z-index: 1000;
 } 
