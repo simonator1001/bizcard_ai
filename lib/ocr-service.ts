@@ -4,154 +4,92 @@ import { BusinessCard } from '@/types/business-card';
 
 // Add more detailed validation
 function isValidBusinessCardData(data: any): boolean {
-  try {
-    // Check if data exists and is an object
-    if (!data || typeof data !== 'object') {
-      return false;
-    }
+  // Must have at least one of these fields
+  const hasRequiredField = data.name || data.email || data.phone || data.title || data.company;
+  
+  // Check for obviously invalid data
+  const hasValidFormat = 
+    (!data.email || data.email.includes('@')) &&
+    (!data.phone || data.phone.length >= 8) &&
+    (!data.name || data.name.length >= 2);
 
-    // Must have at least one of these fields with valid data
-    const requiredFields = ['name', 'email', 'phone', 'title', 'company'];
-    const hasRequiredField = requiredFields.some(field => 
-      data[field] && typeof data[field] === 'string' && data[field].trim().length > 0
-    );
-
-    // Additional validation for specific fields
-    const isValidEmail = !data.email || (typeof data.email === 'string' && data.email.includes('@'));
-    const isValidPhone = !data.phone || (typeof data.phone === 'string' && data.phone.length >= 8);
-    const isValidName = !data.name || (typeof data.name === 'string' && data.name.length >= 2);
-
-    return hasRequiredField && isValidEmail && isValidPhone && isValidName;
-  } catch (error) {
-    console.error('[Validation] Error validating business card data:', error);
-    return false;
-  }
+  return hasRequiredField && hasValidFormat;
 }
 
-// Add a custom error class for OCR failures
-export class OCRError extends Error {
-  constructor(message: string, public readonly details?: any) {
-    super(message);
-    this.name = 'OCRError';
-  }
-}
-
-export async function recognizeBusinessCard(imageData: string, maxRetries = 3): Promise<any> {
-  let lastError = null;
-  let attempt = 1;
-
-  while (attempt <= maxRetries) {
+export async function recognizeBusinessCard(imageData: string, retries = 3): Promise<BusinessCard> {
+  let lastError: any;
+  
+  for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      console.log(`[OCR] Attempt ${attempt}/${maxRetries}`);
+      console.log(`🔍 OCR attempt ${attempt}/${retries}`);
       
+      // First try preprocessing
       const processedImage = await preprocessImageForOCR(imageData);
       
+      // Make the API request
       const response = await axios.post('/api/extract-info', {
         image: processedImage,
-        originalImage: imageData
+        originalImage: imageData // Send both versions
       }, {
-        timeout: 30000,
+        timeout: 30000, // 30 second timeout
         headers: {
           'Content-Type': 'application/json',
         }
       });
 
-      // Log raw response for debugging
-      console.log('[OCR] Raw API response:', response.data);
-
-      // Handle case where no text is found
-      if (response.data === 'No text found on the business card.') {
-        throw new OCRError('No text detected', {
-          attempt,
-          message: 'No readable text found on the image'
-        });
-      }
-
-      // Handle empty or invalid response
       if (!response.data) {
-        throw new OCRError('Empty response', { attempt });
+        throw new Error('Empty response from OCR service');
       }
 
-      let parsedData;
-      try {
-        // Handle both string and object responses
-        parsedData = typeof response.data === 'string' 
-          ? JSON.parse(response.data) 
-          : response.data;
+      // Log the raw OCR result for debugging
+      console.log('Raw OCR result:', response.data);
 
-        // Validate basic structure
-        if (!parsedData || (typeof parsedData === 'object' && Object.keys(parsedData).length === 0)) {
-          throw new Error('Empty parsed data');
-        }
-
-        console.log('[OCR] Parsed data:', parsedData);
-
-      } catch (parseError) {
-        throw new OCRError('Failed to parse response', {
-          attempt,
-          error: parseError,
-          rawData: response.data
-        });
+      // Validate the extracted data
+      if (!isValidBusinessCardData(response.data)) {
+        throw new Error('Invalid or incomplete data extracted');
       }
 
-      // Create business card with fallbacks
+      // Map the response to our BusinessCard type
       const businessCard: BusinessCard = {
         id: crypto.randomUUID(),
-        name: parsedData.name || parsedData.words_result?.NAME?.words || '',
-        title: parsedData.title || parsedData.words_result?.TITLE?.words || '',
-        title_zh: parsedData.title_zh || parsedData.words_result?.TITLE_ZH?.words || '',
-        company: parsedData.company || parsedData.words_result?.COMPANY?.words || '',
-        email: parsedData.email || parsedData.words_result?.EMAIL?.words || '',
-        phone: parsedData.phone || parsedData.words_result?.MOBILE?.words || '',
-        position: parsedData.title || parsedData.words_result?.TITLE?.words || '',
+        name: response.data.name || '',
+        title: response.data.title || '',
+        title_zh: response.data.title_zh || '',
+        company: response.data.company || '',
+        email: response.data.email || '',
+        phone: response.data.phone || '',
+        position: response.data.title || response.data.title_zh || '',
         imageUrl: imageData
       };
 
-      // Validate extracted data
-      if (!isValidBusinessCardData(businessCard)) {
-        throw new OCRError('Insufficient data extracted', {
-          attempt,
-          extractedData: businessCard
-        });
-      }
-
+      console.log('✅ Successfully extracted business card:', businessCard);
       return businessCard;
 
     } catch (error) {
+      console.error(`❌ OCR attempt ${attempt} failed:`, error);
       lastError = error;
-      console.warn(`[OCR] Attempt ${attempt} failed:`, error);
-
-      // Special handling for "no text found" case
-      if (error instanceof OCRError && error.details?.message === 'No readable text found on the image') {
-        throw new OCRError(
-          'No readable text found on the image. Please ensure the image is clear and contains text.',
-          error.details
-        );
-      }
-
-      if (attempt === maxRetries) {
-        const errorDetails = {
-          lastError: lastError?.message || 'Unknown error',
-          details: lastError?.details || lastError,
-          attempts: attempt
-        };
-        
-        console.error('[OCR] All attempts failed:', errorDetails);
-        
-        throw new OCRError(
-          'Unable to process the business card. Please try with a clearer image.',
-          errorDetails
-        );
-      }
-
-      // Wait before retry
-      const delay = Math.min(2000 * Math.pow(2, attempt - 1), 10000);
-      console.log(`[OCR] Waiting ${delay}ms before retry ${attempt + 1}`);
-      await new Promise(resolve => setTimeout(resolve, delay));
       
-      attempt++;
+      // Add specific error handling
+      if (error instanceof AxiosError) {
+        if (error.response?.status === 429) {
+          // Rate limit error - wait longer
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        } else if (error.code === 'ECONNABORTED') {
+          // Timeout error - might need longer timeout
+          console.log('Request timed out, increasing timeout for next attempt');
+        }
+      }
+      
+      // If this isn't the last attempt, wait before retrying
+      if (attempt < retries) {
+        const delay = Math.min(2000 * Math.pow(2, attempt - 1), 10000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
   }
+
+  // If we get here, all attempts failed
+  throw new Error(`OCR failed after ${retries} attempts. Last error: ${lastError?.message || 'No valid data extracted'}`);
 }
 
 // Helper function to preprocess image
@@ -217,9 +155,3 @@ export const preprocessImageForOCR = async (base64Image: string): Promise<string
     img.src = base64Image;
   });
 }; 
-
-// Helper function to validate OCR result
-function isValidOCRResult(result: any): boolean {
-  // Add your validation logic here
-  return result && typeof result === 'object' && Object.keys(result).length > 0;
-} 

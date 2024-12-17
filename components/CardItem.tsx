@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Mail, Edit2, Trash2, Phone, Smartphone, Globe } from 'lucide-react'
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { BusinessCard } from '@/types/business-card'
-import { toast } from 'react-hot-toast'
 
 interface CardItemProps {
   card: BusinessCard
@@ -19,15 +18,6 @@ interface CardItemProps {
 export function CardItem({ card, onEdit, onDelete, viewMode }: CardItemProps) {
   const [isHovered, setIsHovered] = useState(false)
   const initials = card.name.split(' ').map(n => n[0]).join('').toUpperCase()
-
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const confirmed = window.confirm('Are you sure you want to delete this business card?')
-    if (confirmed) {
-      onDelete(card.id)
-      toast.success('Business card deleted successfully')
-    }
-  }
 
   return (
     <motion.div
@@ -67,8 +57,10 @@ export function CardItem({ card, onEdit, onDelete, viewMode }: CardItemProps) {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  onClick={handleDelete}
-                  className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(card.id);
+                  }}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

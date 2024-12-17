@@ -4,7 +4,6 @@ import { NavBar } from '@/components/nav-bar'
 import { ThemeProvider } from '@/components/ui/theme-provider'
 import { supabase } from '@/lib/supabase-client'
 import { BusinessCard } from '@/types/business-card'
-import { TrashIcon } from '@heroicons/react/solid'
 
 export default function OrgChartPage() {
   const [cards, setCards] = useState<BusinessCard[]>([])
@@ -82,42 +81,3 @@ export default function OrgChartPage() {
     </ThemeProvider>
   )
 } 
-
-// Inside the business card detail component or modal
-function BusinessCardDetail({ card, onClose }) {
-  const handleDelete = async () => {
-    // Show confirmation dialog
-    const confirmed = window.confirm('Are you sure you want to delete this business card?');
-    
-    if (confirmed) {
-      try {
-        // Assuming you have an API endpoint to delete the card
-        await fetch(`/api/business-cards/${card.id}`, {
-          method: 'DELETE',
-        });
-        
-        // Close the detail component after successful deletion
-        onClose();
-      } catch (error) {
-        console.error('Error deleting business card:', error);
-        // Optionally show error message to user
-        alert('Failed to delete business card. Please try again.');
-      }
-    }
-  };
-
-  return (
-    <div>
-      {/* Existing business card detail UI... */}
-      <div className="flex justify-end gap-2">
-        <button
-          onClick={handleDelete}
-          className="text-red-600 hover:text-red-800"
-        >
-          <TrashIcon className="h-5 w-5" />
-        </button>
-        {/* Other buttons... */}
-      </div>
-    </div>
-  );
-}

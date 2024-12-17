@@ -1,5 +1,5 @@
 import { Building2, Image as ImageIcon } from "lucide-react"
-import { NewsArticle } from "@/types/news"
+import { NewsArticle } from "@/lib/news-service"
 import Image from "next/image"
 import { useState } from "react"
 
