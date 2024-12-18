@@ -1,3 +1,5 @@
+'use client';
+
 import { Logo } from './logo';
 import { Button } from './button';
 import Link from 'next/link';

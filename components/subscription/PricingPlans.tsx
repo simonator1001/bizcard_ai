@@ -5,15 +5,8 @@ import { SUBSCRIPTION_PLANS, SubscriptionTier } from '@/types/subscription';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-
-const STRIPE_LINKS = {
-  pro: {
-    monthly: 'https://buy.stripe.com/test_bIY3eN9mh9hv95SbIJ',
-    yearly: 'https://buy.stripe.com/test_dR6aHf41X51fbe07su',
-  },
-};
 
 export function PricingPlans() {
   const { user } = useUser();
@@ -30,15 +23,9 @@ export function PricingPlans() {
       return;
     }
 
-    // For Pro tier, redirect to Stripe payment link
-    if (tier === 'pro') {
-      const paymentLink = isYearly ? STRIPE_LINKS.pro.yearly : STRIPE_LINKS.pro.monthly;
-      window.location.href = paymentLink;
-      return;
-    }
-
     setLoading(tier);
     try {
+      // TODO: Integrate with payment provider
       const success = await SubscriptionService.upgradeSubscription(user.id, tier, {
         provider: 'stripe',
         subscriptionId: 'dummy-id',

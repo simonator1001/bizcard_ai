@@ -1,6 +1,17 @@
 -- Add custom branding fields to subscriptions table
-ALTER TABLE subscriptions
-ADD COLUMN custom_branding JSONB DEFAULT NULL;
+DO $$ 
+BEGIN
+    -- Only add the custom_branding column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'subscriptions' 
+        AND column_name = 'custom_branding'
+    ) THEN
+        ALTER TABLE subscriptions
+        ADD COLUMN custom_branding JSONB DEFAULT NULL;
+    END IF;
+END $$;
 
 -- Create a trigger to validate custom branding JSON
 CREATE OR REPLACE FUNCTION validate_custom_branding()
@@ -23,6 +34,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Drop the trigger if it exists
+DROP TRIGGER IF EXISTS validate_custom_branding_trigger ON subscriptions;
+
+-- Create the trigger
 CREATE TRIGGER validate_custom_branding_trigger
 BEFORE INSERT OR UPDATE ON subscriptions
 FOR EACH ROW

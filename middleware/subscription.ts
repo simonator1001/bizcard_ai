@@ -1,28 +1,11 @@
-import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { SubscriptionService } from '@/lib/subscription';
 
 export async function subscriptionMiddleware(request: NextRequest) {
   const res = NextResponse.next();
-  
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: any) {
-          res.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: any) {
-          res.cookies.set({ name, value: '', ...options });
-        },
-      },
-    }
-  );
+  const supabase = createClient(request, res);
 
   // Check if user is authenticated
   const {
