@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/router'
-import { BusinessCardDetails } from '@/components/BusinessCardDetails'
+import { BusinessCardDetails } from '@/components/cards/BusinessCardDetails'
 import { supabase } from '@/lib/supabase-client'
 import { toast } from 'sonner'
 

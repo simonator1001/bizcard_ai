@@ -1,5 +1,5 @@
 import { Navigation } from '@/components/ui/navigation';
-import { Providers } from '@/components/providers';
+import { Providers } from '@/components/layout/providers';
 import '@/styles/globals.css';
 
 export const metadata = {

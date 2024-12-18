@@ -48,14 +48,14 @@ import { saveAs } from 'file-saver'
 import Papa from 'papaparse'
 
 // Import components
-import { GridView } from '@/components/GridView'
-import { CardDetailView } from '@/components/CardDetailView'
-import { OrgChartView } from '@/components/OrgChartView'
-import { NewsView } from '@/components/NewsView'
-import { EnhancedProView } from '@/components/EnhancedProView'
-import { SettingsTab } from '@/components/SettingsTab'
-import { ScanPage } from '@/components/ScanPage'
-import { ListView } from '@/components/ListView'
+import { GridView } from '@/components/cards/GridView'
+import { CardDetailView } from '@/components/cards/CardDetailView'
+import { OrgChartView } from '@/components/org-chart/OrgChartView'
+import { NewsView } from '@/components/news/NewsView'
+import { EnhancedProView } from '@/components/subscription/EnhancedProView'
+import { SettingsTab } from '@/components/shared/SettingsTab'
+import { ScanPage } from '@/components/cards/ScanPage'
+import { ListView } from '@/components/cards/ListView'
 
 // Import types and mock data
 import { mockNewsData } from '@/lib/mock-data'

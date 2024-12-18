@@ -1,5 +1,5 @@
-import { Layout } from '@/components/Layout';
-import { SubscriptionPlans } from '@/components/SubscriptionPlans';
+import { Layout } from '@/components/layout/Layout';
+import { SubscriptionPlans } from '@/components/subscription/SubscriptionPlans';
 import { Typography, Container, Box, Button } from '@mui/material';
 
 export default function PricingPage() {

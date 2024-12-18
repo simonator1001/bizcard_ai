@@ -64,7 +64,11 @@ export async function POST(request: Request) {
     // If no API key, return fallback articles immediately
     if (!PERPLEXITY_API_KEY) {
       console.log('No Perplexity API key configured, using fallback articles');
-      return NextResponse.json({ articles: fallbackArticles });
+      return NextResponse.json({ 
+        articles: fallbackArticles,
+        source: 'mock',
+        reason: 'No API key configured'
+      });
     }
 
     console.log('Fetching employees for company:', company);
@@ -97,7 +101,7 @@ Important:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-sonar-large-128k-online',
+        model: 'llama-3.1-sonar-small-128k-online',
         messages: [{
           role: 'system',
           content: 'You are a JSON API. Return only valid JSON arrays. No other text.'
@@ -114,7 +118,11 @@ Important:
       console.error('Perplexity API error:', response.status, response.statusText);
       const errorText = await response.text();
       console.error('Error details:', errorText);
-      return NextResponse.json({ articles: fallbackArticles });
+      return NextResponse.json({ 
+        articles: fallbackArticles,
+        source: 'mock',
+        reason: `API error: ${response.status} ${response.statusText}`
+      });
     }
 
     const data = await response.json();
@@ -157,24 +165,32 @@ Important:
 
       // Return parsed articles if valid, otherwise use fallback
       return NextResponse.json({ 
-        articles: articles.length > 0 ? articles : fallbackArticles 
+        articles: articles.length > 0 ? articles : fallbackArticles,
+        source: articles.length > 0 ? 'api' : 'mock',
+        reason: articles.length === 0 ? 'Failed to parse API response' : undefined
       });
     } catch (error) {
       // Return fallback articles if parsing fails
       console.error('Failed to parse articles:', error);
-      return NextResponse.json({ articles: fallbackArticles });
+      return NextResponse.json({ 
+        articles: fallbackArticles,
+        source: 'mock',
+        reason: 'Failed to parse API response'
+      });
     }
   } catch (error) {
     console.error('News API Error:', error);
-    // Return fallback articles instead of error
-    const fallbackArticles = Array(3).fill(null).map(() => ({
-      title: `${company} Company News`,
-      summary: `Recent business activities and industry developments for ${company}.`,
-      url: `https://www.google.com/search?q=${encodeURIComponent(company)}+news`,
-      publishedDate: new Date().toISOString(),
-      source: 'News Service',
-      company
-    }));
-    return NextResponse.json({ articles: fallbackArticles });
+    return NextResponse.json({ 
+      articles: Array(count || 3).fill(null).map(() => ({
+        title: `${company} Company News`,
+        summary: `Recent business activities and industry developments for ${company}.`,
+        url: `https://www.google.com/search?q=${encodeURIComponent(company)}+news`,
+        publishedDate: new Date().toISOString(),
+        source: 'News Service',
+        company
+      })),
+      source: 'mock',
+      reason: 'Internal server error'
+    });
   }
 } 

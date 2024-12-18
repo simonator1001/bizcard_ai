@@ -1,7 +1,7 @@
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase-client'
-import { BusinessCardDetails } from '@/components/BusinessCardDetails'
+import { BusinessCardDetails } from '@/components/cards/BusinessCardDetails'
 
 export default function SharedCardPage() {
   const router = useRouter()
