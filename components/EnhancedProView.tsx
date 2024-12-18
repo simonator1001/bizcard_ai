@@ -10,14 +10,26 @@ import { Check, X, CreditCard, Search, Users, Zap, HelpCircle, ChevronRight } fr
 import { useToast } from "@/components/ui/use-toast"
 
 const planFeatures = [
-  { name: "Scan Business Cards", free: true, pro: true },
-  { name: "Store Cards", free: "Up to 100", pro: "Unlimited" },
-  { name: "Basic Search", free: true, pro: true },
-  { name: "Advanced OCR", free: false, pro: true },
-  { name: "Org Chart Visualization", free: false, pro: true },
-  { name: "News Consolidation", free: false, pro: true },
-  { name: "API Access", free: false, pro: true },
-  { name: "Priority Support", free: false, pro: true },
+  // Card Scanning Features
+  { name: "Card Scanning", free: "5 cards/month", basic: "30 cards/month", pro: "Unlimited scans" },
+  { name: "OCR Support", free: "Basic (English only)", basic: "Multi-language", pro: "Advanced OCR with auto-merge" },
+  { name: "Card Management", free: "Basic", basic: "Filter & sort", pro: "Full management suite" },
+  { name: "Duplicate Removal", free: false, basic: true, pro: true },
+  { name: "Export (PDF/CSV)", free: false, basic: "Basic PDF", pro: "All formats" },
+  
+  // News Features
+  { name: "Company Tracking", free: "Up to 3 companies", basic: "Up to 10 companies", pro: "Up to 20 companies" },
+  { name: "News Updates", free: "Daily updates only", basic: "4 updates/day", pro: "Real-time updates" },
+  { name: "News Sources", free: "Major news only", basic: "Major + Industry", pro: "All news + Premium content" },
+  { name: "News History", free: "7-day history", basic: "30-day history", pro: "Unlimited history" },
+  { name: "Email Digests", free: false, basic: true, pro: true },
+  
+  // Advanced Features
+  { name: "AI Features", free: false, basic: false, pro: "AI-curated content" },
+  { name: "Competitor Analysis", free: false, basic: false, pro: true },
+  { name: "Market Predictions", free: false, basic: false, pro: true },
+  { name: "Team Sharing", free: false, basic: "Basic sharing", pro: "Advanced sharing" },
+  { name: "Custom Annotations", free: false, basic: false, pro: true },
 ]
 
 const testimonials = [
@@ -62,7 +74,8 @@ export function EnhancedProView() {
 
   const handleUpgrade = async () => {
     try {
-      // Add your subscription/payment logic here
+      // Redirect to Stripe payment page
+      window.location.href = 'https://buy.stripe.com/test_dR6aHf41X51fbe07su';
       toast({
         title: "Upgrading to Pro...",
         description: "Redirecting to payment page",
@@ -97,9 +110,10 @@ export function EnhancedProView() {
             <Table className="w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-1/3">Feature</TableHead>
-                  <TableHead className="w-1/3">Free Plan</TableHead>
-                  <TableHead className="w-1/3 bg-purple-100">
+                  <TableHead className="w-1/4">Feature</TableHead>
+                  <TableHead className="w-1/4">Free Plan</TableHead>
+                  <TableHead className="w-1/4">Basic Plan</TableHead>
+                  <TableHead className="w-1/4 bg-purple-100">
                     Pro Plan
                     <Badge className="ml-2 bg-purple-600">Best Value</Badge>
                   </TableHead>
@@ -116,6 +130,13 @@ export function EnhancedProView() {
                         feature.free
                       )}
                     </TableCell>
+                    <TableCell>
+                      {typeof feature.basic === 'boolean' ? (
+                        feature.basic ? <Check className="text-green-500" /> : <X className="text-red-500" />
+                      ) : (
+                        feature.basic
+                      )}
+                    </TableCell>
                     <TableCell className="bg-purple-50">
                       {typeof feature.pro === 'boolean' ? (
                         feature.pro ? <Check className="text-green-500" /> : <X className="text-red-500" />
@@ -128,11 +149,29 @@ export function EnhancedProView() {
                 <TableRow>
                   <TableCell>Price</TableCell>
                   <TableCell>$0/month</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="text-lg font-bold">$5/month</span>
+                      <span className="text-sm text-gray-600">or $50/year (save $10)</span>
+                      <Button 
+                        onClick={() => window.location.href = 'https://buy.stripe.com/test_bIY3eN9mh9hv95SbIJ'}
+                        className="mt-2 bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 transition-all duration-300"
+                      >
+                        Get Basic
+                      </Button>
+                    </div>
+                  </TableCell>
                   <TableCell className="bg-purple-50">
-                    $19.99/month
-                    <Button className="ml-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300">
-                      Upgrade to Pro
-                    </Button>
+                    <div className="flex flex-col">
+                      <span className="text-lg font-bold">$15/month</span>
+                      <span className="text-sm text-gray-600">or $150/year (save $30)</span>
+                      <Button 
+                        onClick={handleUpgrade}
+                        className="mt-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300"
+                      >
+                        Upgrade to Pro
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               </TableBody>

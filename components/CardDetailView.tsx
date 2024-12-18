@@ -8,6 +8,16 @@ import { Edit, Share, Download, Trash2, X, ChevronLeft, ChevronRight } from 'luc
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface BusinessCard {
   id: string
@@ -84,6 +94,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
   const [isImageEnlarged, setIsImageEnlarged] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const images = card.images || [card.imageUrl];
 
   const containsChinese = (text: string) => /[\u4e00-\u9fa5]/.test(text)
@@ -163,6 +174,16 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
       </DialogContent>
     </Dialog>
   );
+
+  const handleDelete = () => {
+    setShowDeleteAlert(true)
+  }
+
+  const confirmDelete = () => {
+    onDelete(editedCard.id)
+    setShowDeleteAlert(false)
+    onClose()
+  }
 
   return (
     <>
@@ -379,7 +400,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
               <Button 
                 variant="outline" 
                 size="icon"
-                onClick={() => onDelete(editedCard.id)}
+                onClick={handleDelete}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -403,6 +424,23 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
       )}
 
       {isImageEnlarged && <ImageEnlargedDialog />}
+
+      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Business Card</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this business card? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 } 
