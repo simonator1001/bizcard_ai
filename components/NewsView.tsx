@@ -6,10 +6,29 @@ import { Input } from '@/components/ui/input'
 import { supabase } from '@/lib/supabase-client'
 import { toast } from 'sonner'
 import { BusinessCard } from '@/types/business-card'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu'
+import { ChevronDown, Search } from 'lucide-react'
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { CompanySelect } from './CompanySelect'
 
 interface NewsViewProps {
   cards: BusinessCard[]
   onUpgradeToPro: () => void
+}
+
+interface EmployeeMention {
+  name: string
+  title: string
+  company: string
 }
 
 interface NewsArticle {
@@ -19,6 +38,7 @@ interface NewsArticle {
   publishedDate: string
   source: string
   company: string
+  mentionedEmployees?: EmployeeMention[]
 }
 
 export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
@@ -27,6 +47,8 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
   const [articlesPerCompany, setArticlesPerCompany] = useState(3)
   const [isLoading, setIsLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [companySearchTerm, setCompanySearchTerm] = useState('')
+  const [showCompanySelect, setShowCompanySelect] = useState(false)
 
   // Get unique companies from cards
   const uniqueCompanies = Array.from(new Set(cards.map(card => card.company))).filter(Boolean)
@@ -45,9 +67,7 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
     setIsLoading(true)
     try {
       const newsPromises = companies.map(async (company) => {
-        // Add retry logic
         const maxRetries = 3
-        let lastError
         
         for (let i = 0; i < maxRetries; i++) {
           try {
@@ -67,22 +87,36 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
             if (!response.ok) {
               throw new Error(data.details || data.error || 'Failed to fetch news')
             }
+
+            if (!Array.isArray(data.articles)) {
+              throw new Error('Invalid response format: articles not found')
+            }
             
             return data.articles.map((article: NewsArticle) => ({
               ...article,
               company
             }))
           } catch (e) {
-            lastError = e
+            console.error(`Attempt ${i + 1} failed for ${company}:`, e)
             if (i === maxRetries - 1) throw e
-            // Wait before retrying
             await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)))
           }
         }
       })
 
-      const allArticles = await Promise.all(newsPromises)
-      setNewsArticles(allArticles.flat())
+      const results = await Promise.allSettled(newsPromises)
+      const successfulArticles = results
+        .filter((result): result is PromiseFulfilledResult<NewsArticle[]> => 
+          result.status === 'fulfilled'
+        )
+        .map(result => result.value)
+        .flat()
+
+      if (successfulArticles.length === 0) {
+        toast.error('No news articles found for any selected company')
+      } else {
+        setNewsArticles(successfulArticles)
+      }
     } catch (error) {
       console.error('Error fetching news:', error)
       toast.error(
@@ -109,35 +143,114 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
     article.company.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  // Filter companies based on search term
+  const filteredCompanies = uniqueCompanies.filter(company =>
+    company.toLowerCase().includes(companySearchTerm.toLowerCase())
+  )
+
+  const handleCompanyToggle = (company: string) => {
+    setSelectedCompanies(prev => {
+      if (prev.includes(company)) {
+        return prev.filter(c => c !== company)
+      } else {
+        return [...prev, company]
+      }
+    })
+  }
+
   return (
     <Card className="backdrop-blur-sm bg-white/90 shadow-lg border-0">
       <CardHeader>
         <CardTitle className="text-3xl font-bold">Company News</CardTitle>
-        <div className="flex items-center gap-4 mt-4">
-          <Input
-            placeholder="Search news..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-          <Select 
-            value={articlesPerCompany.toString()}
-            onValueChange={(value) => setArticlesPerCompany(parseInt(value))}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Articles per company" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="3">3 articles</SelectItem>
-              <SelectItem value="5">5 articles</SelectItem>
-              <SelectItem value="10">10 articles</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={handleRandomize}>
-            Randomize Companies
-          </Button>
+        
+        {/* Main Controls Container */}
+        <div className="space-y-4 mt-4">
+          {/* Top Row - Company Selection */}
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              className="w-full md:w-[400px] justify-between"
+              onClick={() => setShowCompanySelect(true)}
+            >
+              <span>
+                {selectedCompanies.length 
+                  ? `${selectedCompanies.length} companies selected`
+                  : "Select Companies"
+                }
+              </span>
+              <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+
+            {/* Selected Companies Tags */}
+            {selectedCompanies.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedCompanies.map((company) => (
+                  <div
+                    key={company}
+                    className="flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1"
+                  >
+                    <span className="text-sm">{company}</span>
+                    <button
+                      onClick={() => handleCompanyToggle(company)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Row - Controls */}
+          <div className="flex flex-wrap items-center gap-4">
+            <Input
+              placeholder="Search news..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full md:w-[200px]"
+            />
+            <Select 
+              value={articlesPerCompany.toString()}
+              onValueChange={(value) => setArticlesPerCompany(parseInt(value))}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Articles per company" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3">3 articles</SelectItem>
+                <SelectItem value="5">5 articles</SelectItem>
+                <SelectItem value="10">10 articles</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex gap-2 ml-auto">
+              <Button onClick={handleRandomize}>
+                Randomize Companies
+              </Button>
+              {selectedCompanies.length > 0 && (
+                <Button 
+                  onClick={() => fetchNews(selectedCompanies)}
+                  className="whitespace-nowrap"
+                >
+                  Fetch News
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </CardHeader>
+
+      {/* Company Select Modal */}
+      {showCompanySelect && (
+        <CompanySelect
+          companies={uniqueCompanies}
+          selectedCompanies={selectedCompanies}
+          searchTerm={companySearchTerm}
+          onSearchChange={setCompanySearchTerm}
+          onCompanyToggle={handleCompanyToggle}
+          onClose={() => setShowCompanySelect(false)}
+        />
+      )}
 
       <CardContent>
         {isLoading ? (
@@ -155,14 +268,23 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
                     </a>
                   </div>
                   <p className="text-sm text-gray-600 mb-2">{article.summary}</p>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
                     <span>{article.source}</span>
                     <span>{new Date(article.publishedDate).toLocaleDateString()}</span>
                   </div>
-                  <div className="mt-2">
+                  <div className="flex flex-wrap gap-2">
                     <span className="inline-block bg-primary/10 text-primary rounded-full px-2 py-1 text-xs">
                       {article.company}
                     </span>
+                    {article.mentionedEmployees?.map((employee, i) => (
+                      <span 
+                        key={i}
+                        className="inline-block bg-secondary/10 text-secondary rounded-full px-2 py-1 text-xs"
+                        title={`${employee.title} at ${employee.company}`}
+                      >
+                        {employee.name}
+                      </span>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
