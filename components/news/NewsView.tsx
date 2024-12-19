@@ -33,6 +33,7 @@ interface NewsArticle {
   publishedDate: string;
   source: string;
   company: string;
+  imageUrl?: string;
   mentionedEmployees?: EmployeeMention[];
 }
 
@@ -85,7 +86,10 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
             return [];
           }
           
-          return data.articles;
+          return data.articles.map((article: NewsArticle) => ({
+            ...article,
+            company: company
+          }));
         } catch (e) {
           console.error(`Error fetching news for ${company}:`, e);
           return [];
@@ -93,7 +97,7 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
       });
 
       const results = await Promise.all(newsPromises);
-      const articles = results.flat();
+      const articles = results.flat().filter(Boolean);
 
       if (articles.length === 0) {
         toast.error('No news articles found for any selected company');
@@ -138,7 +142,28 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
   return (
     <Card className="backdrop-blur-sm bg-white/90 shadow-lg border-0">
       <CardHeader>
-        <CardTitle className="text-3xl font-bold">Company News</CardTitle>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-primary/10 p-2 rounded-lg">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-primary"
+            >
+              <path d="M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8" />
+              <path d="M10 19v-3.96 3.15" />
+              <path d="M14 19v-6" />
+              <path d="M18 19v-8" />
+              <path d="M22 19v-11" />
+            </svg>
+          </div>
+          <CardTitle className="text-3xl font-bold">Biz.ai</CardTitle>
+        </div>
         
         {/* Main Controls Container */}
         <div className="space-y-4 mt-4">
@@ -179,6 +204,21 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
                 <SelectItem value="10">10 articles per company</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Clear All Button */}
+            {selectedCompanies.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedCompanies([]);
+                  setNewsArticles([]);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                Clear All
+              </Button>
+            )}
           </div>
 
           {/* Selected Companies Tags */}
@@ -224,30 +264,51 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {newsArticles.map((article, index) => (
               <Card key={index} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-4">
-                  <div className="font-semibold mb-2 hover:text-primary">
-                    <a href={article.url} target="_blank" rel="noopener noreferrer">
+                <CardContent className="p-4 flex flex-col gap-3">
+                  {/* Article Image */}
+                  <div className="relative w-full h-40 bg-gray-100 rounded-lg overflow-hidden">
+                    <img
+                      src={article.imageUrl || '/images/placeholder-news.jpg'}
+                      alt={article.title}
+                      className="object-cover w-full h-full hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/images/placeholder-news.jpg';
+                      }}
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent p-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-white font-medium">{article.source}</span>
+                        <span className="text-xs text-white/80">{new Date(article.publishedDate).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Article Content */}
+                  <div>
+                    <a 
+                      href={article.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="font-semibold hover:text-primary line-clamp-2 mb-2"
+                    >
                       {article.title}
                     </a>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">{article.summary}</p>
-                  <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                    <span>{article.source}</span>
-                    <span>{new Date(article.publishedDate).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="inline-block bg-primary/10 text-primary rounded-full px-2 py-1 text-xs">
-                      {article.company}
-                    </span>
-                    {article.mentionedEmployees?.map((employee, i) => (
-                      <span 
-                        key={i}
-                        className="inline-block bg-secondary/10 text-secondary rounded-full px-2 py-1 text-xs"
-                        title={`${employee.title} at ${employee.company}`}
-                      >
-                        {employee.name}
+                    <p className="text-sm text-gray-600 mb-2 line-clamp-3">{article.summary}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="inline-block bg-primary/10 text-primary rounded-full px-2 py-1 text-xs">
+                        {article.company}
                       </span>
-                    ))}
+                      {article.mentionedEmployees?.map((employee, i) => (
+                        <span 
+                          key={i}
+                          className="inline-block bg-secondary/10 text-secondary rounded-full px-2 py-1 text-xs"
+                          title={`${employee.title} at ${employee.company}`}
+                        >
+                          {employee.name}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

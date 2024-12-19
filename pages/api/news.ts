@@ -1,7 +1,69 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabase } from '@/lib/supabase-client'
+import https from 'https';
 
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY
+
+// Helper function to delay execution
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper function to make HTTPS requests with retry logic
+async function makeHttpsRequestWithRetry(
+  options: https.RequestOptions, 
+  data: any, 
+  maxRetries: number = 3,
+  initialDelay: number = 1000
+): Promise<any> {
+  let lastError;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`API request attempt ${attempt}/${maxRetries}`);
+      const result = await makeHttpsRequest(options, data);
+      return result;
+    } catch (error) {
+      lastError = error;
+      console.error(`Attempt ${attempt} failed:`, error.message);
+      
+      if (attempt < maxRetries) {
+        const delayTime = initialDelay * Math.pow(2, attempt - 1); // Exponential backoff
+        console.log(`Retrying in ${delayTime}ms...`);
+        await delay(delayTime);
+      }
+    }
+  }
+  throw lastError;
+}
+
+// Helper function to make HTTPS requests
+function makeHttpsRequest(options: https.RequestOptions, data: any): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const req = https.request(options, (res) => {
+      let responseData = '';
+      
+      res.on('data', (chunk) => {
+        responseData += chunk;
+      });
+      
+      res.on('end', () => {
+        try {
+          const parsedData = JSON.parse(responseData);
+          resolve({ ok: res.statusCode === 200, status: res.statusCode, data: parsedData });
+        } catch (error) {
+          reject(new Error(`Failed to parse response: ${error.message}`));
+        }
+      });
+    });
+    
+    req.on('error', (error) => {
+      reject(error);
+    });
+    
+    if (data) {
+      req.write(JSON.stringify(data));
+    }
+    req.end();
+  });
+}
 
 interface NewsArticle {
   title: string
@@ -23,6 +85,7 @@ interface NewsArticleResponse {
   publishedDate?: string;
   source?: string;
   company?: string;
+  imageUrl?: string;
 }
 
 async function getEmployeesForCompany(company: string) {
@@ -40,14 +103,65 @@ async function getEmployeesForCompany(company: string) {
 }
 
 function createFallbackArticles(company: string, count: number) {
-  return Array(count).fill(null).map((_, i) => ({
+  return Array(Math.min(count, 10)).fill(null).map((_, i) => ({
     title: `${company} Business Update ${i + 1}`,
     summary: `Latest updates and developments from ${company}.`,
     url: `https://www.google.com/search?q=${encodeURIComponent(company)}+news`,
     publishedDate: new Date().toISOString().split('T')[0],
     source: 'News Service',
-    company
+    company,
+    imageUrl: '/images/placeholder-news.jpg'
   }));
+}
+
+// Helper function to validate image URL
+async function isValidImageUrl(url: string): Promise<boolean> {
+  try {
+    const parsedUrl = new URL(url);
+    // Only allow HTTPS URLs
+    if (parsedUrl.protocol !== 'https:') return false;
+    
+    // Avoid known problematic domains
+    const blockedDomains = [
+      'marketing-interactive.com',
+      'en.yna.co.kr',
+      'news.samsung.com'
+    ];
+    if (blockedDomains.some(domain => parsedUrl.hostname.includes(domain))) {
+      return false;
+    }
+    
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Helper function to get fallback image URL based on company name
+function getFallbackImageUrl(company: string): string {
+  // List of reliable fallback image sources
+  const fallbackImages = {
+    default: '/images/placeholder-news.jpg',
+    hkust: 'https://hkust.edu.hk/themes/hkust/images/logo.png',
+    parknshop: 'https://www.aswatson.com/wp-content/uploads/brands/parknshop-logo.png',
+    samsung: 'https://www.samsung.com/etc.clientlibs/samsung/clientlibs/consumer/global/clientlib-common/resources/images/logo.png'
+  };
+
+  // Convert company name to lowercase for matching
+  const companyLower = company.toLowerCase();
+  
+  // Match company name with fallback images
+  if (companyLower.includes('hkust') || companyLower.includes('hong kong university')) {
+    return fallbackImages.hkust;
+  }
+  if (companyLower.includes('parknshop') || companyLower.includes('park n shop')) {
+    return fallbackImages.parknshop;
+  }
+  if (companyLower.includes('samsung')) {
+    return fallbackImages.samsung;
+  }
+
+  return fallbackImages.default;
 }
 
 export default async function handler(
@@ -58,7 +172,6 @@ export default async function handler(
     return res.status(405).json({ message: 'Method not allowed' })
   }
 
-  // Extract request parameters early to ensure they're available throughout the function
   const { company, count = 3 } = req.body;
 
   try {
@@ -70,7 +183,7 @@ export default async function handler(
       return res.status(400).json({ error: 'Company is required' });
     }
 
-    // Create fallback articles
+    // Create fallback articles with the requested count
     const fallbackArticles = createFallbackArticles(company, count);
 
     // If no API key, return fallback articles immediately
@@ -95,58 +208,66 @@ Each article must have these exact fields:
   "summary": "Brief article summary here",
   "url": "https://example.com/article",
   "publishedDate": "${new Date().toISOString().split('T')[0]}",
-  "source": "Source name here"
+  "source": "Source name here",
+  "imageUrl": "https://example.com/image.jpg"
 }
 
 Important:
 1. Return ONLY the JSON array
 2. Include ALL required fields
-3. Use valid URLs
+3. Use valid URLs for both article and image
 4. Use today's date for recent news
-5. NO additional text or explanation`;
+5. NO additional text or explanation
+6. For imageUrl, use a relevant news, company logo, or product image URL`;
 
     console.log('Making request to Perplexity API');
     try {
-      const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      const requestOptions = {
+        hostname: 'api.perplexity.ai',
+        path: '/chat/completions',
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          model: 'llama-3.1-sonar-small-128k-online',
-          messages: [{
-            role: 'system',
-            content: 'You are a JSON API. Return only valid JSON arrays. No other text.'
-          }, {
-            role: 'user',
-            content: prompt
-          }],
-          temperature: 0.1,
-          max_tokens: 1000,
-        })
-      });
+        timeout: 15000, // Increased timeout
+        minVersion: 'TLSv1.2',
+        rejectUnauthorized: true,
+        servername: 'api.perplexity.ai' // Explicitly set the server name for SNI
+      };
+
+      const requestData = {
+        model: 'llama-3.1-sonar-small-128k-online',
+        messages: [{
+          role: 'system',
+          content: 'You are a JSON API. Return only valid JSON arrays. No other text.'
+        }, {
+          role: 'user',
+          content: prompt
+        }],
+        temperature: 0.1,
+        max_tokens: 1000,
+      };
+
+      const response = await makeHttpsRequestWithRetry(requestOptions, requestData);
 
       if (!response.ok) {
-        console.error('Perplexity API error:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Error details:', errorText);
-        return res.status(200).json({ 
-          articles: fallbackArticles,
-          source: 'mock',
-          reason: `API error: ${response.status} ${response.statusText}`
-        });
+        console.error('Perplexity API error:', response.status);
+        throw new Error(`API error: ${response.status}`);
       }
 
-      const data = await response.json();
-      console.log('Raw API response:', data.choices[0].message.content);
+      if (!response.data?.choices?.[0]?.message?.content) {
+        console.error('Invalid API response format');
+        throw new Error('Invalid API response format');
+      }
+
+      console.log('Raw API response:', response.data.choices[0].message.content);
 
       try {
         // Try to parse the response
-        const content = data.choices[0].message.content;
+        const content = response.data.choices[0].message.content;
         let articles = [];
 
-        // Try different parsing strategies
         try {
           // First try: Direct parse
           articles = JSON.parse(content);
@@ -160,19 +281,33 @@ Important:
             console.log('Successfully parsed articles from extracted JSON');
           } else {
             console.error('No valid JSON array found in response');
-            throw new Error('No valid JSON array found');
+            return res.status(200).json({ 
+              articles: fallbackArticles,
+              source: 'mock',
+              reason: 'Failed to parse API response'
+            });
           }
         }
 
-        // Validate and clean articles
-        articles = articles.map((article: NewsArticleResponse) => ({
-          title: String(article.title || '').trim(),
-          summary: String(article.summary || '').trim(),
-          url: String(article.url || '').trim(),
-          publishedDate: new Date(article.publishedDate || Date.now()).toISOString().split('T')[0],
-          source: String(article.source || '').trim(),
-          company: article.company || company
-        }));
+        // Validate and clean articles, ensuring we only return the requested count
+        articles = await Promise.all(
+          articles
+            .slice(0, count) // Limit to requested count
+            .map(async (article: NewsArticleResponse) => {
+              const imageUrl = article.imageUrl || '';
+              const isValidImage = await isValidImageUrl(imageUrl);
+              
+              return {
+                title: String(article.title || '').trim(),
+                summary: String(article.summary || '').trim(),
+                url: String(article.url || '').trim(),
+                publishedDate: new Date(article.publishedDate || Date.now()).toISOString().split('T')[0],
+                source: String(article.source || '').trim(),
+                company: article.company || company,
+                imageUrl: isValidImage ? imageUrl : getFallbackImageUrl(company)
+              };
+            })
+        );
 
         console.log('Processed articles:', articles.length);
 
