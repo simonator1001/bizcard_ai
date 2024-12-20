@@ -56,6 +56,7 @@ import { EnhancedProView } from '@/components/subscription/EnhancedProView'
 import { SettingsTab } from '@/components/shared/SettingsTab'
 import { ScanPage } from '@/components/cards/ScanPage'
 import { ListView } from '@/components/cards/ListView'
+import { FreeUsageCounter } from '@/components/subscription/FreeUsageCounter'
 
 // Import types and mock data
 import { mockNewsData } from '@/lib/mock-data'
@@ -664,6 +665,9 @@ export default function Component() {
                   <CardDescription className="text-lg text-gray-600">
                     View, edit, and organize your scanned business cards
                   </CardDescription>
+
+                  <FreeUsageCounter />
+
                   <div className="flex items-center justify-between mt-6 space-x-4">
                     <div className="relative flex-grow">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />

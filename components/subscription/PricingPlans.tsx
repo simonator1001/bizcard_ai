@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from 'react';
 import { useUser } from '@/lib/hooks/useUser';
 import { SubscriptionService } from '@/lib/subscription';

@@ -65,55 +65,39 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     },
   },
   {
-    tier: 'basic',
-    name: 'Basic',
-    price: {
-      monthly: 5,
-      yearly: 50,
-    },
-    features: [
-      'Scan up to 30 cards/month',
-      'OCR support for multiple languages',
-      'Access to news feed with updates on up to 10 companies',
-      'Filter, sort, and remove duplicates in Manage tab',
-    ],
-    limits: {
-      scansPerMonth: 30,
-      companiesTracked: 10,
-    },
-  },
-  {
     tier: 'pro',
     name: 'Pro',
     price: {
-      monthly: 15,
-      yearly: 150,
+      monthly: 9.99,
+      yearly: 99.99,
     },
     features: [
-      'Unlimited scans',
-      'Advanced OCR with auto-merge for multilingual cards',
-      'Full-featured Manage tab',
-      'Advanced news feed: AI-curated news, 20 companies',
-      'Organizational chart with AI suggestions',
-      'Export business cards in PDF/CSV format',
+      'Unlimited card scans',
+      'Advanced OCR with multi-language support',
+      'Export to CSV/Excel',
+      'Full news feed access',
+      'Organization chart view',
+      'Priority support',
     ],
     limits: {
       scansPerMonth: Infinity,
-      companiesTracked: 20,
+      companiesTracked: Infinity,
     },
   },
   {
     tier: 'enterprise',
     name: 'Enterprise',
     price: {
-      monthly: -1, // Custom pricing
-      yearly: -1,
+      monthly: 49.99,
+      yearly: 499.99,
     },
     features: [
+      'All Pro features',
       'Custom branding',
-      'Multi-user accounts with team access',
       'API access',
-      'Dedicated customer support and training',
+      'Advanced analytics',
+      'Dedicated support',
+      'Team management',
     ],
     limits: {
       scansPerMonth: Infinity,

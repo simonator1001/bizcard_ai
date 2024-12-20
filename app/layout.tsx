@@ -3,8 +3,8 @@ import { Providers } from '@/components/layout/providers';
 import '@/styles/globals.css';
 
 export const metadata = {
-  title: 'BizCard - Digital Business Card Management',
-  description: 'Scan, manage, and organize your business cards with AI-powered features.',
+  title: 'Biz.ai - AI-Powered Business Card Management',
+  description: 'Transform your business cards into digital contacts with AI-powered scanning and organization.',
   icons: {
     icon: [
       {

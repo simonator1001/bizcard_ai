@@ -10,6 +10,9 @@ import { recognizeBusinessCard, preprocessImageForOCR } from '@/lib/ocr-service'
 import { supabase } from '@/lib/supabase-client'
 import { toast } from 'sonner'
 import imageCompression from 'browser-image-compression';
+import { useSubscription } from '@/lib/hooks/useSubscription'
+import { useRouter } from 'next/navigation'
+import { UpgradePrompt } from '@/components/subscription/UpgradePrompt'
 
 interface BusinessCard {
   id: string
@@ -151,19 +154,22 @@ const PremiumButton: React.FC<PremiumButtonProps> = ({
 };
 
 export function ScanPage({ onAddCard }: ScanPageProps) {
+  const router = useRouter();
+  const { subscription, usage, loading: subscriptionLoading, canPerformAction } = useSubscription();
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [extractedInfo, setExtractedInfo] = useState<Partial<BusinessCard> | null>(null)
   const [showTooltip, setShowTooltip] = useState(true)
   const [processingStatus, setProcessingStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [processingStage, setProcessingStage] = useState<string>('');
+  const [processingStage, setProcessingStage] = useState<string>('')
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Add state for bulk upload progress
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [totalFiles, setTotalFiles] = useState<number>(0);
-  const [processedFiles, setProcessedFiles] = useState<number>(0);
+  const [uploadProgress, setUploadProgress] = useState<number>(0)
+  const [totalFiles, setTotalFiles] = useState<number>(0)
+  const [processedFiles, setProcessedFiles] = useState<number>(0)
 
   const compressImage = async (file: File): Promise<string> => {
     console.log('[Compression] Original file size:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
@@ -195,47 +201,61 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (files && files.length > 0) {
+    if (!files || files.length === 0) return;
+
+    try {
+      // Check if user can perform scan action
+      const canScan = await canPerformAction('scan');
+      if (!canScan) {
+        setShowUpgradePrompt(true);
+        return;
+      }
+
       setTotalFiles(files.length);
       setProcessedFiles(0);
       
-      try {
-        // Convert FileList to Array
-        const fileArray = Array.from(files);
+      // Convert FileList to Array
+      const fileArray = Array.from(files);
+      
+      // Process files sequentially
+      for (let i = 0; i < fileArray.length; i++) {
+        const file = fileArray[i];
+        setFile(file);
         
-        // Process files sequentially
-        for (let i = 0; i < fileArray.length; i++) {
-          const file = fileArray[i];
-          setFile(file);
-          
-          // Compress and get base64
-          const compressedBase64 = await compressImage(file);
-          setPreview(compressedBase64);
-          
-          // Process image
-          await processImage(compressedBase64);
-          
-          // Update progress
-          setProcessedFiles(i + 1);
-          setUploadProgress(((i + 1) / fileArray.length) * 100);
+        // Check quota before each scan
+        const canScanNext = await canPerformAction('scan');
+        if (!canScanNext) {
+          setShowUpgradePrompt(true);
+          break;
         }
         
-        // Clear states after all files are processed
-        setFile(null);
-        setPreview(null);
-        setExtractedInfo(null);
-        toast.success(`Successfully processed ${fileArray.length} business cards`);
+        // Compress and get base64
+        const compressedBase64 = await compressImage(file);
+        setPreview(compressedBase64);
         
-      } catch (error) {
-        console.error('Error processing files:', error);
-        toast.error('Failed to process some images');
-      } finally {
-        setTotalFiles(0);
-        setProcessedFiles(0);
-        setUploadProgress(0);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
+        // Process image
+        await processImage(compressedBase64);
+        
+        // Update progress
+        setProcessedFiles(i + 1);
+        setUploadProgress(((i + 1) / fileArray.length) * 100);
+      }
+      
+      // Clear states after all files are processed
+      setFile(null);
+      setPreview(null);
+      setExtractedInfo(null);
+      toast.success(`Successfully processed ${processedFiles} business cards`);
+      
+    } catch (error) {
+      console.error('Error processing files:', error);
+      toast.error('Failed to process some images');
+    } finally {
+      setTotalFiles(0);
+      setProcessedFiles(0);
+      setUploadProgress(0);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
     }
   };
@@ -243,39 +263,53 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
   const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const files = event.dataTransfer.files;
-    if (files && files.length > 0) {
+    if (!files || files.length === 0) return;
+
+    try {
+      // Check if user can perform scan action
+      const canScan = await canPerformAction('scan');
+      if (!canScan) {
+        setShowUpgradePrompt(true);
+        return;
+      }
+
       setTotalFiles(files.length);
       setProcessedFiles(0);
       
-      try {
-        const fileArray = Array.from(files);
+      const fileArray = Array.from(files);
+      
+      for (let i = 0; i < fileArray.length; i++) {
+        const file = fileArray[i];
+        setFile(file);
         
-        for (let i = 0; i < fileArray.length; i++) {
-          const file = fileArray[i];
-          setFile(file);
-          
-          const compressedBase64 = await compressImage(file);
-          setPreview(compressedBase64);
-          
-          await processImage(compressedBase64);
-          
-          setProcessedFiles(i + 1);
-          setUploadProgress(((i + 1) / fileArray.length) * 100);
+        // Check quota before each scan
+        const canScanNext = await canPerformAction('scan');
+        if (!canScanNext) {
+          setShowUpgradePrompt(true);
+          break;
         }
         
-        setFile(null);
-        setPreview(null);
-        setExtractedInfo(null);
-        toast.success(`Successfully processed ${fileArray.length} business cards`);
+        const compressedBase64 = await compressImage(file);
+        setPreview(compressedBase64);
         
-      } catch (error) {
-        console.error('Error processing dropped files:', error);
-        toast.error('Failed to process some images');
-      } finally {
-        setTotalFiles(0);
-        setProcessedFiles(0);
-        setUploadProgress(0);
+        await processImage(compressedBase64);
+        
+        setProcessedFiles(i + 1);
+        setUploadProgress(((i + 1) / fileArray.length) * 100);
       }
+      
+      setFile(null);
+      setPreview(null);
+      setExtractedInfo(null);
+      toast.success(`Successfully processed ${processedFiles} business cards`);
+      
+    } catch (error) {
+      console.error('Error processing dropped files:', error);
+      toast.error('Failed to process some images');
+    } finally {
+      setTotalFiles(0);
+      setProcessedFiles(0);
+      setUploadProgress(0);
     }
   };
 
@@ -524,6 +558,13 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
           </CardContent>
         </Card>
       </div>
+
+      {showUpgradePrompt && (
+        <UpgradePrompt
+          type="scan_limit"
+          onClose={() => setShowUpgradePrompt(false)}
+        />
+      )}
     </ScrollArea>
   )
 }
