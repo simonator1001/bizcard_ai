@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Mail, Phone } from 'lucide-react'
 import { BusinessCard } from '@/types/business-card'
+import { useTranslation } from 'react-i18next'
 
 interface BusinessCardDialogProps {
   open: boolean
@@ -16,6 +17,8 @@ export function BusinessCardDialog({
   card,
   mode 
 }: BusinessCardDialogProps) {
+  const { t } = useTranslation()
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[800px] p-0 bg-white">
@@ -26,12 +29,12 @@ export function BusinessCardDialog({
               {card.imageUrl ? (
                 <img 
                   src={card.imageUrl} 
-                  alt={`${card.name}'s business card`}
+                  alt={t('card.imageAlt', { name: card.name })}
                   className="object-cover w-full h-full"
                 />
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400">
-                  No image available
+                  {t('card.noImage')}
                 </div>
               )}
             </div>
@@ -40,7 +43,7 @@ export function BusinessCardDialog({
           {/* Right side - Card Details */}
           <div className="w-1/2 p-6">
             <DialogHeader>
-              <DialogTitle className="text-xl font-semibold">Business Card Details</DialogTitle>
+              <DialogTitle className="text-xl font-semibold">{t('dialogs.cardDetails.title')}</DialogTitle>
             </DialogHeader>
             
             <div className="mt-6 space-y-6">
@@ -61,7 +64,7 @@ export function BusinessCardDialog({
 
               {/* Contact Info */}
               <div className="space-y-3">
-                <h4 className="text-sm font-medium text-gray-500">Contact Information</h4>
+                <h4 className="text-sm font-medium text-gray-500">{t('card.contactInfo')}</h4>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm">
                     <Mail className="h-4 w-4 text-gray-400" />
@@ -77,13 +80,13 @@ export function BusinessCardDialog({
               {/* Additional Details */}
               {card.title && (
                 <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-gray-500">Title</h4>
+                  <h4 className="text-sm font-medium text-gray-500">{t('card.title')}</h4>
                   <p className="text-sm">{card.title}</p>
                 </div>
               )}
               {card.title_zh && (
                 <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-gray-500">Chinese Title</h4>
+                  <h4 className="text-sm font-medium text-gray-500">{t('card.titleZh')}</h4>
                   <p className="text-sm">{card.title_zh}</p>
                 </div>
               )}

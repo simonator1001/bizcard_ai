@@ -13,6 +13,7 @@ import imageCompression from 'browser-image-compression';
 import { useSubscription } from '@/lib/hooks/useSubscription'
 import { useRouter } from 'next/navigation'
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt'
+import { useTranslation } from 'react-i18next'
 
 interface BusinessCard {
   id: string
@@ -165,6 +166,7 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
   const [processingStage, setProcessingStage] = useState<string>('')
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { t } = useTranslation()
 
   // Add state for bulk upload progress
   const [uploadProgress, setUploadProgress] = useState<number>(0)
@@ -418,9 +420,11 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       <div className="p-8 flex items-center justify-center min-h-[calc(100vh-280px)]">
         <Card className="w-full max-w-xl">
           <CardHeader>
-            <CardTitle className="text-4xl font-bold text-center mb-2">Scan Business Card</CardTitle>
+            <CardTitle className="text-4xl font-bold text-center mb-2">
+              {t('scan.title')}
+            </CardTitle>
             <CardDescription className="text-lg text-center text-gray-600">
-              Upload an image of a business card to extract information
+              {t('scan.description')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -442,10 +446,10 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
               >
                 {preview ? (
                   <div className="relative">
-                    <img src={preview} alt="Business Card Preview" className="max-w-full h-auto mx-auto rounded-md" />
+                    <img src={preview} alt={t('scan.preview')} className="max-w-full h-auto mx-auto rounded-md" />
                     <PremiumButton
                       icon={X}
-                      label="Clear"
+                      label={t('actions.clear')}
                       variant="destructive"
                       className="absolute top-2 right-2 !p-2"
                       onClick={(e) => {
@@ -462,10 +466,10 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
                   >
                     <Upload className="h-16 w-16 mx-auto mb-4 text-gray-400" />
                     <p className="text-lg font-semibold text-gray-700 mb-2">
-                      Click or drag and drop to upload a business card image
+                      {t('scan.dropzone.title')}
                     </p>
                     <p className="text-sm text-gray-500">
-                      Supports multiple files
+                      {t('scan.dropzone.subtitle')}
                     </p>
                   </motion.div>
                 )}

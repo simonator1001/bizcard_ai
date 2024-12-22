@@ -1,0 +1,20 @@
+{
+  "orgChart": {
+    "title": "Organization Chart",
+    "description": "Visualize card connections and hierarchies",
+    "search": {
+      "placeholder": "Search companies...",
+      "selectCompany": "Select a company",
+      "noCompanySelected": "Select a company to view its organization chart"
+    },
+    "loading": "Loading organization chart...",
+    "errors": {
+      "noData": "No data available for this company",
+      "failed": "Failed to generate organization chart"
+    },
+    "node": {
+      "unknown": "Unknown",
+      "noPosition": "No Position"
+    }
+  }
+} 

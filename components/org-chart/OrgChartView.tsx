@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useCallback, useEffect, memo, useMemo } from 'react'
 import ReactFlow, { 
   Background, 
@@ -22,6 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { analyzeOrgStructure, testPerplexityAPI } from '@/lib/org-chart-analyzer'
 import { Mail, Phone } from 'lucide-react'
 import { BusinessCardDialog } from '@/components/cards/BusinessCardDialog'
+import { useTranslation } from 'react-i18next'
 
 interface BusinessCard {
   id: string
@@ -81,6 +84,7 @@ const getNodeStyle = (position?: string): string => {
 const CustomNode = memo(({ data }: { data: BusinessCard }) => {
   const [showDetails, setShowDetails] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const { t } = useTranslation()
   
   const nodeStyle = getNodeStyle(data.position)
   const avatarSize = getNodeSize(data.position)
@@ -117,7 +121,7 @@ const CustomNode = memo(({ data }: { data: BusinessCard }) => {
             `}>
               <AvatarImage src={data.imageUrl} alt={data.name} />
               <AvatarFallback className="bg-gradient-to-br from-gray-100 to-gray-200">
-                {data.name?.substring(0, 2) || 'NA'}
+                {data.name?.substring(0, 2) || t('orgChart.node.unknown')}
               </AvatarFallback>
             </Avatar>
             {getPositionIcon(data.position)}
@@ -125,10 +129,10 @@ const CustomNode = memo(({ data }: { data: BusinessCard }) => {
           
           <div className="flex-1 min-w-0">
             <div className="font-medium text-gray-900 truncate">
-              {data.name || 'Unknown'}
+              {data.name || t('orgChart.node.unknown')}
             </div>
             <div className="text-sm text-gray-500 truncate">
-              {data.position}
+              {data.position || t('orgChart.node.noPosition')}
             </div>
             <div className="mt-2 text-xs text-gray-400 truncate">
               {displayTitle}
@@ -384,6 +388,7 @@ export function OrgChartView({ data }: OrgChartViewProps) {
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { t } = useTranslation()
 
   // Memoize getCompanyCards to prevent unnecessary recreations
   const getCompanyCards = useCallback((companyName: string) => {
@@ -424,7 +429,7 @@ export function OrgChartView({ data }: OrgChartViewProps) {
     );
   }, [data, searchQuery]);
 
-  // Add the missing updateOrgChart function
+  // Update updateOrgChart to use translations
   const updateOrgChart = useCallback(async (company: string) => {
     if (company === 'placeholder') {
       setNodes([])
@@ -441,7 +446,7 @@ export function OrgChartView({ data }: OrgChartViewProps) {
       
       if (!companyCards.length) {
         console.log('⚠️ No cards found for company:', company)
-        setError('No data available for this company')
+        setError(t('orgChart.errors.noData'))
         return
       }
 
@@ -458,11 +463,11 @@ export function OrgChartView({ data }: OrgChartViewProps) {
 
     } catch (err) {
       console.error('❌ Error updating org chart:', err)
-      setError('Failed to generate organization chart')
+      setError(t('orgChart.errors.failed'))
     } finally {
       setIsLoading(false)
     }
-  }, [getCompanyCards, setNodes, setEdges])
+  }, [getCompanyCards, setNodes, setEdges, t])
 
   // Remove the duplicate useEffect
   useEffect(() => {
@@ -488,7 +493,7 @@ export function OrgChartView({ data }: OrgChartViewProps) {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <Input
-              placeholder="Search companies..."
+              placeholder={t('orgChart.search.placeholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -500,11 +505,11 @@ export function OrgChartView({ data }: OrgChartViewProps) {
               onValueChange={setSelectedCompany}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a company" />
+                <SelectValue placeholder={t('orgChart.search.selectCompany')} />
               </SelectTrigger>
               <SelectContent>
                 <ScrollArea className="h-[200px]">
-                  <SelectItem value="placeholder">Select a company</SelectItem>
+                  <SelectItem value="placeholder">{t('orgChart.search.selectCompany')}</SelectItem>
                   {companies.map(company => (
                     company && (
                       <SelectItem key={company} value={company}>
@@ -527,7 +532,7 @@ export function OrgChartView({ data }: OrgChartViewProps) {
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mb-4" />
-                  <p>Loading organization chart...</p>
+                  <p>{t('orgChart.loading')}</p>
                 </div>
               </div>
             ) : error ? (
@@ -574,7 +579,7 @@ export function OrgChartView({ data }: OrgChartViewProps) {
               <div className="text-center">
                 <ChevronDown className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <p className="text-lg text-gray-500">
-                  Select a company to view its organization chart
+                  {t('orgChart.search.noCompanySelected')}
                 </p>
               </div>
             </motion.div>

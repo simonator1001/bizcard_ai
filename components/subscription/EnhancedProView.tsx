@@ -8,82 +8,55 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge"
 import { Check, X, CreditCard, Search, Users, Zap, HelpCircle, ChevronRight } from 'lucide-react'
 import { useToast } from "@/components/ui/use-toast"
+import { useTranslation } from 'react-i18next'
 
 const planFeatures = [
   // Card Scanning Features
-  { name: "Card Scanning", free: "5 cards/month", basic: "30 cards/month", pro: "Unlimited scans" },
-  { name: "OCR Support", free: "Basic (English only)", basic: "Multi-language", pro: "Advanced OCR with auto-merge" },
-  { name: "Card Management", free: "Basic", basic: "Filter & sort", pro: "Full management suite" },
-  { name: "Duplicate Removal", free: false, basic: true, pro: true },
-  { name: "Export (PDF/CSV)", free: false, basic: "Basic PDF", pro: "All formats" },
+  { key: "cardScanning" },
+  { key: "ocrSupport" },
+  { key: "cardManagement" },
+  { key: "duplicateRemoval" },
+  { key: "export" },
   
   // News Features
-  { name: "Company Tracking", free: "Up to 3 companies", basic: "Up to 10 companies", pro: "Up to 20 companies" },
-  { name: "News Updates", free: "Daily updates only", basic: "4 updates/day", pro: "Real-time updates" },
-  { name: "News Sources", free: "Major news only", basic: "Major + Industry", pro: "All news + Premium content" },
-  { name: "News History", free: "7-day history", basic: "30-day history", pro: "Unlimited history" },
-  { name: "Email Digests", free: false, basic: true, pro: true },
+  { key: "companyTracking" },
+  { key: "newsUpdates" },
+  { key: "newsSources" },
+  { key: "newsHistory" },
+  { key: "emailDigests" },
   
   // Advanced Features
-  { name: "AI Features", free: false, basic: false, pro: "AI-curated content" },
-  { name: "Competitor Analysis", free: false, basic: false, pro: true },
-  { name: "Market Predictions", free: false, basic: false, pro: true },
-  { name: "Team Sharing", free: false, basic: "Basic sharing", pro: "Advanced sharing" },
-  { name: "Custom Annotations", free: false, basic: false, pro: true },
+  { key: "aiFeatures" },
+  { key: "competitorAnalysis" },
+  { key: "marketPredictions" },
+  { key: "teamSharing" },
+  { key: "customAnnotations" },
 ]
 
-const testimonials = [
-  {
-    name: "John Doe",
-    company: "Tech Innovators Inc.",
-    photo: "/placeholder.svg?height=100&width=100",
-    comment: "The Pro features have revolutionized how we manage our business contacts. The org chart feature is a game-changer!"
-  },
-  {
-    name: "Jane Smith",
-    company: "Global Enterprises Ltd.",
-    photo: "/placeholder.svg?height=100&width=100",
-    comment: "Unlimited card storage and advanced OCR have made our networking efforts so much more efficient. It's worth every penny!"
-  },
-  {
-    name: "Alex Johnson",
-    company: "StartUp Solutions",
-    photo: "/placeholder.svg?height=100&width=100",
-    comment: "The news consolidation feature keeps us informed about our contacts' companies. It's like having a personal business intelligence tool!"
-  }
-]
-
-const faqs = [
-  {
-    question: "What happens if I downgrade?",
-    answer: "If you downgrade from Pro to Free, you'll retain access to your first 100 stored cards. Additional cards and Pro features will be inaccessible until you upgrade again."
-  },
-  {
-    question: "Can I cancel anytime?",
-    answer: "Yes, you can cancel your Pro subscription at any time. Your Pro features will remain active until the end of your current billing cycle."
-  },
-  {
-    question: "Is there a free trial for Pro?",
-    answer: "We offer a 14-day free trial of Pro features. You can upgrade to try it out and downgrade before the trial ends if you decide it's not for you."
-  }
+const featureHighlights = [
+  { key: "storage", icon: CreditCard },
+  { key: "ocr", icon: Search },
+  { key: "orgChart", icon: Users },
+  { key: "news", icon: Zap },
 ]
 
 export function EnhancedProView() {
   const [isPro] = useState(false)
   const { toast } = useToast()
+  const { t } = useTranslation()
 
   const handleUpgrade = async () => {
     try {
       // Redirect to Stripe payment page
       window.location.href = 'https://buy.stripe.com/test_dR6aHf41X51fbe07su';
       toast({
-        title: "Upgrading to Pro...",
+        title: t('pro.buttons.upgradePro'),
         description: "Redirecting to payment page",
       })
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to initiate upgrade process. Please try again.",
+        title: t('errors.somethingWentWrong'),
+        description: t('errors.tryAgainLater'),
         variant: "destructive",
       })
     }
@@ -92,84 +65,90 @@ export function EnhancedProView() {
   return (
     <div className="flex flex-col min-h-[calc(100vh-200px)] bg-gradient-to-br from-purple-50 to-pink-50">
       <header className="py-12 text-center bg-gradient-to-r from-purple-600 to-pink-600 text-white">
-        <h1 className="text-4xl font-bold mb-4 animate-fade-in-down">Unlock Pro Features for Maximum Efficiency</h1>
-        <p className="text-xl mb-8 animate-fade-in-up">Upgrade to Pro and enjoy unlimited storage, advanced OCR, and exclusive features.</p>
+        <h1 className="text-4xl font-bold mb-4 animate-fade-in-down">{t('pro.title')}</h1>
+        <p className="text-xl mb-8 animate-fade-in-up">{t('pro.subtitle')}</p>
         <Button 
           size="lg" 
           className="bg-white text-purple-600 hover:bg-purple-100 transition-all duration-300 animate-bounce"
           onClick={handleUpgrade}
         >
-          Get Started with Pro
+          {t('pro.getStarted')}
         </Button>
       </header>
 
       <main className="flex-grow container mx-auto px-4 py-8">
         <section className="mb-16">
-          <h2 className="text-3xl font-bold text-center mb-8">Choose Your Plan</h2>
+          <h2 className="text-3xl font-bold text-center mb-8">{t('pro.choosePlan')}</h2>
           <div className="overflow-x-auto">
             <Table className="w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-1/4">Feature</TableHead>
-                  <TableHead className="w-1/4">Free Plan</TableHead>
-                  <TableHead className="w-1/4">Basic Plan</TableHead>
+                  <TableHead className="w-1/4">{t('pro.feature')}</TableHead>
+                  <TableHead className="w-1/4">{t('pro.freePlan')}</TableHead>
+                  <TableHead className="w-1/4">{t('pro.basicPlan')}</TableHead>
                   <TableHead className="w-1/4 bg-purple-100">
-                    Pro Plan
-                    <Badge className="ml-2 bg-purple-600">Best Value</Badge>
+                    {t('pro.proPlan')}
+                    <Badge className="ml-2 bg-purple-600">{t('pro.bestValue')}</Badge>
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {planFeatures.map((feature, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{feature.name}</TableCell>
+                {planFeatures.map((feature) => (
+                  <TableRow key={feature.key}>
+                    <TableCell>{t(`pro.features.${feature.key}.name`)}</TableCell>
                     <TableCell>
-                      {typeof feature.free === 'boolean' ? (
-                        feature.free ? <Check className="text-green-500" /> : <X className="text-red-500" />
+                      {t(`pro.features.${feature.key}.free`, { defaultValue: false }) ? (
+                        <Check className="text-green-500" />
+                      ) : t(`pro.features.${feature.key}.free`) ? (
+                        t(`pro.features.${feature.key}.free`)
                       ) : (
-                        feature.free
+                        <X className="text-red-500" />
                       )}
                     </TableCell>
                     <TableCell>
-                      {typeof feature.basic === 'boolean' ? (
-                        feature.basic ? <Check className="text-green-500" /> : <X className="text-red-500" />
+                      {t(`pro.features.${feature.key}.basic`, { defaultValue: false }) ? (
+                        <Check className="text-green-500" />
+                      ) : t(`pro.features.${feature.key}.basic`) ? (
+                        t(`pro.features.${feature.key}.basic`)
                       ) : (
-                        feature.basic
+                        <X className="text-red-500" />
                       )}
                     </TableCell>
                     <TableCell className="bg-purple-50">
-                      {typeof feature.pro === 'boolean' ? (
-                        feature.pro ? <Check className="text-green-500" /> : <X className="text-red-500" />
+                      {t(`pro.features.${feature.key}.pro`, { defaultValue: false }) ? (
+                        <Check className="text-green-500" />
+                      ) : t(`pro.features.${feature.key}.pro`) ? (
+                        t(`pro.features.${feature.key}.pro`)
                       ) : (
-                        feature.pro
+                        <X className="text-red-500" />
                       )}
                     </TableCell>
                   </TableRow>
                 ))}
                 <TableRow>
-                  <TableCell>Price</TableCell>
-                  <TableCell>$0/month</TableCell>
+                  <TableCell>{t('pro.feature')}</TableCell>
+                  <TableCell>{t('pro.price.free')}</TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="text-lg font-bold">$5/month</span>
-                      <span className="text-sm text-gray-600">or $50/year (save $10)</span>
+                      <span className="text-lg font-bold">{t('pro.price.basic.monthly')}</span>
+                      <span className="text-sm text-gray-600">{t('pro.price.basic.yearly')}</span>
                       <Button 
                         onClick={() => window.location.href = 'https://buy.stripe.com/test_bIY3eN9mh9hv95SbIJ'}
                         className="mt-2 bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 transition-all duration-300"
                       >
-                        Get Basic
+                        {t('pro.buttons.getBasic')}
                       </Button>
                     </div>
                   </TableCell>
                   <TableCell className="bg-purple-50">
                     <div className="flex flex-col">
-                      <span className="text-lg font-bold">$15/month</span>
-                      <span className="text-sm text-gray-600">or $150/year (save $30)</span>
+                      <span className="text-lg font-bold">{t('pro.price.pro.monthly')}</span>
+                      <span className="text-sm text-gray-600">{t('pro.price.pro.yearly')}</span>
                       <Button 
                         onClick={handleUpgrade}
                         className="mt-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300"
                       >
-                        Upgrade to Pro
+                        {t('pro.buttons.upgradePro')}
                       </Button>
                     </div>
                   </TableCell>
@@ -181,92 +160,38 @@ export function EnhancedProView() {
 
         {/* Feature Highlights Section */}
         <section className="mb-16">
-          <h2 className="text-3xl font-bold text-center mb-8">Feature Highlights</h2>
+          <h2 className="text-3xl font-bold text-center mb-8">{t('pro.sections.featureHighlights.title')}</h2>
           <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="unlimited-storage">
-              <AccordionTrigger>
-                <div className="flex items-center">
-                  <CreditCard className="mr-2" />
-                  Unlimited Card Storage
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                Store as many business cards as you need without worrying about limits. Perfect for networking professionals and growing businesses.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="advanced-ocr">
-              <AccordionTrigger>
-                <div className="flex items-center">
-                  <Search className="mr-2" />
-                  Advanced OCR
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                Our cutting-edge OCR technology ensures higher accuracy in text recognition, even for complex business card layouts and multiple languages.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="org-chart">
-              <AccordionTrigger>
-                <div className="flex items-center">
-                  <Users className="mr-2" />
-                  Org Chart Visualization
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                Visualize complex organizational structures with our advanced, interactive org chart feature. Understand company hierarchies at a glance.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="news-consolidation">
-              <AccordionTrigger>
-                <div className="flex items-center">
-                  <Zap className="mr-2" />
-                  News Consolidation
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                Stay informed about your contacts' companies with our AI-powered news aggregation. Get relevant updates delivered directly to your dashboard.
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </section>
-
-        {/* Testimonials Section */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold text-center mb-8">What Our Pro Users Say</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow duration-300">
-                <CardHeader>
+            {featureHighlights.map((feature) => (
+              <AccordionItem key={feature.key} value={feature.key}>
+                <AccordionTrigger>
                   <div className="flex items-center">
-                    <img src={testimonial.photo} alt={testimonial.name} className="w-12 h-12 rounded-full mr-4" />
-                    <div>
-                      <CardTitle>{testimonial.name}</CardTitle>
-                      <CardDescription>{testimonial.company}</CardDescription>
-                    </div>
+                    <feature.icon className="mr-2" />
+                    {t(`pro.sections.featureHighlights.${feature.key}.title`)}
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="italic">&ldquo;{testimonial.comment}&rdquo;</p>
-                </CardContent>
-              </Card>
+                </AccordionTrigger>
+                <AccordionContent>
+                  {t(`pro.sections.featureHighlights.${feature.key}.description`)}
+                </AccordionContent>
+              </AccordionItem>
             ))}
-          </div>
+          </Accordion>
         </section>
 
         {/* FAQ Section */}
         <section className="mb-16">
-          <h2 className="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+          <h2 className="text-3xl font-bold text-center mb-8">{t('pro.sections.faq.title')}</h2>
           <Accordion type="single" collapsible className="w-full">
-            {faqs.map((faq, index) => (
-              <AccordionItem key={index} value={`faq-${index}`}>
+            {['downgrade', 'cancel', 'trial'].map((key) => (
+              <AccordionItem key={key} value={key}>
                 <AccordionTrigger>
                   <div className="flex items-center">
                     <HelpCircle className="mr-2" />
-                    {faq.question}
+                    {t(`pro.sections.faq.questions.${key}.question`)}
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  {faq.answer}
+                  {t(`pro.sections.faq.questions.${key}.answer`)}
                 </AccordionContent>
               </AccordionItem>
             ))}
@@ -275,9 +200,13 @@ export function EnhancedProView() {
       </main>
 
       <footer className="bg-gray-100 py-8 text-center">
-        <p className="mb-4">Ready to take your networking to the next level?</p>
-        <Button size="lg" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300">
-          Upgrade to Pro Now <ChevronRight className="ml-2" />
+        <p className="mb-4">{t('pro.footer.cta')}</p>
+        <Button 
+          size="lg" 
+          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300"
+          onClick={handleUpgrade}
+        >
+          {t('pro.footer.button')} <ChevronRight className="ml-2" />
         </Button>
       </footer>
     </div>

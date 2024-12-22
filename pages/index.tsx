@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { 
   ScanIcon,
   LayoutGridIcon,
@@ -112,6 +113,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 }
 
 export default function Component() {
+  const { t } = useTranslation()
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState('grid')
   const [selectedCard, setSelectedCard] = useState<BusinessCard | null>(null)
@@ -512,9 +514,11 @@ export default function Component() {
         emailMap.get(card.email)?.push(card);
       });
 
+      let mergedCount = 0;
       // Process each group of cards
       for (const [email, cardGroup] of emailMap) {
         if (cardGroup.length > 1) {
+          mergedCount++;
           // Sort by created_at to keep the latest as base
           const sortedCards = cardGroup.sort((a, b) => 
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -533,8 +537,14 @@ export default function Component() {
             address: merged.address || current.address,
             address_zh: merged.address_zh || current.address_zh,
             notes: merged.notes || current.notes,
-            // Collect all images
-            images: [...(merged.images || [merged.imageUrl]), current.imageUrl]
+            // Properly handle images
+            imageUrl: merged.imageUrl || current.imageUrl,
+            images: Array.from(new Set([
+              ...(merged.images || []),
+              ...(current.images || []),
+              merged.imageUrl,
+              current.imageUrl
+            ]).filter(Boolean))
           }));
 
           // Update the base card in database
@@ -551,6 +561,7 @@ export default function Component() {
               address: mergedCard.address,
               address_zh: mergedCard.address_zh,
               notes: mergedCard.notes,
+              image_url: mergedCard.imageUrl,
               images: mergedCard.images,
               updated_at: new Date().toISOString()
             })
@@ -568,14 +579,19 @@ export default function Component() {
         }
       }
 
+      if (mergedCount === 0) {
+        toast.info(t('dialogs.merge.noMergeableCards'));
+        return;
+      }
+
       // Refresh cards
       await fetchCards();
-      toast.success('Cards merged successfully');
+      toast.success(t('dialogs.merge.success'));
       setShowMergeConfirmDialog(false);
 
     } catch (error) {
       console.error('Error merging cards:', error);
-      toast.error('Failed to merge cards');
+      toast.error(t('dialogs.merge.error'));
     }
   };
 
@@ -651,7 +667,7 @@ export default function Component() {
     <ErrorBoundary>
       <div className="flex flex-col min-h-screen bg-gray-50">
         <header className="bg-white border-b px-8 py-4">
-          <h1 className="text-2xl font-bold text-primary">Digital Archive.ai</h1>
+          <h1 className="text-2xl font-bold text-primary">{t('appTitle')}</h1>
         </header>
 
         <main className="flex-1 overflow-auto p-8 pb-20 scroll-smooth">
@@ -660,10 +676,10 @@ export default function Component() {
               <Card className="backdrop-blur-sm bg-white/90 shadow-lg border-0">
                 <CardHeader className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b">
                   <CardTitle className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                    Manage Business Cards
+                    {t('manage.title')}
                   </CardTitle>
                   <CardDescription className="text-lg text-gray-600">
-                    View, edit, and organize your scanned business cards
+                    {t('manage.description')}
                   </CardDescription>
 
                   <FreeUsageCounter />
@@ -672,7 +688,7 @@ export default function Component() {
                     <div className="relative flex-grow">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                       <Input
-                        placeholder="Search cards..."
+                        placeholder={t('manage.searchPlaceholder')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 py-2 text-sm rounded-lg border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary/20 transition-all duration-300"
@@ -689,35 +705,35 @@ export default function Component() {
                           icon={Download}
                           variant="ghost"
                           size="sm"
-                          title="Export as CSV"
+                          title={t('manage.actions.download')}
                           onClick={handleDownloadCSV}
                         />
                         <PremiumButton
                           icon={Trash2}
                           variant="ghost"
                           size="sm"
-                          title="Remove Duplicates"
+                          title={t('manage.actions.removeDuplicates')}
                           onClick={handleRemoveDuplicatesClick}
                         />
                         <PremiumButton
                           icon={Merge}
                           variant="ghost"
                           size="sm"
-                          title="Merge Similar Cards"
+                          title={t('manage.actions.merge')}
                           onClick={handleMergeCardsClick}
                         />
                         <PremiumButton
                           icon={Filter}
                           variant="ghost"
                           size="sm"
-                          title="Filter Cards"
+                          title={t('actions.filter')}
                           onClick={() => setShowFilterDialog(true)}
                         />
                         <PremiumButton
                           icon={SortAsc}
                           variant="ghost"
                           size="sm"
-                          title="Sort Cards"
+                          title={t('actions.sort')}
                           onClick={() => setShowSortDialog(true)}
                         />
                         <Select
@@ -728,8 +744,8 @@ export default function Component() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="grid">Grid View</SelectItem>
-                            <SelectItem value="table">Table View</SelectItem>
+                            <SelectItem value="grid">{t('view.grid')}</SelectItem>
+                            <SelectItem value="table">{t('view.table')}</SelectItem>
                           </SelectContent>
                         </Select>
                       </motion.div>
@@ -745,13 +761,13 @@ export default function Component() {
                       transition={{ duration: 0.5 }}
                     >
                       <Upload className="h-16 w-16 mb-4 text-gray-400" />
-                      <p className="text-lg font-medium mb-2">No business cards found</p>
-                      <p className="text-sm text-gray-500 mb-4">Start by uploading a new card</p>
+                      <p className="text-lg font-medium mb-2">{t('manage.empty.title')}</p>
+                      <p className="text-sm text-gray-500 mb-4">{t('manage.empty.description')}</p>
                       <Button 
                         onClick={() => setActiveView('scan')}
                         className="bg-gradient-to-r from-primary to-primary/80 text-white hover:from-primary/90 hover:to-primary/70"
                       >
-                        Upload Card
+                        {t('actions.uploadCard')}
                       </Button>
                     </motion.div>
                   ) : (
@@ -837,10 +853,9 @@ export default function Component() {
         {showTooltip && (
           <div className="fixed bottom-20 right-4 bg-white p-4 rounded-lg shadow-lg max-w-xs">
             <p className="text-sm text-gray-600 mb-2">
-              Welcome! Use the filters and sorting options to organize your business cards. 
-              Click on a card to view details.
+              {t('tooltips.welcome')}
             </p>
-            <Button size="sm" onClick={() => setShowTooltip(false)}>Got it</Button>
+            <Button size="sm" onClick={() => setShowTooltip(false)}>{t('actions.gotIt')}</Button>
           </div>
         )}
 
@@ -848,17 +863,17 @@ export default function Component() {
           <Dialog open={showFilterDialog} onOpenChange={setShowFilterDialog}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Filter Cards</DialogTitle>
+                <DialogTitle>{t('dialogs.filter.title')}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label>Company</Label>
+                  <Label>{t('card.company')}</Label>
                   <Select value={filterCompany} onValueChange={setFilterCompany}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select company" />
+                      <SelectValue placeholder={t('dialogs.filter.selectCompany')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Companies</SelectItem>
+                      <SelectItem value="all">{t('dialogs.filter.allCompanies')}</SelectItem>
                       {uniqueCompanies.map(company => (
                         <SelectItem key={company} value={company}>{company}</SelectItem>
                       ))}
@@ -866,13 +881,13 @@ export default function Component() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Position</Label>
+                  <Label>{t('card.position')}</Label>
                   <Select value={filterPosition} onValueChange={setFilterPosition}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select position" />
+                      <SelectValue placeholder={t('dialogs.filter.selectPosition')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Positions</SelectItem>
+                      <SelectItem value="all">{t('dialogs.filter.allPositions')}</SelectItem>
                       {uniquePositions.map(position => (
                         <SelectItem key={position} value={position}>{position}</SelectItem>
                       ))}
@@ -885,9 +900,9 @@ export default function Component() {
                   setFilterCompany('all')
                   setFilterPosition('all')
                 }}>
-                  Reset
+                  {t('actions.reset')}
                 </Button>
-                <Button onClick={() => setShowFilterDialog(false)}>Apply</Button>
+                <Button onClick={() => setShowFilterDialog(false)}>{t('actions.apply')}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -897,38 +912,38 @@ export default function Component() {
           <Dialog open={showSortDialog} onOpenChange={setShowSortDialog}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Sort Cards</DialogTitle>
+                <DialogTitle>{t('dialogs.sort.title')}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label>Sort By</Label>
+                  <Label>{t('dialogs.sort.field')}</Label>
                   <Select value={sortField} onValueChange={(value: 'name' | 'company' | 'position' | 'createdAt') => setSortField(value)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="name">Name</SelectItem>
-                      <SelectItem value="company">Company</SelectItem>
-                      <SelectItem value="position">Position</SelectItem>
-                      <SelectItem value="createdAt">Date Added</SelectItem>
+                      <SelectItem value="name">{t('card.name')}</SelectItem>
+                      <SelectItem value="company">{t('card.company')}</SelectItem>
+                      <SelectItem value="position">{t('card.position')}</SelectItem>
+                      <SelectItem value="createdAt">{t('card.createdAt')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Direction</Label>
+                  <Label>{t('dialogs.sort.direction')}</Label>
                   <Select value={sortDirection} onValueChange={(value: 'asc' | 'desc') => setSortDirection(value)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="asc">Ascending</SelectItem>
-                      <SelectItem value="desc">Descending</SelectItem>
+                      <SelectItem value="asc">{t('dialogs.sort.ascending')}</SelectItem>
+                      <SelectItem value="desc">{t('dialogs.sort.descending')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={() => setShowSortDialog(false)}>Apply</Button>
+                <Button onClick={() => setShowSortDialog(false)}>{t('actions.apply')}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -938,14 +953,14 @@ export default function Component() {
           <Dialog open={showRemoveConfirmDialog} onOpenChange={setShowRemoveConfirmDialog}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Remove Duplicate Cards</DialogTitle>
+                <DialogTitle>{t('dialogs.removeDuplicates.title')}</DialogTitle>
                 <DialogDescription>
-                  Found {duplicateCount} duplicate business cards. Are you sure you want to remove them?
+                  {t('dialogs.removeDuplicates.description', { count: duplicateCount })}
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowRemoveConfirmDialog(false)}>
-                  Cancel
+                  {t('actions.cancel')}
                 </Button>
                 <Button 
                   variant="destructive" 
@@ -954,7 +969,7 @@ export default function Component() {
                     setShowRemoveConfirmDialog(false)
                   }}
                 >
-                  Remove {duplicateCount} Cards
+                  {t('actions.remove')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -965,14 +980,14 @@ export default function Component() {
           <Dialog open={showMergeConfirmDialog} onOpenChange={setShowMergeConfirmDialog}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Merge Similar Cards</DialogTitle>
+                <DialogTitle>{t('dialogs.merge.title')}</DialogTitle>
                 <DialogDescription>
-                  Found {mergeableCount} groups of cards that can be merged. Merging will combine information from cards with the same email address.
+                  {t('dialogs.merge.description', { count: mergeableCount })}
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowMergeConfirmDialog(false)}>
-                  Cancel
+                  {t('actions.cancel')}
                 </Button>
                 <Button 
                   onClick={() => {
@@ -980,7 +995,7 @@ export default function Component() {
                     setShowMergeConfirmDialog(false)
                   }}
                 >
-                  Merge Cards
+                  {t('actions.merge')}
                 </Button>
               </DialogFooter>
             </DialogContent>

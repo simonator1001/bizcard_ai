@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTranslation } from 'react-i18next';
 
 interface NewsViewProps {
   cards: BusinessCard[];
@@ -38,6 +39,7 @@ interface NewsArticle {
 }
 
 export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
+  const { t } = useTranslation();
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -162,7 +164,7 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
               <path d="M22 19v-11" />
             </svg>
           </div>
-          <CardTitle className="text-3xl font-bold">Biz.ai</CardTitle>
+          <CardTitle className="text-3xl font-bold">{t('news.title')}</CardTitle>
         </div>
         
         {/* Main Controls Container */}
@@ -177,8 +179,8 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
             >
               <span>
                 {selectedCompanies.length 
-                  ? `${selectedCompanies.length} companies selected`
-                  : "Select Companies"
+                  ? t('news.companiesSelected', { count: selectedCompanies.length })
+                  : t('news.noCompanies')
                 }
               </span>
               <ChevronDown className="ml-2 h-4 w-4" />
@@ -195,13 +197,13 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
               }}
             >
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Articles per company" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1">1 article per company</SelectItem>
-                <SelectItem value="3">3 articles per company</SelectItem>
-                <SelectItem value="5">5 articles per company</SelectItem>
-                <SelectItem value="10">10 articles per company</SelectItem>
+                <SelectItem value="1">{t('news.articlesPerCompany.one')}</SelectItem>
+                <SelectItem value="3">{t('news.articlesPerCompany.three')}</SelectItem>
+                <SelectItem value="5">{t('news.articlesPerCompany.five')}</SelectItem>
+                <SelectItem value="10">{t('news.articlesPerCompany.ten')}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -216,7 +218,7 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
-                Clear All
+                {t('news.clearAll')}
               </Button>
             )}
           </div>
@@ -259,6 +261,23 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
         {isLoading ? (
           <div className="flex justify-center p-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <span className="ml-3">{t('news.loading')}</span>
+          </div>
+        ) : newsArticles.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            {selectedCompanies.length === 0 
+              ? t('news.selectCompanies')
+              : t('news.noArticles')}
+            {selectedCompanies.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchNews(selectedCompanies)}
+                className="mt-4"
+              >
+                {t('actions.tryAgain')}
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

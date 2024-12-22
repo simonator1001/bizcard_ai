@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useTranslation } from 'react-i18next'
 
 interface BusinessCard {
   id: string
@@ -60,6 +61,7 @@ export const BusinessCardDetails: React.FC<BusinessCardDetailsProps> = ({
   onDelete,
   onEdit
 }) => {
+  const { t } = useTranslation()
   const [showDeleteAlert, setShowDeleteAlert] = React.useState(false)
   const initials = card.name
     .split(' ')
@@ -111,16 +113,34 @@ export const BusinessCardDetails: React.FC<BusinessCardDetailsProps> = ({
                 </div>
 
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => onEdit?.(card.id)}>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => onEdit?.(card.id)}
+                    title={t('actions.edit')}
+                  >
                     <Edit2 className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={handleDelete}>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={handleDelete}
+                    title={t('actions.delete')}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    title={t('actions.email')}
+                  >
                     <Mail className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    title={t('actions.notes')}
+                  >
                     <PenTool className="h-4 w-4" />
                   </Button>
                 </div>
@@ -128,7 +148,7 @@ export const BusinessCardDetails: React.FC<BusinessCardDetailsProps> = ({
 
               <div className="mt-4 grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-1">Contact</h4>
+                  <h4 className="text-sm font-medium text-gray-500 mb-1">{t('card.contact')}</h4>
                   <div className="space-y-1">
                     {card.email && (
                       <p className="text-sm truncate">{card.email}</p>
@@ -142,7 +162,7 @@ export const BusinessCardDetails: React.FC<BusinessCardDetailsProps> = ({
                   </div>
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-1">Address</h4>
+                  <h4 className="text-sm font-medium text-gray-500 mb-1">{t('card.address')}</h4>
                   <div className="space-y-1">
                     {card.address && (
                       <p className="text-sm">{card.address}</p>
@@ -158,7 +178,7 @@ export const BusinessCardDetails: React.FC<BusinessCardDetailsProps> = ({
             {card.image_url && layout !== 'list' && (
               <img 
                 src={card.image_url} 
-                alt="Business Card"
+                alt={t('card.businessCardImage')}
                 className="w-32 h-20 object-cover rounded-lg"
               />
             )}
@@ -169,15 +189,15 @@ export const BusinessCardDetails: React.FC<BusinessCardDetailsProps> = ({
       <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Business Card</AlertDialogTitle>
+            <AlertDialogTitle>{t('dialogs.delete.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this business card? This action cannot be undone.
+              {t('dialogs.delete.description')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-              Delete
+            <AlertDialogCancel>{t('actions.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>
+              {t('actions.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

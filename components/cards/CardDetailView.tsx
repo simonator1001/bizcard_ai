@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -45,50 +46,54 @@ interface CardDetailViewProps {
   onDelete: (id: string) => void
 }
 
-const ShareDialog = ({ card, onClose }: { card: BusinessCard; onClose: () => void }) => (
-  <Dialog open onOpenChange={onClose}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Share Business Card</DialogTitle>
-      </DialogHeader>
-      <div className="space-y-4 p-4">
-        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-          <span className="text-sm text-gray-600 truncate">{card.imageUrl}</span>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              navigator.clipboard.writeText(card.imageUrl);
-              toast.success('Link copied to clipboard');
-            }}
-          >
-            Copy Link
-          </Button>
+const ShareDialog = ({ card, onClose }: { card: BusinessCard; onClose: () => void }) => {
+  const { t } = useTranslation();
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t('card.share.title')}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 p-4">
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <span className="text-sm text-gray-600 truncate">{card.imageUrl}</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                navigator.clipboard.writeText(card.imageUrl);
+                toast.success(t('card.share.copyLink'));
+              }}
+            >
+              {t('actions.copyLink')}
+            </Button>
+          </div>
+          <div className="flex justify-center gap-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                window.open(`mailto:?subject=Business Card - ${card.name}&body=View this business card: ${card.imageUrl}`);
+              }}
+            >
+              {t('card.share.email')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                window.open(`https://wa.me/?text=Business Card - ${card.name}%0A${card.imageUrl}`);
+              }}
+            >
+              {t('card.share.whatsapp')}
+            </Button>
+          </div>
         </div>
-        <div className="flex justify-center gap-4">
-          <Button
-            variant="outline"
-            onClick={() => {
-              window.open(`mailto:?subject=Business Card - ${card.name}&body=View this business card: ${card.imageUrl}`);
-            }}
-          >
-            Email
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              window.open(`https://wa.me/?text=Business Card - ${card.name}%0A${card.imageUrl}`);
-            }}
-          >
-            WhatsApp
-          </Button>
-        </div>
-      </div>
-    </DialogContent>
-  </Dialog>
-);
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailViewProps) {
+  const { t } = useTranslation();
   const [editedCard, setEditedCard] = useState(card)
   const [isEditing, setIsEditing] = useState(false)
   const [isImageEnlarged, setIsImageEnlarged] = useState(false)
@@ -104,11 +109,11 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
     const { name, value } = e.target
     
     if (name.endsWith('_zh') && containsEnglish(value)) {
-      toast.error('Please enter Chinese text only in this field')
+      toast.error(t('errors.chineseOnly'))
       return
     }
     if (!name.endsWith('_zh') && name !== 'email' && name !== 'phone' && name !== 'notes' && containsChinese(value)) {
-      toast.error('Please enter English text only in this field')
+      toast.error(t('errors.englishOnly'))
       return
     }
 
@@ -190,8 +195,8 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
       <Dialog open={true} onOpenChange={onClose}>
         <DialogContent className="max-w-2xl h-[85vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle>Business Card Details</DialogTitle>
-            <DialogDescription>View and edit business card information</DialogDescription>
+            <DialogTitle>{t('card.details.title')}</DialogTitle>
+            <DialogDescription>{t('card.details.description')}</DialogDescription>
           </DialogHeader>
           
           <ScrollArea className="flex-1 pr-4 -mr-4">
@@ -257,7 +262,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
               {/* Name Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Name (English)</Label>
+                  <Label htmlFor="name">{t('card.details.nameEnglish')}</Label>
                   <Input
                     id="name"
                     name="name"
@@ -267,7 +272,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="name_zh">Name (Chinese)</Label>
+                  <Label htmlFor="name_zh">{t('card.details.nameChinese')}</Label>
                   <Input
                     id="name_zh"
                     name="name_zh"
@@ -281,7 +286,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
               {/* Company Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="company">Company (English)</Label>
+                  <Label htmlFor="company">{t('card.details.companyEnglish')}</Label>
                   <Input
                     id="company"
                     name="company"
@@ -291,7 +296,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="company_zh">Company (Chinese)</Label>
+                  <Label htmlFor="company_zh">{t('card.details.companyChinese')}</Label>
                   <Input
                     id="company_zh"
                     name="company_zh"
@@ -305,7 +310,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
               {/* Title Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Title (English)</Label>
+                  <Label htmlFor="title">{t('card.details.titleEnglish')}</Label>
                   <Input
                     id="title"
                     name="title"
@@ -315,7 +320,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="title_zh">Title (Chinese)</Label>
+                  <Label htmlFor="title_zh">{t('card.details.titleChinese')}</Label>
                   <Input
                     id="title_zh"
                     name="title_zh"
@@ -328,7 +333,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
 
               {/* Contact Information */}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('card.details.email')}</Label>
                 <Input
                   id="email"
                   name="email"
@@ -339,7 +344,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone">{t('card.details.phone')}</Label>
                 <Input
                   id="phone"
                   name="phone"
@@ -352,7 +357,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
               {/* Address Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="address">Address (English)</Label>
+                  <Label htmlFor="address">{t('card.details.addressEnglish')}</Label>
                   <Input
                     id="address"
                     name="address"
@@ -362,7 +367,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="address_zh">Address (Chinese)</Label>
+                  <Label htmlFor="address_zh">{t('card.details.addressChinese')}</Label>
                   <Input
                     id="address_zh"
                     name="address_zh"
@@ -375,7 +380,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
 
               {/* Notes Field */}
               <div className="space-y-2">
-                <Label htmlFor="notes">Remarks</Label>
+                <Label htmlFor="notes">{t('card.details.remarks')}</Label>
                 <Textarea
                   id="notes"
                   name="notes"
@@ -413,7 +418,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
               </Button>
             </div>
             {isEditing && (
-              <Button onClick={handleSave}>Save changes</Button>
+              <Button onClick={handleSave}>{t('actions.save')}</Button>
             )}
           </DialogFooter>
         </DialogContent>
@@ -428,15 +433,15 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
       <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Business Card</AlertDialogTitle>
+            <AlertDialogTitle>{t('card.delete.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this business card? This action cannot be undone.
+              {t('card.delete.description')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('card.delete.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-              Delete
+              {t('card.delete.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

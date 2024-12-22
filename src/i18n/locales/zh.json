@@ -1,0 +1,372 @@
+{
+  "appTitle": "数字档案.ai",
+  "navigation": {
+    "dashboard": "仪表板",
+    "scan": "扫描",
+    "manage": "管理",
+    "news": "新闻",
+    "orgChart": "组织架构",
+    "settings": "设置",
+    "pro": "专业版"
+  },
+  "settings": {
+    "title": "设置",
+    "description": "管理您的账户偏好设置和订阅",
+    "subscription": "订阅",
+    "preferences": "偏好设置",
+    "language": "语言",
+    "languageDescription": "选择您的首选语言",
+    "darkMode": "深色模式",
+    "darkModeDescription": "启用深色模式以获得更好的夜间观看体验",
+    "notifications": "通知",
+    "notificationsDescription": "接收关于您的联系人的更新",
+    "autoScan": "自动扫描",
+    "autoScanDescription": "上传后自动处理名片"
+  },
+  "subscription": {
+    "businessCardScans": "名片扫描次数",
+    "companiesTracked": "追踪的公司数",
+    "upgradeNow": "立即升级",
+    "subscriptionEnding": "您的订阅将于以下日期结束",
+    "renewSubscription": "续���订阅",
+    "freePlan": "免费计划",
+    "renewsOn": "续订日期"
+  },
+  "account": {
+    "title": "账户",
+    "signOut": "退出登录"
+  },
+  "pro": {
+    "title": "解锁专业版功能以提升效率",
+    "subtitle": "升级到专业版，享受无限存储、高级OCR和独家功能",
+    "getStarted": "开始使用专业版",
+    "choosePlan": "选择您的计划",
+    "feature": "功能",
+    "freePlan": "免费版",
+    "basicPlan": "基础版",
+    "proPlan": "专业版",
+    "bestValue": "最佳选择",
+    "features": {
+      "cardScanning": {
+        "name": "名片扫描",
+        "free": "每月5次",
+        "basic": "每月30次",
+        "pro": "无限制"
+      },
+      "ocrSupport": {
+        "name": "OCR支持",
+        "free": "基础",
+        "basic": "增强",
+        "pro": "高级"
+      },
+      "cardManagement": {
+        "name": "名片管理",
+        "free": "基础",
+        "basic": "增强",
+        "pro": "高级"
+      },
+      "duplicateRemoval": {
+        "name": "重复删除",
+        "free": false,
+        "basic": true,
+        "pro": true
+      },
+      "export": {
+        "name": "导出",
+        "free": "CSV",
+        "basic": "CSV, PDF",
+        "pro": "所有格式"
+      },
+      "companyTracking": {
+        "name": "公司追踪",
+        "free": "3家公司",
+        "basic": "10家公司",
+        "pro": "无限制"
+      },
+      "newsUpdates": {
+        "name": "新闻更新",
+        "free": "每日",
+        "basic": "实时",
+        "pro": "实时 + 提醒"
+      },
+      "newsSources": {
+        "name": "新闻来源",
+        "free": "基础",
+        "basic": "高级",
+        "pro": "所有来源"
+      },
+      "newsHistory": {
+        "name": "新闻历史",
+        "free": "7天",
+        "basic": "30天",
+        "pro": "无限制"
+      },
+      "emailDigests": {
+        "name": "邮件摘要",
+        "free": false,
+        "basic": "每周",
+        "pro": "每日 + 自定义"
+      },
+      "aiFeatures": {
+        "name": "AI功能",
+        "free": "基础",
+        "basic": "增强",
+        "pro": "高级"
+      },
+      "competitorAnalysis": {
+        "name": "竞争对手分析",
+        "free": false,
+        "basic": "基础",
+        "pro": "高级"
+      },
+      "marketPredictions": {
+        "name": "市场预测",
+        "free": false,
+        "basic": "基础",
+        "pro": "高级"
+      },
+      "teamSharing": {
+        "name": "团队共享",
+        "free": false,
+        "basic": "最多3个用户",
+        "pro": "无限制"
+      },
+      "customAnnotations": {
+        "name": "自定义注释",
+        "free": false,
+        "basic": "基础",
+        "pro": "高级"
+      }
+    },
+    "price": {
+      "free": "免费",
+      "basic": {
+        "monthly": "¥69/月",
+        "yearly": "¥699/年"
+      },
+      "pro": {
+        "monthly": "¥139/月",
+        "yearly": "¥1399/年"
+      }
+    },
+    "buttons": {
+      "getBasic": "获取基础版",
+      "upgradePro": "升级到专业版"
+    },
+    "sections": {
+      "featureHighlights": {
+        "title": "功能亮点",
+        "storage": {
+          "title": "无限存储",
+          "description": "存储和管理无限数量的名片"
+        },
+        "ocr": {
+          "title": "高级OCR",
+          "description": "以高精度提取多语言名片文本"
+        },
+        "orgChart": {
+          "title": "组织架构图",
+          "description": "可视化公司层级和关系"
+        },
+        "news": {
+          "title": "公司新闻",
+          "description": "追踪您的联系人公司的最新动态"
+        }
+      },
+      "faq": {
+        "title": "常见问题",
+        "questions": {
+          "downgrade": {
+            "question": "我可以降级我的计划吗？",
+            "answer": "是的，您可以随时降级您的计划。您的专业版功能将在当前计费周期结束前保持有效。"
+          },
+          "cancel": {
+            "question": "如何取消订阅？",
+            "answer": "您可以在设置页面取消订阅。您的账户将在当前计费周期结束时恢复为免费计划。"
+          },
+          "trial": {
+            "question": "是否有免费试用？",
+            "answer": "是的，我们提供14天的专业版功能免费试用。无需信用卡。"
+          }
+        }
+      }
+    },
+    "footer": {
+      "cta": "准备好升级您的名片管理了吗？",
+      "button": "升级到专业版"
+    }
+  },
+  "scan": {
+    "title": "扫描名片",
+    "description": "上传名片图片以提取信息",
+    "dropzone": {
+      "title": "点击或拖放以上传名片图片",
+      "subtitle": "支持多个文件"
+    },
+    "preview": "名片预览",
+    "processing": "处理中...",
+    "success": "名片处理成功",
+    "error": "名片处理失败"
+  },
+  "orgChart": {
+    "title": "组织架构图",
+    "description": "可视化公司层级和关系",
+    "search": {
+      "placeholder": "搜索公司...",
+      "selectCompany": "选择公司",
+      "noCompanySelected": "选择公司以查看其组织架构图"
+    },
+    "loading": "正在加载组织架构图...",
+    "errors": {
+      "noData": "该公司暂无可用数据",
+      "failed": "生成组织架构图失败"
+    },
+    "node": {
+      "unknown": "未知",
+      "noPosition": "无职位"
+    }
+  },
+  "dialogs": {
+    "filter": {
+      "title": "筛选名片",
+      "selectCompany": "选择公司",
+      "selectPosition": "选择职位",
+      "allCompanies": "所有公司",
+      "allPositions": "所有职位"
+    },
+    "sort": {
+      "title": "排序名片",
+      "field": "排序依据",
+      "direction": "排序方向",
+      "selectField": "选择字段",
+      "selectDirection": "选择方向",
+      "ascending": "升序",
+      "descending": "降序"
+    },
+    "merge": {
+      "title": "合并相似名片",
+      "description": "发现 {{count}} 组可以合并的名片。合并将会组合具有相同电子邮件址的名片信息",
+      "confirm": "您确定要合并这些名片吗？",
+      "success": "名片合并成功",
+      "error": "名片合并失败",
+      "noMergeableCards": "未找到可合并的名片"
+    },
+    "removeDuplicates": {
+      "title": "删除重复名片",
+      "description": "发现 {{count}} 张重复的名片。您确定要删除它们吗？",
+      "confirm": "您确定要删除重复的名片吗？",
+      "success": "已删除 {{count}} 张重复名片",
+      "error": "删除重复名片失败",
+      "noDuplicates": "未找到重复名片"
+    }
+  },
+  "actions": {
+    "cancel": "取消",
+    "confirm": "确认",
+    "merge": "合并名片",
+    "remove": "删除名片",
+    "filter": "筛选名片",
+    "sort": "排序名片",
+    "uploadCard": "上传名片",
+    "gotIt": "知道了",
+    "tryAgain": "重试",
+    "email": "电子邮件",
+    "notes": "备注",
+    "delete": "删除",
+    "edit": "编辑",
+    "save": "保存更改",
+    "copyLink": "复制链接",
+    "share": "分享",
+    "download": "下载",
+    "apply": "应用",
+    "reset": "重置"
+  },
+  "view": {
+    "grid": "网格视图",
+    "table": "表格视图"
+  },
+  "card": {
+    "name": "姓名",
+    "company": "公司",
+    "position": "职位",
+    "createdAt": "创建时间",
+    "contact": "联系方式",
+    "address": "地址",
+    "businessCardImage": "名片图片",
+    "noImage": "暂无图片",
+    "details": {
+      "title": "名片详情",
+      "description": "查看和编辑名片信息",
+      "nameEnglish": "姓名（英文）",
+      "nameChinese": "姓名（中文）",
+      "companyEnglish": "公司（英文）",
+      "companyChinese": "公司（中文）",
+      "titleEnglish": "职位（英文）",
+      "titleChinese": "职位（中文）",
+      "email": "电子邮件",
+      "phone": "电话",
+      "addressEnglish": "地址（英文）",
+      "addressChinese": "地址（中文）",
+      "remarks": "备注"
+    },
+    "share": {
+      "title": "分享名片",
+      "copyLink": "复制链接",
+      "email": "电子邮件",
+      "whatsapp": "WhatsApp"
+    },
+    "delete": {
+      "title": "删除名片",
+      "description": "您确定要删除这张名片吗？此操作无法撤消。",
+      "cancel": "取消",
+      "confirm": "删除"
+    }
+  },
+  "tooltips": {
+    "welcome": "欢迎！使用筛选和排序选项来组织您的名片。点名片查看详情。"
+  },
+  "manage": {
+    "title": "管理名片",
+    "description": "查看、编辑和组织您的扫描名片",
+    "loading": "正在加载您的名片...",
+    "searchPlaceholder": "搜索名片...",
+    "empty": {
+      "title": "未找到名片",
+      "description": "从上传新名片开始"
+    },
+    "actions": {
+      "merge": "合并相似名片",
+      "removeDuplicates": "删除重复",
+      "download": "下载CSV",
+      "share": "分享"
+    }
+  },
+  "news": {
+    "title": "公司新闻",
+    "description": "追踪您的名片联系人的公司新闻",
+    "companiesSelected": "已选择 {{count}} 家公司",
+    "articlesPerCompany": {
+      "one": "每家公司1篇文章",
+      "three": "每家公司3篇文章",
+      "five": "每家公司5篇文章",
+      "ten": "每家公司10篇文章"
+    },
+    "clearAll": "清除全部",
+    "loading": "正在加载新闻...",
+    "noCompanies": "选择公司",
+    "selectCompanies": "选择公司以查看其新闻",
+    "noArticles": "未找到新闻文章",
+    "error": {
+      "fetchFailed": "获取新闻文章失败",
+      "noArticlesFound": "未找到所选公司的任何新闻文章"
+    }
+  },
+  "errors": {
+    "chineseOnly": "此字段只能输入中文",
+    "englishOnly": "此字段只能输入英文",
+    "required": "此字段为必填项",
+    "invalidEmail": "请输入有效的电子邮件地址",
+    "invalidPhone": "请输入有效的电话号码",
+    "generic": "发生错误，请重试"
+  }
+} 

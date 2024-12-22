@@ -9,10 +9,13 @@ import { useRouter } from 'next/navigation'
 import { AlertCircle, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
+import { LanguageSelector } from './LanguageSelector'
+import { useTranslation } from 'react-i18next'
 
 export function SettingsTab() {
   const { subscription, usage, loading } = useSubscription();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const currentPlan = SUBSCRIPTION_PLANS.find(
     (plan) => plan.tier === (subscription?.tier || 'free')
@@ -28,9 +31,9 @@ export function SettingsTab() {
         <div className="p-6 space-y-6">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-2xl font-bold">Settings</h2>
+              <h2 className="text-2xl font-bold">{t('navigation.settings')}</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                Manage your account preferences and subscription
+                {t('settings.description', 'Manage your account preferences and subscription')}
               </p>
             </div>
             {subscription?.status === 'active' && (
@@ -43,14 +46,14 @@ export function SettingsTab() {
 
           {/* Subscription Status */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Subscription</h3>
+            <h3 className="text-lg font-semibold">{t('settings.subscription')}</h3>
             
             {isExpiringSoon && (
               <Alert variant="warning">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  Your subscription will expire in {Math.ceil((new Date(subscription.current_period_end).getTime() - new Date().getTime()) / (24 * 60 * 60 * 1000))} days.
-                  {subscription.cancel_at_period_end ? ' Renew now to keep your benefits.' : ''}
+                  {t('subscription.subscriptionEnding')} {new Date(subscription.current_period_end).toLocaleDateString()}.
+                  {subscription.cancel_at_period_end ? t('subscription.renewSubscription') : ''}
                 </AlertDescription>
               </Alert>
             )}
@@ -58,10 +61,10 @@ export function SettingsTab() {
             <div className="bg-muted/50 rounded-lg p-4">
               <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h4 className="font-medium">{currentPlan?.name || 'Free'} Plan</h4>
+                  <h4 className="font-medium">{currentPlan?.name || t('subscription.freePlan')}</h4>
                   {subscription?.status === 'active' && (
                     <p className="text-sm text-muted-foreground">
-                      Renews on {new Date(subscription.current_period_end).toLocaleDateString()}
+                      {t('subscription.renewsOn')} {new Date(subscription.current_period_end).toLocaleDateString()}
                     </p>
                   )}
                 </div>
@@ -69,7 +72,7 @@ export function SettingsTab() {
                   variant={subscription?.status === 'active' ? 'outline' : 'default'}
                   onClick={() => router.push('/pricing')}
                 >
-                  {subscription?.status === 'active' ? 'Manage Plan' : 'Upgrade Now'}
+                  {subscription?.status === 'active' ? t('subscription.manageSubscription') : t('subscription.upgradeNow')}
                 </Button>
               </div>
 
@@ -78,7 +81,7 @@ export function SettingsTab() {
                 <div className="space-y-3">
                   <div>
                     <div className="flex justify-between text-sm mb-2">
-                      <span>Business Card Scans</span>
+                      <span>{t('subscription.businessCardScans')}</span>
                       <span>
                         {usage?.scansCount || 0} / {currentPlan.limits.scansPerMonth === Infinity ? '∞' : currentPlan.limits.scansPerMonth}
                       </span>
@@ -90,7 +93,7 @@ export function SettingsTab() {
                   </div>
                   <div>
                     <div className="flex justify-between text-sm mb-2">
-                      <span>Companies Tracked</span>
+                      <span>{t('subscription.companiesTracked')}</span>
                       <span>
                         {usage?.companiesTracked || 0} / {currentPlan.limits.companiesTracked === Infinity ? '∞' : currentPlan.limits.companiesTracked}
                       </span>
@@ -109,13 +112,15 @@ export function SettingsTab() {
           
           {/* Preferences */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Preferences</h3>
+            <h3 className="text-lg font-semibold">{t('settings.preferences', 'Preferences')}</h3>
             
+            <LanguageSelector />
+
             <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="darkMode">Dark Mode</Label>
+                <Label htmlFor="darkMode">{t('settings.darkMode')}</Label>
                 <p className="text-sm text-muted-foreground">
-                  Enable dark mode for better viewing at night
+                  {t('settings.darkModeDescription')}
                 </p>
               </div>
               <Switch id="darkMode" />
@@ -123,9 +128,9 @@ export function SettingsTab() {
 
             <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="notifications">Notifications</Label>
+                <Label htmlFor="notifications">{t('settings.notifications')}</Label>
                 <p className="text-sm text-muted-foreground">
-                  Receive updates about your contacts
+                  {t('settings.notificationsDescription')}
                 </p>
               </div>
               <Switch id="notifications" />
@@ -133,9 +138,9 @@ export function SettingsTab() {
 
             <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="autoScan">Auto Scan</Label>
+                <Label htmlFor="autoScan">{t('settings.autoScan')}</Label>
                 <p className="text-sm text-muted-foreground">
-                  Automatically process cards after upload
+                  {t('settings.autoScanDescription')}
                 </p>
               </div>
               <Switch id="autoScan" />
@@ -146,15 +151,15 @@ export function SettingsTab() {
 
           {/* Account Actions */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Account</h3>
+            <h3 className="text-lg font-semibold">{t('account.title')}</h3>
             <Button variant="outline" className="w-full">
-              Sign Out
+              {t('account.signOut')}
             </Button>
           </div>
         </div>
       </Card>
     </div>
-  )
+  );
 }
 
 export default SettingsTab 
