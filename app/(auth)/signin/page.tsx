@@ -119,10 +119,6 @@ export default function SignInPage() {
         </Card>
 
         <div className="hidden lg:flex flex-col items-center max-w-[400px]">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-2">Business Card</h1>
-            <p className="text-xl text-gray-600">Easy scanning and saving of business cards</p>
-          </div>
           <div className="relative w-[300px] h-[600px]">
             <img
               src="/images/bizcard-preview.png"
