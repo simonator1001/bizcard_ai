@@ -11,11 +11,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import { LanguageSelector } from './LanguageSelector'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '@/lib/auth-context'
 
 export function SettingsTab() {
   const { subscription, usage, loading } = useSubscription();
   const router = useRouter();
   const { t } = useTranslation();
+  const { signOut } = useAuth();
 
   const currentPlan = SUBSCRIPTION_PLANS.find(
     (plan) => plan.tier === (subscription?.tier || 'free')
@@ -152,7 +154,7 @@ export function SettingsTab() {
           {/* Account Actions */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">{t('account.title')}</h3>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={signOut}>
               {t('account.signOut')}
             </Button>
           </div>
