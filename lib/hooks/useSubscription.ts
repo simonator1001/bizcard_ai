@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useUser } from './useUser';
 import { SubscriptionService } from '../subscription';
 import { Subscription, SubscriptionUsage } from '@/types/subscription';
@@ -11,6 +11,16 @@ export function useSubscription() {
   const [usage, setUsage] = useState<SubscriptionUsage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const refreshUsage = useCallback(async () => {
+    if (!user) return;
+    try {
+      const usageData = await SubscriptionService.getCurrentUsage(user.id);
+      setUsage(usageData);
+    } catch (err) {
+      console.error('Error refreshing usage data:', err);
+    }
+  }, [user]);
 
   useEffect(() => {
     async function fetchSubscriptionData() {
@@ -53,5 +63,6 @@ export function useSubscription() {
     loading,
     error,
     canPerformAction,
+    refreshUsage,
   };
 }

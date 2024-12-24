@@ -14,6 +14,7 @@ import { useSubscription } from '@/lib/hooks/useSubscription'
 import { useRouter } from 'next/navigation'
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt'
 import { useTranslation } from 'react-i18next'
+import { SubscriptionService } from '@/lib/subscription'
 
 interface BusinessCard {
   id: string
@@ -156,7 +157,7 @@ const PremiumButton: React.FC<PremiumButtonProps> = ({
 
 export function ScanPage({ onAddCard }: ScanPageProps) {
   const router = useRouter();
-  const { subscription, usage, loading: subscriptionLoading, canPerformAction } = useSubscription();
+  const { subscription, usage, loading: subscriptionLoading, canPerformAction, refreshUsage } = useSubscription();
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -206,13 +207,6 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     if (!files || files.length === 0) return;
 
     try {
-      // Check if user can perform scan action
-      const canScan = await canPerformAction('scan');
-      if (!canScan) {
-        setShowUpgradePrompt(true);
-        return;
-      }
-
       setTotalFiles(files.length);
       setProcessedFiles(0);
       
@@ -223,13 +217,6 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i];
         setFile(file);
-        
-        // Check quota before each scan
-        const canScanNext = await canPerformAction('scan');
-        if (!canScanNext) {
-          setShowUpgradePrompt(true);
-          break;
-        }
         
         // Compress and get base64
         const compressedBase64 = await compressImage(file);
@@ -248,17 +235,9 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       setPreview(null);
       setExtractedInfo(null);
       toast.success(`Successfully processed ${processedFiles} business cards`);
-      
     } catch (error) {
       console.error('Error processing files:', error);
-      toast.error('Failed to process some images');
-    } finally {
-      setTotalFiles(0);
-      setProcessedFiles(0);
-      setUploadProgress(0);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      toast.error('Failed to process business cards');
     }
   };
 
@@ -284,13 +263,7 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
         const file = fileArray[i];
         setFile(file);
         
-        // Check quota before each scan
-        const canScanNext = await canPerformAction('scan');
-        if (!canScanNext) {
-          setShowUpgradePrompt(true);
-          break;
-        }
-        
+        // Compress and get base64
         const compressedBase64 = await compressImage(file);
         setPreview(compressedBase64);
         
@@ -320,64 +293,45 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
   }
 
   const processImage = async (base64Image: string) => {
-    if (!base64Image) return;
-    setIsProcessing(true);
-    setProcessingStage('Starting OCR process...');
-    
     try {
-      // Log the current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-      console.log('[Process] Current user:', user.id);
+      setIsProcessing(true);
+      setProcessingStage('Analyzing image...');
 
-      // Process image with OCR
-      setProcessingStage('Processing image...');
+      // Process the image with OCR first
       const result = await recognizeBusinessCard(base64Image);
-      console.log('[Process] OCR result:', result);
-
-      // Upload image to storage
-      setProcessingStage('Uploading to storage...');
-      const fileName = `${user.id}/${Date.now()}-card.jpg`;
       
-      // Convert base64 to blob for upload
-      const base64Response = await fetch(base64Image);
-      const blob = await base64Response.blob();
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('business-cards')
-        .upload(fileName, blob, {
-          contentType: 'image/jpeg',
-          upsert: true
-        });
+      if (!result) {
+        throw new Error('Failed to process image');
+      }
 
-      if (uploadError) throw uploadError;
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('business-cards')
-        .getPublicUrl(fileName);
+      // Check if user can perform scan action AFTER processing but BEFORE saving
+      const canScan = await canPerformAction('scan');
+      if (!canScan) {
+        setShowUpgradePrompt(true);
+        return;
+      }
 
       // Map OCR result to database record
-      setProcessingStage('Saving to database...');
-      const record = mapOCRToRecord(result, user.id, publicUrl);
+      const record = mapOCRToRecord(result, user.id, base64Image);
       
-      // Auto-save to database
-      const savedId = await saveToDatabase(record);
+      // Save to database
+      const cardId = await saveToDatabase(record);
       
-      // Update UI
-      setProcessingStage('Finalizing...');
-      setExtractedInfo({
-        id: savedId,
-        ...result,
-        imageUrl: publicUrl
-      });
+      // Increment scan count
+      await SubscriptionService.incrementScanCount(user.id);
       
-      setProcessingStatus('success');
-      toast.success('Business card saved successfully');
-      
-      // Notify parent component
-      onAddCard({
-        id: savedId,
+      // Refresh usage data
+      await refreshUsage();
+
+      // Map database record to BusinessCard type
+      const newCard: BusinessCard = {
+        id: cardId,
         name: record.name,
         name_zh: record.name_zh,
         company: record.company,
@@ -388,20 +342,24 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
         phone: record.phone,
         address: record.address,
         address_zh: record.address_zh,
-        notes: record.notes,
         imageUrl: record.image_url,
+        notes: record.notes,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
+        updated_at: new Date().toISOString(),
+      };
 
+      // Update UI
+      setExtractedInfo(newCard);
+      onAddCard(newCard);
+      setProcessingStatus('success');
+      toast.success('Business card processed successfully');
     } catch (error) {
       console.error('Error processing image:', error);
       setProcessingStatus('error');
-      toast.error('Failed to process and save business card');
+      toast.error('Failed to process business card');
     } finally {
-      setProcessingStage('');
       setIsProcessing(false);
-      setTimeout(() => setProcessingStatus('idle'), 3000);
+      setProcessingStage('');
     }
   };
 

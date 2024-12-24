@@ -25,26 +25,14 @@ const TIMEOUT = 60000;
 
 // Create a stable axios instance with proper configuration
 const axiosInstance = axios.create({
-  baseURL: 'https://api.together.xyz',
+  baseURL: '/api',
   timeout: TIMEOUT,
   headers: {
-    'Authorization': `Bearer ${TOGETHER_API_KEY}`,
     'Content-Type': 'application/json',
   },
   // Increase maxContentLength and maxBodyLength
   maxContentLength: Infinity,
-  maxBodyLength: Infinity,
-  // Important: Enable keep-alive to maintain connection
-  httpAgent: new (require('http')).Agent({ 
-    keepAlive: true,
-    timeout: TIMEOUT,
-    keepAliveMsecs: 3000
-  }),
-  httpsAgent: new (require('https')).Agent({ 
-    keepAlive: true,
-    timeout: TIMEOUT,
-    keepAliveMsecs: 3000
-  }),
+  maxBodyLength: Infinity
 });
 
 // Add request interceptor for logging
@@ -84,13 +72,7 @@ axiosInstance.interceptors.response.use(
       console.log(`Retrying request (attempt ${config.retryCount}) after ${delay}ms`);
       await new Promise(resolve => setTimeout(resolve, delay));
 
-      // Create new axios instance for retry to avoid stale connection
-      const newAxiosInstance = axios.create({
-        timeout: TIMEOUT,
-        headers: config.headers,
-      });
-
-      return newAxiosInstance(config);
+      return axiosInstance(config);
     }
 
     return Promise.reject(error);
@@ -285,7 +267,7 @@ export async function recognizeBusinessCard(imageBase64: string): Promise<OCRRes
       
       let response;
       try {
-        response = await axiosInstance.post('/v1/chat/completions', requestBody, {
+        response = await axiosInstance.post('/ocr', requestBody, {
           timeout: TIMEOUT,
           onUploadProgress: (progressEvent) => {
             console.log(`[OCR] Upload progress: ${Math.round((progressEvent.loaded * 100) / progressEvent.total)}%`);

@@ -23,12 +23,13 @@ export interface Subscription {
 
 export interface SubscriptionUsage {
   id: string;
-  userId: string;
-  month: Date;
+  user_id: string;
+  month: string;
   scansCount: number;
   companiesTracked: number;
-  createdAt: Date;
-  updatedAt: Date;
+  totalCards: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface SubscriptionPlan {

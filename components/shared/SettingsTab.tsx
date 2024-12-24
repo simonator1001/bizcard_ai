@@ -24,8 +24,8 @@ export function SettingsTab() {
   );
 
   const isExpiringSoon = subscription?.status === 'active' && 
-    subscription.current_period_end && 
-    new Date(subscription.current_period_end).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000;
+    subscription.currentPeriodEnd && 
+    new Date(subscription.currentPeriodEnd).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000;
 
   return (
     <div className="p-8">
@@ -35,7 +35,7 @@ export function SettingsTab() {
             <div>
               <h2 className="text-2xl font-bold">{t('navigation.settings')}</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                {t('settings.description', 'Manage your account preferences and subscription')}
+                {t('settings.description')}
               </p>
             </div>
             {subscription?.status === 'active' && (
@@ -54,8 +54,8 @@ export function SettingsTab() {
               <Alert variant="warning">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  {t('subscription.subscriptionEnding')} {new Date(subscription.current_period_end).toLocaleDateString()}.
-                  {subscription.cancel_at_period_end ? t('subscription.renewSubscription') : ''}
+                  {t('subscription.subscriptionEnding')} {new Date(subscription.currentPeriodEnd).toLocaleDateString()}.
+                  {subscription.cancelAtPeriodEnd && t('subscription.renewSubscription')}
                 </AlertDescription>
               </Alert>
             )}
@@ -64,9 +64,9 @@ export function SettingsTab() {
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <h4 className="font-medium">{currentPlan?.name || t('subscription.freePlan')}</h4>
-                  {subscription?.status === 'active' && (
+                  {subscription?.status === 'active' && subscription.currentPeriodEnd && (
                     <p className="text-sm text-muted-foreground">
-                      {t('subscription.renewsOn')} {new Date(subscription.current_period_end).toLocaleDateString()}
+                      {t('subscription.renewsOn')} {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
                     </p>
                   )}
                 </div>
@@ -83,7 +83,7 @@ export function SettingsTab() {
                 <div className="space-y-3">
                   <div>
                     <div className="flex justify-between text-sm mb-2">
-                      <span>{t('subscription.businessCardScans')}</span>
+                      <span>{t('subscription.monthlyScansUsed')}</span>
                       <span>
                         {usage?.scansCount || 0} / {currentPlan.limits.scansPerMonth === Infinity ? '∞' : currentPlan.limits.scansPerMonth}
                       </span>
@@ -92,6 +92,9 @@ export function SettingsTab() {
                       value={currentPlan.limits.scansPerMonth === Infinity ? 0 : ((usage?.scansCount || 0) / currentPlan.limits.scansPerMonth) * 100} 
                       className="h-2" 
                     />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {t('subscription.totalCardsStored', { count: usage?.totalCards || 0 })}
+                    </p>
                   </div>
                   <div>
                     <div className="flex justify-between text-sm mb-2">
@@ -114,7 +117,7 @@ export function SettingsTab() {
           
           {/* Preferences */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">{t('settings.preferences', 'Preferences')}</h3>
+            <h3 className="text-lg font-semibold">{t('settings.preferences')}</h3>
             
             <LanguageSelector />
 
