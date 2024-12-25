@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation'
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt'
 import { useTranslation } from 'react-i18next'
 import { SubscriptionService } from '@/lib/subscription'
+import { useAuth } from '@/lib/auth-context'
 
 interface BusinessCard {
   id: string
@@ -157,7 +158,8 @@ const PremiumButton: React.FC<PremiumButtonProps> = ({
 
 export function ScanPage({ onAddCard }: ScanPageProps) {
   const router = useRouter();
-  const { subscription, usage, loading: subscriptionLoading, canPerformAction, refreshUsage } = useSubscription();
+  const { user } = useAuth();
+  const { subscription, usage, refreshUsage } = useSubscription();
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -293,32 +295,36 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
   }
 
   const processImage = async (base64Image: string) => {
+    if (!user) {
+      toast.error('Please sign in to scan business cards');
+      return;
+    }
+
     try {
+      // Check subscription limits before processing
+      const canPerform = await SubscriptionService.canPerformAction(user.id, 'scan');
+      if (!canPerform) {
+        toast.error('You have reached your monthly scan limit. Please upgrade your plan to continue scanning.');
+        setShowUpgradePrompt(true);
+        return;
+      }
+
       setIsProcessing(true);
       setProcessingStage('Analyzing image...');
 
-      // Process the image with OCR first
+      // Process the image with OCR
       const result = await recognizeBusinessCard(base64Image);
       
       if (!result) {
         throw new Error('Failed to process image');
       }
 
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
-      // Check if user can perform scan action AFTER processing but BEFORE saving
-      const canScan = await canPerformAction('scan');
-      if (!canScan) {
-        setShowUpgradePrompt(true);
-        return;
-      }
+      // Upload image to Supabase storage
+      setProcessingStage('Uploading image...');
+      const imageUrl = await SubscriptionService.uploadBusinessCardImage(user.id, base64Image);
 
       // Map OCR result to database record
-      const record = mapOCRToRecord(result, user.id, base64Image);
+      const record = mapOCRToRecord(result, user.id, imageUrl);
       
       // Save to database
       const cardId = await saveToDatabase(record);
@@ -348,18 +354,15 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
         updated_at: new Date().toISOString(),
       };
 
-      // Update UI
-      setExtractedInfo(newCard);
+      // Notify parent component
       onAddCard(newCard);
-      setProcessingStatus('success');
-      toast.success('Business card processed successfully');
+      toast.success('Business card scanned and saved successfully');
+
     } catch (error) {
       console.error('Error processing image:', error);
-      setProcessingStatus('error');
-      toast.error('Failed to process business card');
+      toast.error('Failed to process and save business card');
     } finally {
       setIsProcessing(false);
-      setProcessingStage('');
     }
   };
 

@@ -134,6 +134,7 @@ END $$;
 CREATE OR REPLACE FUNCTION increment_scan_count()
 RETURNS TRIGGER AS $$
 BEGIN
+    -- Create or update the usage record for the current month
     INSERT INTO subscription_usage (
         user_id,
         month,
@@ -143,9 +144,20 @@ BEGIN
         NEW.user_id,
         date_trunc('month', CURRENT_DATE),
         1,
-        0
+        COALESCE((
+            SELECT COUNT(DISTINCT LOWER(company))
+            FROM business_cards
+            WHERE user_id = NEW.user_id
+            AND company IS NOT NULL
+        ), 0)
     ) ON CONFLICT (user_id, month) DO UPDATE
-    SET scans_count = subscription_usage.scans_count + 1;
+    SET scans_count = subscription_usage.scans_count + 1,
+        companies_tracked = COALESCE((
+            SELECT COUNT(DISTINCT LOWER(company))
+            FROM business_cards
+            WHERE user_id = NEW.user_id
+            AND company IS NOT NULL
+        ), 0);
     
     RETURN NEW;
 END;

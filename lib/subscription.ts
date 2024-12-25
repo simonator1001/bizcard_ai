@@ -1,148 +1,216 @@
-import { createClient } from '@/lib/supabase/client';
-import { Subscription, SubscriptionUsage } from '@/types/subscription';
+import { createClient } from '@supabase/supabase-js';
+import { SUBSCRIPTION_PLANS } from '@/lib/plans';
 
-let supabaseInstance: ReturnType<typeof createClient>;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_KEY;
 
-const getSupabase = () => {
-  if (!supabaseInstance) {
-    supabaseInstance = createClient();
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('Missing Supabase environment variables');
+}
+
+console.log('Connecting to Supabase at:', supabaseUrl);
+
+const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  },
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
   }
-  return supabaseInstance;
-};
+});
 
-export const SubscriptionService = {
-  async getCurrentSubscription(userId: string): Promise<Subscription | null> {
+export interface Subscription {
+  id: string;
+  userId: string;
+  tier: 'free' | 'basic' | 'pro';
+  status: 'active' | 'inactive' | 'cancelled';
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date | null;
+  cancelAtPeriodEnd: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SubscriptionUsage {
+  scansCount: number;
+  companiesTracked: number;
+  totalCards: number;
+  remainingScans: number;
+}
+
+export class SubscriptionService {
+  static async getCurrentSubscription(userId: string): Promise<Subscription> {
     try {
-      console.log('Getting subscription for user:', userId);
-      const supabase = getSupabase();
-      const { data, error } = await supabase
+      const { data: subscription, error } = await adminClient
         .from('subscriptions')
-        .select('*')
+        .select('id, user_id, tier, status, current_period_start, current_period_end, cancel_at_period_end, created_at, updated_at')
         .eq('user_id', userId)
         .maybeSingle();
 
       if (error) {
         console.error('Error fetching subscription:', error);
-        return null;
+        return this.getDefaultSubscription(userId);
       }
 
-      // If no subscription found, return a default free tier subscription
-      if (!data) {
-        console.log('No subscription found, returning free tier');
+      if (!subscription) {
+        return this.getDefaultSubscription(userId);
+      }
+
+      return {
+        id: subscription.id,
+        userId: subscription.user_id,
+        tier: subscription.tier || 'free',
+        status: subscription.status || 'active',
+        currentPeriodStart: new Date(subscription.current_period_start),
+        currentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end) : null,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end || false,
+        createdAt: new Date(subscription.created_at),
+        updatedAt: new Date(subscription.updated_at)
+      };
+    } catch (error) {
+      console.error('Error in getCurrentSubscription:', error);
+      return this.getDefaultSubscription(userId);
+    }
+  }
+
+  private static getDefaultSubscription(userId: string): Subscription {
+    return {
+      id: 'free',
+      userId,
+      tier: 'free',
+      status: 'active',
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  }
+
+  static async getCurrentUsage(userId: string): Promise<SubscriptionUsage> {
+    try {
+      console.log('Getting usage for user:', userId);
+
+      // First, let's check if the user has any cards
+      const { data: cards, error: cardsError } = await adminClient
+        .from('business_cards')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (cardsError) {
+        console.error('Error fetching cards:', cardsError);
+        throw cardsError;
+      }
+
+      console.log('Found cards:', cards);
+
+      // Get subscription to determine scan limits
+      const subscription = await this.getCurrentSubscription(userId);
+      const plan = SUBSCRIPTION_PLANS[subscription.tier];
+
+      // Get current stats using the database function
+      const { data: stats, error: statsError } = await adminClient
+        .rpc('get_user_card_stats', { user_id_param: userId });
+
+      if (statsError) {
+        console.error('Error getting user stats:', statsError);
+        // If the function fails, calculate stats manually
+        const totalCards = cards?.length || 0;
+        const uniqueCompanies = new Set(cards?.map(card => card.company?.toLowerCase())?.filter(Boolean)).size;
+        
         return {
-          id: 'free',
-          userId: userId,
-          tier: 'free',
-          status: 'active',
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: new Date(),
-          cancelAtPeriodEnd: false,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          scansCount: totalCards,
+          companiesTracked: uniqueCompanies,
+          totalCards: totalCards,
+          remainingScans: Math.max(0, plan.limits.scansPerMonth - totalCards)
         };
       }
 
-      console.log('Found subscription:', data);
+      // For testing - log the raw stats
+      console.log('Raw stats from DB:', stats);
+      console.log('Raw cards count:', cards?.length);
+
+      const monthlyLimit = plan.limits.scansPerMonth;
+      const scansCount = stats?.scans_this_month || cards?.length || 0;
+      const totalCards = stats?.total_cards || cards?.length || 0;
+      const uniqueCompanies = stats?.unique_companies || new Set(cards?.map(card => card.company?.toLowerCase())?.filter(Boolean)).size || 0;
+
+      // Calculate remaining scans
+      const remainingScans = Math.max(0, monthlyLimit - scansCount);
+
+      // For testing - log the calculated values
+      console.log('Calculated usage:', {
+        scansCount,
+        companiesTracked: uniqueCompanies,
+        totalCards,
+        remainingScans
+      });
+
       return {
-        id: data.id,
-        userId: data.user_id,
-        tier: data.tier,
-        status: data.status,
-        currentPeriodStart: new Date(data.current_period_start),
-        currentPeriodEnd: new Date(data.current_period_end),
-        cancelAtPeriodEnd: data.cancel_at_period_end,
-        paymentProvider: data.payment_provider,
-        paymentProviderSubscriptionId: data.payment_provider_subscription_id,
-        customBranding: data.custom_branding,
-        createdAt: new Date(data.created_at),
-        updatedAt: new Date(data.updated_at)
+        scansCount,
+        companiesTracked: uniqueCompanies,
+        totalCards,
+        remainingScans
       };
     } catch (error) {
-      console.error('Error fetching subscription:', error);
-      return null;
+      console.error('Error getting usage:', error);
+      return this.getDefaultUsage(SUBSCRIPTION_PLANS.free);
     }
-  },
+  }
 
-  async getCurrentUsage(userId: string): Promise<SubscriptionUsage | null> {
+  private static getDefaultUsage(plan: any): SubscriptionUsage {
+    return {
+      scansCount: 0,
+      companiesTracked: 0,
+      totalCards: 0,
+      remainingScans: plan.limits.scansPerMonth
+    };
+  }
+
+  static async updateUsageAfterCardDeletion(userId: string): Promise<void> {
     try {
-      const currentDate = new Date();
-      const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`;
-      console.log('Getting usage for user:', userId, 'month:', currentMonth);
+      // Call the stored procedure to update usage stats
+      const { error } = await adminClient
+        .rpc('initialize_monthly_usage', { user_id_param: userId });
 
-      const supabase = getSupabase();
-
-      // Get the total number of cards
-      const { count: totalCards, error: countError } = await supabase
-        .from('business_cards')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId);
-
-      console.log('Total cards:', totalCards);
-
-      if (countError) {
-        console.error('Error fetching total cards:', countError);
-        return null;
+      if (error) {
+        throw error;
       }
-
-      // Get the current month's usage
-      const { data: usageData, error: usageError } = await supabase
-        .from('subscription_usage')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('month', currentMonth)
-        .maybeSingle();
-
-      console.log('Usage data from DB:', usageData);
-
-      if (usageError) {
-        console.error('Error fetching usage:', usageError);
-        return null;
-      }
-
-      // Return usage data with actual scan count
-      const usage: SubscriptionUsage = {
-        id: usageData?.id || 'current',
-        user_id: userId,
-        month: currentMonth,
-        scansCount: totalCards || 0,
-        companiesTracked: usageData?.companies_tracked || 0,
-        totalCards: totalCards || 0,
-        created_at: usageData?.created_at || new Date().toISOString(),
-        updated_at: usageData?.updated_at || new Date().toISOString()
-      };
-
-      console.log('Returning usage data:', usage);
-      return usage;
     } catch (error) {
-      console.error('Error fetching usage:', error);
-      return null;
+      console.error('Error updating usage after card deletion:', error);
+      throw error;
     }
-  },
+  }
 
-  async canPerformAction(userId: string, action: 'scan' | 'track_company'): Promise<boolean> {
+  static async getUserPlan(userId: string) {
+    const subscription = await this.getCurrentSubscription(userId);
+    return SUBSCRIPTION_PLANS[subscription.tier];
+  }
+
+  static async canPerformAction(userId: string, action: 'scan' | 'track_company'): Promise<boolean> {
     try {
-      const [subscription, usage] = await Promise.all([
-        this.getCurrentSubscription(userId),
-        this.getCurrentUsage(userId)
+      const [plan, usage] = await Promise.all([
+        this.getUserPlan(userId),
+        this.getCurrentUsage(userId),
       ]);
 
-      if (!subscription || !usage) {
-        return false;
-      }
-
-      const currentPlan = SUBSCRIPTION_PLANS.find(plan => plan.tier === subscription.tier);
-      if (!currentPlan) {
+      if (!plan || !usage) {
         return false;
       }
 
       if (action === 'scan') {
-        return usage.scansCount < currentPlan.limits.scansPerMonth;
-      } else {
-        return usage.companiesTracked < currentPlan.limits.companiesTracked;
+        return usage.remainingScans > 0;
+      } else if (action === 'track_company') {
+        return usage.companiesTracked < plan.limits.companiesTracked;
       }
+
+      return false;
     } catch (error) {
       console.error('Error checking action permission:', error);
       return false;
     }
   }
-}; 
+} 

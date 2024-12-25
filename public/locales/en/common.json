@@ -17,16 +17,16 @@
     "autoScanDescription": "Automatically process cards when images are uploaded"
   },
   "subscription": {
-    "monthlyScansUsed": "Available Monthly Scans",
-    "totalCardsStored": "Total Business Cards: {{count}}",
-    "companiesTracked": "Companies Being Tracked",
+    "businessCardScans": "Number of free biz cards scanned left",
+    "totalCardsStored": "Number of Cards Stored: {{count}}",
+    "companiesTracked": "Total number of biz cards scanned",
     "subscriptionEnding": "Your subscription period ends on",
     "renewSubscription": "Please renew your subscription to maintain access to all features.",
     "freePlan": "Free Plan",
-    "renewsOn": "Next renewal date:",
-    "manageSubscription": "Manage Subscription",
+    "renewsOn": "Plan expires on:",
+    "manageSubscription": "Manage Plan",
     "upgradeNow": "Upgrade Now",
-    "manageSubscription": "Manage Plan"
+    "currentPlan": "Current Plan"
   },
   "account": {
     "title": "Account",

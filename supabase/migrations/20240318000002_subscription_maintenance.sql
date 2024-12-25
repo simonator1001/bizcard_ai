@@ -12,21 +12,17 @@ BEGIN
     SELECT DISTINCT
         u.id as user_id,
         date_trunc('month', CURRENT_DATE),
-        COALESCE((
-            SELECT COUNT(*)
-            FROM business_cards bc
-            WHERE bc.user_id = u.id
-        ), 0) as scans_count,
+        0 as scans_count,
         COALESCE((
             SELECT companies_tracked 
             FROM subscription_usage su 
             WHERE su.user_id = u.id 
             AND su.month = date_trunc('month', CURRENT_DATE - interval '1 month')
-        ), 0)
+        ), 0) as companies_tracked
     FROM auth.users u
     LEFT JOIN subscriptions s ON s.user_id = u.id
     ON CONFLICT (user_id, month) DO UPDATE
-    SET scans_count = EXCLUDED.scans_count;
+    SET scans_count = 0;
 
     -- Handle subscription renewals
     UPDATE subscriptions

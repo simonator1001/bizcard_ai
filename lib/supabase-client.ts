@@ -11,16 +11,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true
-  },
-  db: {
-    schema: 'public'
+    detectSessionInUrl: true,
+    storageKey: 'sb-auth',
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined
   },
   global: {
     headers: {
       'X-Client-Info': 'supabase-js-client'
-    },
-    fetch: fetch.bind(globalThis) // Ensure fetch is bound correctly
+    }
   }
 })
 

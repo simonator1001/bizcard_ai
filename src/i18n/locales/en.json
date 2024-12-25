@@ -24,13 +24,16 @@
     "autoScanDescription": "Automatically process business cards after upload"
   },
   "subscription": {
-    "businessCardScans": "Business Card Scans",
-    "companiesTracked": "Companies Tracked",
+    "businessCardScans": "Number of free biz cards scanned left",
+    "totalCardsStored": "Number of Cards Stored: {{count}}",
+    "companiesTracked": "Total number of biz cards scanned",
     "upgradeNow": "Upgrade Now",
     "subscriptionEnding": "Your subscription will end on",
-    "renewSubscription": "Renew Subscription",
+    "renewSubscription": "Please renew your subscription to maintain access to all features.",
     "freePlan": "Free Plan",
-    "renewsOn": "Renews on"
+    "renewsOn": "Plan expires on:",
+    "manageSubscription": "Manage Plan",
+    "currentPlan": "Current Plan"
   },
   "account": {
     "title": "Account",
