@@ -97,7 +97,7 @@ export class SubscriptionService {
       // First, let's check if the user has any cards
       const { data: cards, error: cardsError } = await adminClient
         .from('business_cards')
-        .select('*')
+        .select('id, company')
         .eq('user_id', userId);
 
       if (cardsError) {
@@ -135,7 +135,7 @@ export class SubscriptionService {
 
       const monthlyLimit = plan.limits.scansPerMonth;
       const scansCount = stats?.scans_this_month || cards?.length || 0;
-      const totalCards = stats?.total_cards || cards?.length || 0;
+      const totalCards = stats?.cards_count || cards?.length || 0;
       const uniqueCompanies = stats?.unique_companies || new Set(cards?.map(card => card.company?.toLowerCase())?.filter(Boolean)).size || 0;
 
       // Calculate remaining scans
@@ -211,6 +211,72 @@ export class SubscriptionService {
     } catch (error) {
       console.error('Error checking action permission:', error);
       return false;
+    }
+  }
+
+  static async uploadBusinessCardImage(userId: string, base64Image: string): Promise<string> {
+    try {
+      // Convert base64 to blob for upload
+      const base64Response = await fetch(base64Image);
+      const blob = await base64Response.blob();
+      
+      // Generate unique filename
+      const fileName = `${userId}/${Date.now()}-card.jpg`;
+      
+      // Use the regular supabase client for storage operations
+      const { supabase } = await import('@/lib/supabase-client');
+      
+      // Upload to Supabase storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('business-cards')
+        .upload(fileName, blob, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('business-cards')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading business card image:', error);
+      throw error;
+    }
+  }
+
+  static async insertBusinessCard(record: any): Promise<{ data: any; error: any }> {
+    try {
+      // First, do a simple insert
+      const { error: insertError } = await adminClient
+        .from('business_cards')
+        .insert([record]);
+
+      if (insertError) {
+        return { data: null, error: insertError };
+      }
+
+      // Then get the ID in a separate query
+      const { data, error: selectError } = await adminClient
+        .from('business_cards')
+        .select('id')
+        .eq('user_id', record.user_id)
+        .eq('image_url', record.image_url)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (selectError) {
+        return { data: null, error: selectError };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error inserting business card:', error);
+      return { data: null, error };
     }
   }
 } 

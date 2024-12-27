@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Upload, X, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { recognizeBusinessCard, preprocessImageForOCR } from '@/lib/ocr-service'
-import { supabase } from '@/lib/supabase-client'
+import { supabase, testConnection } from '@/lib/supabase-client'
 import { toast } from 'sonner'
 import imageCompression from 'browser-image-compression';
 import { useSubscription } from '@/lib/hooks/useSubscription'
@@ -106,9 +106,14 @@ const saveToDatabase = async (record: BusinessCardRecord): Promise<string> => {
 
     console.log('[Database] Saving record:', dbRecord);
 
+    // Try to insert with minimal fields first
     const { data, error } = await supabase
       .from('business_cards')
-      .insert(dbRecord)
+      .insert({
+        user_id: record.user_id,
+        name: record.name,
+        company: record.company
+      })
       .select('id')
       .single();
 
@@ -117,7 +122,23 @@ const saveToDatabase = async (record: BusinessCardRecord): Promise<string> => {
       throw error;
     }
 
-    return data.id;
+    // If successful, update with remaining fields
+    if (data?.id) {
+      const { error: updateError } = await supabase
+        .from('business_cards')
+        .update(dbRecord)
+        .eq('id', data.id);
+
+      if (updateError) {
+        console.error('[Database] Error updating full record:', updateError);
+        throw updateError;
+      }
+
+      console.log('[Database] Successfully saved record:', data);
+      return data.id;
+    }
+
+    throw new Error('Failed to get ID from insert');
   } catch (error) {
     console.error('[Database] Error saving to database:', error);
     throw error;
@@ -301,6 +322,13 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     }
 
     try {
+      // Test database connection first
+      const isConnected = await testConnection();
+      if (!isConnected) {
+        toast.error('Could not connect to the database. Please try again.');
+        return;
+      }
+
       // Check subscription limits before processing
       const canPerform = await SubscriptionService.canPerformAction(user.id, 'scan');
       if (!canPerform) {
@@ -328,9 +356,6 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       
       // Save to database
       const cardId = await saveToDatabase(record);
-      
-      // Increment scan count
-      await SubscriptionService.incrementScanCount(user.id);
       
       // Refresh usage data
       await refreshUsage();

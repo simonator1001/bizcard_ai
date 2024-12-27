@@ -7,106 +7,37 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
+console.log('[Supabase] Initializing client with URL:', supabaseUrl);
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storageKey: 'sb-auth',
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'supabase-js-client'
-    }
+    persistSession: true,
+    detectSessionInUrl: true
   }
 })
 
-// Add error handling and retry logic
-export async function fetchWithRetry(
-  operation: () => Promise<any>,
-  retries = 3,
-  delay = 1000
-) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await operation()
-    } catch (error) {
-      console.error(`Attempt ${i + 1} failed:`, error)
-      if (i === retries - 1) throw error
-      await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)))
-    }
-  }
-}
-
-export const getAuthUser = async () => {
+// Add a connection test function
+export const testConnection = async () => {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession()
-    if (error) throw error
-    
-    if (!session?.user) {
-      return null
-    }
+    console.log('[Supabase] Testing connection...');
+    const { data, error } = await supabase
+      .from('business_cards')
+      .select('*', { count: 'exact', head: true });
 
-    return session.user
-  } catch (error) {
-    console.error('Auth status check error:', error)
-    return null
-  }
-}
-
-export const debugAuthToken = async () => {
-  const { data: { session }, error } = await supabase.auth.getSession()
-  if (error) {
-    console.error('Session error:', error)
-    return
-  }
-  if (session?.access_token) {
-    const [header, payload, signature] = session.access_token.split('.')
-    console.log('JWT Payload:', JSON.parse(atob(payload)))
-  }
-}
-
-export const debugBusinessCards = async () => {
-  const { data, error } = await supabase
-    .from('business_cards')
-    .select(`
-      id,
-      name,
-      title,
-      title_zh,
-      company,
-      company_zh,
-      email,
-      phone,
-      created_at,
-      updated_at
-    `)
-    .order('company', { ascending: true })
-    .order('title', { ascending: true });
-
-  if (error) {
-    console.error('Error fetching business cards:', error);
-    return;
-  }
-
-  console.table(data);
-  return data;
-}; 
-
-export async function checkSupabaseConnection() {
-  try {
-    const { data, error } = await supabase.from('business_cards').select('count').single()
-    
     if (error) {
-      console.error('Supabase connection check failed:', error)
-      return false
+      console.error('[Supabase] Connection test failed:', error);
+      console.error('[Supabase] Error code:', error.code);
+      console.error('[Supabase] Error message:', error.message);
+      console.error('[Supabase] Error status:', error.status);
+      console.error('[Supabase] Error hint:', error.hint);
+      console.error('[Supabase] Error details:', error.details);
+      return false;
     }
-    
-    console.log('Supabase connection successful')
-    return true
+    console.log('[Supabase] Connection test successful:', data);
+    return true;
   } catch (error) {
-    console.error('Supabase connection check failed:', error)
-    return false
+    console.error('[Supabase] Connection test error:', error);
+    return false;
   }
-}
+}; 
