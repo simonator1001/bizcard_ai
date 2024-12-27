@@ -101,7 +101,7 @@ export function SettingsTab() {
             {subscription?.status === 'active' && (
               <div className="flex items-center text-sm text-green-600">
                 <CheckCircle2 className="h-4 w-4 mr-1" />
-                Active
+                {t('subscription.currentPlan')}
               </div>
             )}
           </div>

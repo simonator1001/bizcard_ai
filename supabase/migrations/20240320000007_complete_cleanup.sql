@@ -29,9 +29,9 @@ RETURNS TABLE (
 BEGIN
     RETURN QUERY
     SELECT 
-        COUNT(*) FILTER (WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE))::INTEGER,
-        COUNT(DISTINCT LOWER(company))::INTEGER,
-        COUNT(*)::INTEGER
+        COUNT(*) FILTER (WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE))::INTEGER as scans_this_month,
+        COUNT(DISTINCT LOWER(company))::INTEGER as unique_companies,
+        COUNT(*)::INTEGER as cards_count
     FROM business_cards
     WHERE user_id = user_id_param;
 END;

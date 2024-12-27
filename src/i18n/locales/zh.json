@@ -24,16 +24,19 @@
     "autoScanDescription": "上传后自动处理名片"
   },
   "subscription": {
-    "businessCardScans": "剩余免费名片扫描次数",
+    "businessCardScans": "剩余免费扫描次数",
     "totalCardsStored": "已存储名片数量：{{count}}",
-    "companiesTracked": "已扫描名片总数",
-    "upgradeNow": "立即升级",
+    "companiesTracked": "可追踪的公司数量",
+    "upgradeNow": "升级到专业版",
     "subscriptionEnding": "您的订阅将于以下日期结束",
     "renewSubscription": "请续订您的订阅以保持所有功能的访问权限",
     "freePlan": "免费计划",
     "renewsOn": "计划到期日：",
     "manageSubscription": "管理计划",
-    "currentPlan": "当前计划"
+    "currentPlan": "当前计划",
+    "approachingLimit": "您即将达到免费计划的使用限制。升级到专业版获取无限访问权限！",
+    "of": "共",
+    "left": "剩余"
   },
   "account": {
     "title": "账户",
@@ -330,7 +333,7 @@
   },
   "manage": {
     "title": "管理名片",
-    "description": "查看、编辑和组织您���扫描名片",
+    "description": "查看、编辑和组织您的扫描名片",
     "loading": "正在加载您的名片...",
     "searchPlaceholder": "搜索名片...",
     "empty": {

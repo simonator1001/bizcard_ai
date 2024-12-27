@@ -682,8 +682,6 @@ export default function Component() {
                     {t('manage.description')}
                   </CardDescription>
 
-                  <FreeUsageCounter />
-
                   <div className="flex items-center justify-between mt-6 space-x-4">
                     <div className="relative flex-grow">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />

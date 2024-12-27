@@ -94,49 +94,29 @@ export class SubscriptionService {
     try {
       console.log('Getting usage for user:', userId);
 
-      // First, let's check if the user has any cards
-      const { data: cards, error: cardsError } = await adminClient
-        .from('business_cards')
-        .select('id, company')
-        .eq('user_id', userId);
-
-      if (cardsError) {
-        console.error('Error fetching cards:', cardsError);
-        throw cardsError;
-      }
-
-      console.log('Found cards:', cards);
-
       // Get subscription to determine scan limits
       const subscription = await this.getCurrentSubscription(userId);
       const plan = SUBSCRIPTION_PLANS[subscription.tier];
 
-      // Get current stats using the database function
+      // Get current stats from user_usage_stats table
       const { data: stats, error: statsError } = await adminClient
-        .rpc('get_user_card_stats', { user_id_param: userId });
+        .from('user_usage_stats')
+        .select('scans_this_month, unique_companies, cards_count')
+        .eq('user_id', userId)
+        .single();
 
       if (statsError) {
         console.error('Error getting user stats:', statsError);
-        // If the function fails, calculate stats manually
-        const totalCards = cards?.length || 0;
-        const uniqueCompanies = new Set(cards?.map(card => card.company?.toLowerCase())?.filter(Boolean)).size;
-        
-        return {
-          scansCount: totalCards,
-          companiesTracked: uniqueCompanies,
-          totalCards: totalCards,
-          remainingScans: Math.max(0, plan.limits.scansPerMonth - totalCards)
-        };
+        return this.getDefaultUsage(plan);
       }
 
       // For testing - log the raw stats
       console.log('Raw stats from DB:', stats);
-      console.log('Raw cards count:', cards?.length);
 
       const monthlyLimit = plan.limits.scansPerMonth;
-      const scansCount = stats?.scans_this_month || cards?.length || 0;
-      const totalCards = stats?.cards_count || cards?.length || 0;
-      const uniqueCompanies = stats?.unique_companies || new Set(cards?.map(card => card.company?.toLowerCase())?.filter(Boolean)).size || 0;
+      const scansCount = stats.scans_this_month || 0;
+      const totalCards = stats.cards_count || 0;
+      const uniqueCompanies = stats.unique_companies || 0;
 
       // Calculate remaining scans
       const remainingScans = Math.max(0, monthlyLimit - scansCount);

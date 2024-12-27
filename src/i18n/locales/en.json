@@ -24,16 +24,19 @@
     "autoScanDescription": "Automatically process business cards after upload"
   },
   "subscription": {
-    "businessCardScans": "Number of free biz cards scanned left",
+    "businessCardScans": "Free Scans Remaining",
     "totalCardsStored": "Number of Cards Stored: {{count}}",
-    "companiesTracked": "Total number of biz cards scanned",
-    "upgradeNow": "Upgrade Now",
+    "companiesTracked": "Companies You Can Track",
+    "upgradeNow": "Upgrade to Pro",
     "subscriptionEnding": "Your subscription will end on",
     "renewSubscription": "Please renew your subscription to maintain access to all features.",
     "freePlan": "Free Plan",
     "renewsOn": "Plan expires on:",
     "manageSubscription": "Manage Plan",
-    "currentPlan": "Current Plan"
+    "currentPlan": "Current Plan",
+    "approachingLimit": "You're approaching your free plan limits. Upgrade to Pro for unlimited access!",
+    "of": "of",
+    "left": "left"
   },
   "account": {
     "title": "Account",
