@@ -46,7 +46,7 @@ export default async function handler(
           id: c.id,
           name: c.name,
           title: c.title,
-          title_zh: c.title_zh,
+          titleZh: c.titleZh,
           company: c.company
         })), null, 2)}
 

@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Search, Filter } from 'lucide-react'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -15,18 +14,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
-interface NewsArticle {
-  id: string
-  title: string
-  source: string
-  date: string
-  snippet: string
-  url: string
-  imageUrl?: string
-  relatedCompanies?: string[]
-  relatedPeople?: string[]
-}
 
 interface NewsSectionProps {
   companies: string[]

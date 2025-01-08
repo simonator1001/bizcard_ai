@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, memo, useMemo } from 'react'
+import { useState, useCallback, memo, useMemo, useEffect } from 'react'
 import ReactFlow, { 
   Background, 
   Controls, 
@@ -11,20 +11,21 @@ import ReactFlow, {
   ReactFlowProvider,
   useNodesState,
   useEdgesState,
-  Handle
+  Handle,
+  MarkerType,
+  BackgroundVariant
 } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ChevronDown, Search } from 'lucide-react'
+import { Search, ChevronDown } from 'lucide-react'
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { analyzeOrgStructure, testPerplexityAPI } from '@/lib/org-chart-analyzer'
-import { Mail, Phone } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { analyzeOrgStructure } from '@/lib/org-chart-analyzer'
 import { BusinessCardDialog } from '@/components/cards/BusinessCardDialog'
 import { useTranslation } from 'react-i18next'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface BusinessCard {
   id: string
@@ -299,7 +300,7 @@ const createFlowElements = (cards: BusinessCard[], company: string) => {
         animated: true,
         style: { stroke: '#94a3b8', strokeWidth: 2, strokeDasharray: '5,5' },
         markerEnd: {
-          type: 'arrowclosed',
+          type: MarkerType.Arrow,
           width: 20,
           height: 20,
           color: '#94a3b8',
@@ -559,14 +560,14 @@ export function OrgChartView({ data }: OrgChartViewProps) {
                     strokeDasharray: '5,5'
                   },
                   markerEnd: {
-                    type: 'arrowclosed',
+                    type: MarkerType.Arrow,
                     width: 20,
                     height: 20,
                     color: '#94a3b8',
                   },
                 }}
               >
-                <Background color="#f0f0f0" gap={16} variant="dots" />
+                <Background color="#f0f0f0" gap={16} variant={BackgroundVariant.Dots} />
                 <Controls />
               </ReactFlow>
             )

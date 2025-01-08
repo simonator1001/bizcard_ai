@@ -3,19 +3,20 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Mail, Phone } from 'lucide-react'
 import { BusinessCard } from '@/types/business-card'
 import { useTranslation } from 'react-i18next'
+import Image from 'next/image'
 
 interface BusinessCardDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   card: BusinessCard
-  mode: 'view' | 'edit'
+  mode?: 'view' | 'edit'
 }
 
 export function BusinessCardDialog({ 
   open, 
   onOpenChange, 
   card,
-  mode 
+  mode = 'view'
 }: BusinessCardDialogProps) {
   const { t } = useTranslation()
 
@@ -27,10 +28,13 @@ export function BusinessCardDialog({
           <div className="w-1/2 p-6 border-r border-gray-200">
             <div className="aspect-[1.586/1] relative bg-gray-100 rounded-lg overflow-hidden">
               {card.imageUrl ? (
-                <img 
+                <Image 
                   src={card.imageUrl} 
                   alt={t('card.imageAlt', { name: card.name })}
-                  className="object-cover w-full h-full"
+                  className="object-cover"
+                  fill
+                  sizes="(max-width: 800px) 50vw"
+                  priority
                 />
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400">
@@ -84,10 +88,10 @@ export function BusinessCardDialog({
                   <p className="text-sm">{card.title}</p>
                 </div>
               )}
-              {card.title_zh && (
+              {card.titleZh && (
                 <div className="space-y-3">
                   <h4 className="text-sm font-medium text-gray-500">{t('card.titleZh')}</h4>
-                  <p className="text-sm">{card.title_zh}</p>
+                  <p className="text-sm">{card.titleZh}</p>
                 </div>
               )}
             </div>

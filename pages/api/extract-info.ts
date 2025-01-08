@@ -1,15 +1,14 @@
-import { Configuration, OpenAIApi } from 'openai';
 import { NextApiRequest, NextApiResponse } from 'next';
+import axios from 'axios';
+import { TOGETHER_API_KEY } from '@/lib/ocr-config';
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('Missing OPENAI_API_KEY environment variable');
-}
-
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
+const axiosInstance = axios.create({
+  baseURL: 'https://api.together.xyz/v1',
+  headers: {
+    'Authorization': `Bearer ${TOGETHER_API_KEY}`,
+    'Content-Type': 'application/json'
+  }
 });
-
-const openai = new OpenAIApi(configuration);
 
 export default async function handler(
   req: NextApiRequest,
@@ -22,34 +21,26 @@ export default async function handler(
   try {
     const { text } = req.body;
 
-    const prompt = `
-      Analyze the following business card text and extract the information in a structured format.
-      This is from a Hong Kong business card that may contain both English and Chinese text.
-      
-      Original text:
-      ${text}
-      
-      Please extract and return ONLY a JSON object with these fields:
-      - name: The person's name (include both English and Chinese if available)
-      - title: Job title or position
-      - company: Company name (include both English and Chinese if available)
-      - email: Email address
-      - phone: Phone number (format as a single string)
-      - address: Full address (include both English and Chinese if available)
-      - website: Website URL or domain
-      
-      For the business card shown, I can see:
-      - The company appears to be "House Taikoo" (门自)
-      - The email is alex.liu@DFIretailgroup.com
-      - The phone number is 852 2299 150
-      - The address includes "3/F Devon House, Taikoo Place"
-      
-      Please use this information to help verify and correct the OCR results.
-      Return ONLY the JSON object with no additional text.
-    `;
+    if (!text) {
+      return res.status(400).json({ error: 'No text provided' });
+    }
 
-    const completion = await openai.createChatCompletion({
-      model: "gpt-4",
+    console.log('[EXTRACT] Processing text:', text);
+
+    // Check if the input is already in JSON format
+    try {
+      const parsedInput = JSON.parse(text);
+      if (parsedInput && typeof parsedInput === 'object') {
+        console.log('[EXTRACT] Input is already in JSON format, returning as is');
+        return res.status(200).json(parsedInput);
+      }
+    } catch (e) {
+      // Not JSON, proceed with extraction
+      console.log('[EXTRACT] Input is not JSON, proceeding with extraction');
+    }
+
+    const requestBody = {
+      model: 'meta-llama/Llama-2-70b-chat',
       messages: [
         {
           role: "system",
@@ -57,33 +48,57 @@ export default async function handler(
         },
         {
           role: "user",
-          content: prompt
+          content: `Extract information from this business card text and return ONLY a JSON object with these fields:
+- name: The person's name (include both English and Chinese if available)
+- title: Job title or position
+- company: Company name (include both English and Chinese if available)
+- email: Email address
+- phone: Phone number (format as a single string)
+- address: Full address (include both English and Chinese if available)
+- website: Website URL or domain
+
+Original text:
+${text}
+
+Return ONLY the JSON object with no additional text.`
         }
       ],
-      temperature: 0.1, // Lower temperature for more consistent results
-    });
+      temperature: 0.1,
+      max_tokens: 1000,
+      top_p: 0.9
+    };
 
-    const result = completion.data.choices[0]?.message?.content;
-    let parsedResult;
-    
-    try {
-      parsedResult = JSON.parse(result || '{}');
-    } catch (e) {
-      console.error('Failed to parse OpenAI response:', e);
-      parsedResult = {
-        name: "Alex Liu",
-        company: "House Taikoo 门自",
-        title: "N/A",
-        email: "alex.liu@DFIretailgroup.com",
-        phone: "85222991500",
-        address: "3/F Devon House, Taikoo Place, 979 King's Road, Quarry Bay, Hong Kong",
-        website: "www.7-eleven.com.hk"
-      };
+    console.log('[EXTRACT] Calling Together.ai API...');
+    const response = await axiosInstance.post('/chat/completions', requestBody);
+
+    if (!response.data?.choices?.[0]?.message?.content) {
+      console.error('[EXTRACT] Invalid API response:', response.data);
+      throw new Error('Invalid API response');
     }
 
+    const result = response.data.choices[0].message.content.trim();
+    console.log('[EXTRACT] Raw API response:', result);
+
+    // Extract JSON from the response
+    const jsonMatch = result.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('[EXTRACT] No JSON found in response');
+      throw new Error('No valid JSON found in response');
+    }
+
+    const jsonStr = jsonMatch[0];
+    console.log('[EXTRACT] Extracted JSON:', jsonStr);
+
+    const parsedResult = JSON.parse(jsonStr);
+    console.log('[EXTRACT] Parsed result:', parsedResult);
+
     res.status(200).json(parsedResult);
-  } catch (error) {
-    console.error('Error calling OpenAI:', error);
-    res.status(500).json({ error: 'Failed to process the text' });
+  } catch (error: any) {
+    console.error('[EXTRACT] Error:', error);
+    res.status(500).json({ 
+      error: 'Failed to process the text',
+      message: error.message,
+      details: error.response?.data
+    });
   }
 } 

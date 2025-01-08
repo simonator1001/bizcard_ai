@@ -1,5 +1,7 @@
+"use client"
+
 import React, { useEffect, useRef } from 'react';
-import { Tree } from 'react-d3-tree';
+import Tree from 'react-d3-tree';
 import type { CustomNodeElementProps, TreeNodeDatum } from 'react-d3-tree';
 import {
   Tooltip,
@@ -20,7 +22,7 @@ interface OrgChartProps {
   onNodeClick: (nodeData: NodeData) => void;
 }
 
-export const OrgChart: React.FC<OrgChartProps> = ({ data, onNodeClick }) => {
+export const OrgChart: React.FC<OrgChartProps> = ({ data, onNodeClick }: OrgChartProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 });
 

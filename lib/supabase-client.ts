@@ -1,26 +1,83 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Debug environment variables in detail
+console.log('[Supabase] Environment debug:', {
+  context: typeof window === 'undefined' ? 'server' : 'client',
+  NODE_ENV: process.env.NODE_ENV,
+  env_keys: Object.keys(process.env).filter(key => key.includes('SUPABASE')),
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 8) + '...',
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '(exists)' : '(missing)',
+});
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
+// Debug environment variables
+const envCheck = {
+  hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+  hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+  url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  isServer: typeof window === 'undefined'
+};
+
+console.log('[Supabase] Environment check:', envCheck);
+
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_URL is required');
 }
 
-console.log('[Supabase] Initializing client with URL:', supabaseUrl);
+if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is required');
+}
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// Create a single instance of the Supabase client for client-side use
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    autoRefreshToken: true,
     persistSession: true,
+    autoRefreshToken: true,
     detectSessionInUrl: true
   }
-})
+});
 
-// Add a connection test function
+// Create service role client only on server-side and only if key is available
+let _supabaseAdmin = null;
+
+// Only initialize admin client on server-side
+if (typeof window === 'undefined') {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('[Supabase] Service role key missing in server environment');
+    console.error('[Supabase] Available environment variables:', 
+      Object.keys(process.env).filter(key => key.includes('SUPABASE'))
+    );
+  } else {
+    try {
+      _supabaseAdmin = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      });
+      console.log('[Supabase] Service role client initialized successfully');
+    } catch (error) {
+      console.error('[Supabase] Failed to initialize service role client:', error);
+    }
+  }
+} else {
+  console.log('[Supabase] Skipping admin client initialization on client-side');
+}
+
+export const supabaseAdmin = _supabaseAdmin;
+
+// Add logging to help debug
 export const testConnection = async () => {
   try {
     console.log('[Supabase] Testing connection...');
+    console.log('[Supabase] URL:', supabaseUrl);
+    console.log('[Supabase] Context:', typeof window === 'undefined' ? 'server' : 'client');
+    console.log('[Supabase] Has service role:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+    
     const { data, error } = await supabase
       .from('business_cards')
       .select('*', { count: 'exact', head: true });
@@ -29,7 +86,6 @@ export const testConnection = async () => {
       console.error('[Supabase] Connection test failed:', error);
       console.error('[Supabase] Error code:', error.code);
       console.error('[Supabase] Error message:', error.message);
-      console.error('[Supabase] Error status:', error.status);
       console.error('[Supabase] Error hint:', error.hint);
       console.error('[Supabase] Error details:', error.details);
       return false;

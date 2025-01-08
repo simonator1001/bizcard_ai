@@ -1,5 +1,5 @@
-import { Layout } from '@/components/layout/Layout';
-import { SubscriptionPlans } from '@/components/subscription/SubscriptionPlans';
+import { Layout } from '@/components/layout/layout';
+import { PricingPlans } from '@/components/subscription/PricingPlans';
 import { Typography, Container, Box, Button } from '@mui/material';
 
 export default function PricingPage() {
@@ -44,7 +44,7 @@ export default function PricingPage() {
         </Container>
       </Box>
       <Container maxWidth="lg">
-        <SubscriptionPlans />
+        <PricingPlans />
       </Container>
     </Layout>
   );

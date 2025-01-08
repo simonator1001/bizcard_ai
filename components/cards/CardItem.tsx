@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Mail, Edit2, Trash2, Phone, Smartphone, Globe } from 'lucide-react'
+import { Mail, Trash2, Phone } from 'lucide-react'
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { BusinessCard } from '@/types/business-card'
 import {
@@ -17,6 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import Image from 'next/image'
 
 interface CardItemProps {
   card: BusinessCard
@@ -57,8 +58,15 @@ export function CardItem({ card, onEdit, onDelete, viewMode }: CardItemProps) {
           <CardContent className={`p-6 ${viewMode === 'list' ? 'flex gap-6' : ''}`}>
             <div className={viewMode === 'list' ? 'flex-shrink-0' : 'mb-4'}>
               <Avatar className={viewMode === 'list' ? 'h-16 w-16' : 'h-20 w-20 mx-auto'}>
-                {card.image_url ? (
-                  <img src={card.image_url} alt={card.name} className="object-cover" />
+                {card.imageUrl ? (
+                  <div className="relative w-full h-full">
+                    <Image 
+                      src={card.imageUrl} 
+                      alt={card.name} 
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
                 ) : (
                   <AvatarFallback className="bg-primary/10 text-primary text-xl">
                     {initials}
@@ -105,28 +113,6 @@ export function CardItem({ card, onEdit, onDelete, viewMode }: CardItemProps) {
                   >
                     <Phone className="h-4 w-4 mr-2" />
                     {card.phone}
-                  </a>
-                )}
-                {card.mobile && (
-                  <a 
-                    href={`tel:${card.mobile}`}
-                    className="flex items-center text-sm text-muted-foreground hover:text-primary"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Smartphone className="h-4 w-4 mr-2" />
-                    {card.mobile}
-                  </a>
-                )}
-                {card.website && (
-                  <a 
-                    href={card.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center text-sm text-muted-foreground hover:text-primary"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Globe className="h-4 w-4 mr-2" />
-                    {card.website}
                   </a>
                 )}
               </div>

@@ -1,4 +1,3 @@
-import { Layout } from '@/components/layout/Layout'
 import { PricingPlans } from '@/components/subscription/PricingPlans';
 
 export default function PricingPage() {

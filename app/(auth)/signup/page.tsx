@@ -30,9 +30,13 @@ export default function SignUpPage() {
       }
 
       await signUp(email, password, name)
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Sign up error:', error)
-      toast.error(error.message || 'Failed to create account')
+      if (error instanceof Error) {
+        toast.error(error.message || 'Failed to create account')
+      } else {
+        toast.error('Failed to create account')
+      }
     } finally {
       setIsLoading(false)
     }

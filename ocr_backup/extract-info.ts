@@ -1,15 +1,13 @@
-import { Configuration, OpenAIApi } from 'openai';
+import OpenAI from 'openai';
 import { NextApiRequest, NextApiResponse } from 'next';
 
 if (!process.env.OPENAI_API_KEY) {
   throw new Error('Missing OPENAI_API_KEY environment variable');
 }
 
-const configuration = new Configuration({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-const openai = new OpenAIApi(configuration);
 
 export default async function handler(
   req: NextApiRequest,
@@ -48,7 +46,7 @@ export default async function handler(
       Return ONLY the JSON object with no additional text.
     `;
 
-    const completion = await openai.createChatCompletion({
+    const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
         {
@@ -63,7 +61,7 @@ export default async function handler(
       temperature: 0.1, // Lower temperature for more consistent results
     });
 
-    const result = completion.data.choices[0]?.message?.content;
+    const result = completion.choices[0]?.message?.content;
     let parsedResult;
     
     try {

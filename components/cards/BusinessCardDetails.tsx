@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import Image from 'next/image'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Mail, Edit2, Trash2, PenTool } from 'lucide-react'
@@ -16,37 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useTranslation } from 'react-i18next'
-
-interface BusinessCard {
-  id: string
-  name: string
-  nameZh?: string
-  title: string
-  titleZh?: string
-  company: string
-  companyZh?: string
-  email: string
-  phone: string
-  mobile?: string
-  fax?: string
-  wechat?: string
-  instagram?: string
-  linkedin?: string
-  website?: string
-  address?: string
-  addressZh?: string
-  department?: string
-  departmentZh?: string
-  whatsapp?: string
-  line?: string
-  telegram?: string
-  facebook?: string
-  twitter?: string
-  image_url: string
-  rawText?: string
-  notes: string
-  dateAdded?: string
-}
+import { BusinessCard } from '@/types/business-card'
 
 interface BusinessCardDetailsProps {
   card: BusinessCard
@@ -175,12 +146,15 @@ export const BusinessCardDetails: React.FC<BusinessCardDetailsProps> = ({
               </div>
             </div>
 
-            {card.image_url && layout !== 'list' && (
-              <img 
-                src={card.image_url} 
-                alt={t('card.businessCardImage')}
-                className="w-32 h-20 object-cover rounded-lg"
-              />
+            {card.imageUrl && layout !== 'list' && (
+              <div className="relative w-32 h-20">
+                <Image 
+                  src={card.imageUrl} 
+                  alt={`Business card for ${card.name}`}
+                  fill
+                  className="object-cover rounded-lg"
+                />
+              </div>
             )}
           </div>
         </CardContent>

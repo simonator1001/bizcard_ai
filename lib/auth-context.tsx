@@ -1,8 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
-import Link from 'next/link'
-import Image from 'next/image'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,6 +10,9 @@ import { Facebook, Chrome as Google, MessageCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
 import type { User, AuthError } from '@supabase/supabase-js'
 import { toast } from 'sonner'
+import Link from 'next/link'
+import Image from 'next/image'
+import { createClient } from '@/lib/supabase/client'
 
 const Icons = {
   google: Google,
@@ -21,154 +22,100 @@ const Icons = {
 
 interface AuthContextType {
   user: User | null
-  isAuthenticated: boolean
+  loading: boolean
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, name: string) => Promise<void>
   signOut: () => Promise<void>
-  signInWithProvider: (provider: 'google' | 'facebook' | 'apple') => Promise<void>
+  signInWithProvider: (provider: 'google') => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  loading: true,
+  signIn: async () => {},
+  signUp: async () => {},
+  signOut: async () => {},
+  signInWithProvider: async () => {},
+})
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
-          setUser(session.user)
-          setIsAuthenticated(true)
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    initAuth()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    console.log('[AuthContext] Initializing auth state')
+    
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[AuthContext] Initial session:', session ? 'Found' : 'None')
       setUser(session?.user ?? null)
-      setIsAuthenticated(!!session?.user)
+      setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
-  }, [])
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('[AuthContext] Auth state changed:', _event)
+      console.log('[AuthContext] New session:', session ? 'Found' : 'None')
+      setUser(session?.user ?? null)
+      setLoading(false)
+    })
+
+    return () => {
+      console.log('[AuthContext] Cleaning up auth subscription')
+      subscription.unsubscribe()
+    }
+  }, [supabase.auth])
 
   const signIn = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
-
-      if (error) throw error
-
-      if (data.user) {
-        setUser(data.user)
-        setIsAuthenticated(true)
-        toast.success('Signed in successfully')
-        window.location.href = '/'
-      }
-    } catch (error) {
-      console.error('Sign in error:', error)
-      toast.error((error as AuthError).message || 'Failed to sign in')
-      throw error
-    }
+    console.log('[AuthContext] Signing in with email:', email)
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    if (error) throw error
   }
 
   const signUp = async (email: string, password: string, name: string) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { name }
-        }
-      })
-
-      if (error) throw error
-
-      if (data.user) {
-        toast.success('Please check your email to verify your account')
-        router.push('/signin')
-      }
-    } catch (error) {
-      console.error('Sign up error:', error)
-      toast.error((error as AuthError).message || 'Failed to create account')
-      throw error
-    }
+    console.log('[AuthContext] Signing up with email:', email)
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name },
+      },
+    })
+    if (error) throw error
   }
 
   const signOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-      setUser(null)
-      setIsAuthenticated(false)
-      window.location.href = '/signin'
-    } catch (error) {
-      console.error('Sign out error:', error)
-      toast.error('Failed to sign out')
-      throw error
-    }
+    console.log('[AuthContext] Signing out')
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
   }
 
-  const signInWithProvider = async (provider: 'google' | 'facebook' | 'apple') => {
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
-        }
-      })
-
-      if (error) throw error
-      
-      console.log('OAuth initiated:', data)
-    } catch (error) {
-      console.error('Social sign in error:', error)
-      toast.error(`Failed to sign in with ${provider}`)
-      throw error
-    }
-  }
-
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">Loading...</div>
-    </div>
+  const signInWithProvider = async (provider: 'google') => {
+    console.log('[AuthContext] Signing in with provider:', provider)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    if (error) throw error
   }
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated,
-      signIn, 
-      signUp, 
-      signOut, 
-      signInWithProvider 
-    }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, signInWithProvider }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
+export function useAuth() {
+  return useContext(AuthContext)
 }
 
 export function AuthScreen({ mode }: { mode: 'signin' | 'signup' }) {
@@ -187,6 +134,7 @@ export function AuthScreen({ mode }: { mode: 'signin' | 'signup' }) {
 
       if (mode === 'signin') {
         await signIn(email, password)
+        router.push('/')
       } else {
         const name = formData.get('name') as string
         if (password !== formData.get('confirmPassword')) {
@@ -194,10 +142,15 @@ export function AuthScreen({ mode }: { mode: 'signin' | 'signup' }) {
           return
         }
         await signUp(email, password, name)
+        toast.success('Account created! Please check your email to verify your account.')
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Auth error:', error)
-      toast.error(error.message || (mode === 'signin' ? 'Failed to sign in' : 'Failed to create account'))
+      if (error instanceof Error) {
+        toast.error(error.message || (mode === 'signin' ? 'Failed to sign in' : 'Failed to create account'))
+      } else {
+        toast.error(mode === 'signin' ? 'Failed to sign in' : 'Failed to create account')
+      }
     } finally {
       setIsLoading(false)
     }

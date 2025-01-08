@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronDown } from 'lucide-react';
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslation } from 'react-i18next';
+import Image from 'next/image'
 
 interface NewsViewProps {
   cards: BusinessCard[];
@@ -51,7 +52,7 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
   // Get unique companies from cards
   const uniqueCompanies = Array.from(new Set(cards.map(card => card.company))).filter(Boolean);
 
-  const fetchNews = async (companies: string[]) => {
+  const fetchNews = useCallback(async (companies: string[]) => {
     if (companies.length === 0) {
       setNewsArticles([]);
       return;
@@ -112,7 +113,7 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [articlesPerCompany]);
 
   // Initialize with random companies only once
   useEffect(() => {
@@ -124,7 +125,7 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
       fetchNews(randomCompanies);
       hasInitialized.current = true;
     }
-  }, [uniqueCompanies]);
+  }, [uniqueCompanies, fetchNews]);
 
   const handleCompanyToggle = (company: string) => {
     setSelectedCompanies(prev => {
@@ -286,7 +287,7 @@ export function NewsView({ cards, onUpgradeToPro }: NewsViewProps) {
                 <CardContent className="p-4 flex flex-col gap-3">
                   {/* Article Image */}
                   <div className="relative w-full h-40 bg-gray-100 rounded-lg overflow-hidden">
-                    <img
+                    <Image
                       src={article.imageUrl || '/images/placeholder-news.jpg'}
                       alt={article.title}
                       className="object-cover w-full h-full hover:scale-105 transition-transform duration-300"

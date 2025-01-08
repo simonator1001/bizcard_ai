@@ -2,17 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { User } from '@supabase/supabase-js';
 
 export function useUser() {
-  const { user: authUser, isLoading } = useAuth();
+  const { user: authUser, loading } = useAuth();
   const [user, setUser] = useState(authUser);
 
   useEffect(() => {
     setUser(authUser);
   }, [authUser]);
 
-  return {
-    user,
-    isLoading,
-  };
+  return { user, loading };
 } 

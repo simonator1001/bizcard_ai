@@ -1,16 +1,16 @@
-import { useEffect } from 'react';
-import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/auth-context';
+import { useRouter } from 'next/navigation';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
 
-  // If we have a user, show the protected content
-  if (user && isAuthenticated) {
-    return <>{children}</>;
+  // If we don't have a user, redirect to sign in
+  if (!user) {
+    router.push('/signin');
+    return null;
   }
 
-  // If we're not loading and have no user, show nothing (middleware will redirect)
-  return null;
+  // If we have a user, show the protected content
+  return <>{children}</>;
 } 

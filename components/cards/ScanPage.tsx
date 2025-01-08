@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Upload, X, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { recognizeBusinessCard, preprocessImageForOCR } from '@/lib/ocr-service'
+import { recognizeBusinessCard } from '@/lib/ocr-service'
 import { supabase, testConnection } from '@/lib/supabase-client'
 import { toast } from 'sonner'
 import imageCompression from 'browser-image-compression';
@@ -64,7 +64,7 @@ const mapOCRToRecord = (
   userId: string, 
   imageUrl: string
 ): BusinessCardRecord => {
-  const record = {
+  const record: BusinessCardRecord = {
     user_id: userId,
     name: result.words_result.NAME?.words || '',
     name_zh: result.words_result.NAME_ZH?.words || '',
@@ -147,7 +147,7 @@ const saveToDatabase = async (record: BusinessCardRecord): Promise<string> => {
 
 // Add this new PremiumButton component at the top of the file
 interface PremiumButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  icon: React.ElementType;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   variant?: 'default' | 'destructive' | 'outline';
 }
@@ -271,7 +271,12 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
 
     try {
       // Check if user can perform scan action
-      const canScan = await canPerformAction('scan');
+      if (!user) {
+        toast.error('Please sign in to scan business cards');
+        return;
+      }
+
+      const canScan = await SubscriptionService.canPerformAction(user.id, 'scan');
       if (!canScan) {
         setShowUpgradePrompt(true);
         return;
@@ -321,71 +326,83 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       return;
     }
 
+    setIsProcessing(true);
+    setProcessingStatus('idle');
+    setProcessingStage('Scanning business card...');
+
     try {
-      // Test database connection first
-      const isConnected = await testConnection();
-      if (!isConnected) {
-        toast.error('Could not connect to the database. Please try again.');
-        return;
+      // Get the session token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error('No valid session found');
       }
 
-      // Check subscription limits before processing
-      const canPerform = await SubscriptionService.canPerformAction(user.id, 'scan');
-      if (!canPerform) {
-        toast.error('You have reached your monthly scan limit. Please upgrade your plan to continue scanning.');
-        setShowUpgradePrompt(true);
-        return;
+      // Call our scan API endpoint with the session token
+      const response = await fetch('/api/scan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ image: base64Image })
+      });
+
+      let errorData;
+      let errorText;
+      try {
+        // Try to get JSON response
+        errorData = await response.json();
+      } catch (e) {
+        // If JSON parsing fails, get text response
+        errorText = await response.text();
+        console.error('[Scan] Non-JSON response:', errorText);
       }
 
-      setIsProcessing(true);
-      setProcessingStage('Analyzing image...');
-
-      // Process the image with OCR
-      const result = await recognizeBusinessCard(base64Image);
-      
-      if (!result) {
-        throw new Error('Failed to process image');
+      if (!response.ok) {
+        console.error('[Scan] API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          errorText
+        });
+        throw new Error(
+          errorData?.message || 
+          errorData?.error || 
+          'Failed to scan business card'
+        );
       }
 
-      // Upload image to Supabase storage
-      setProcessingStage('Uploading image...');
-      const imageUrl = await SubscriptionService.uploadBusinessCardImage(user.id, base64Image);
+      if (!errorData) {
+        throw new Error('No response data received from scan endpoint');
+      }
 
-      // Map OCR result to database record
-      const record = mapOCRToRecord(result, user.id, imageUrl);
+      const savedCard = errorData; // We already parsed the JSON above
+      console.log('[Scan] Card saved:', savedCard);
+
+      // Update UI state
+      setProcessingStatus('success');
+      setProcessingStage('Card scanned successfully!');
       
-      // Save to database
-      const cardId = await saveToDatabase(record);
-      
-      // Refresh usage data
-      await refreshUsage();
-
-      // Map database record to BusinessCard type
-      const newCard: BusinessCard = {
-        id: cardId,
-        name: record.name,
-        name_zh: record.name_zh,
-        company: record.company,
-        company_zh: record.company_zh,
-        title: record.title,
-        title_zh: record.title_zh,
-        email: record.email,
-        phone: record.phone,
-        address: record.address,
-        address_zh: record.address_zh,
-        imageUrl: record.image_url,
-        notes: record.notes,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
       // Notify parent component
-      onAddCard(newCard);
-      toast.success('Business card scanned and saved successfully');
+      if (onAddCard) {
+        onAddCard(savedCard);
+      }
 
-    } catch (error) {
-      console.error('Error processing image:', error);
-      toast.error('Failed to process and save business card');
+      // Refresh usage stats
+      refreshUsage?.();
+
+      // Clear form
+      setFile(null);
+      setPreview(null);
+      setExtractedInfo(null);
+
+      toast.success('Business card scanned and saved successfully!');
+    } catch (error: any) {
+      console.error('[Scan] Error:', error);
+      setProcessingStatus('error');
+      setProcessingStage('Failed to scan card');
+      toast.error(error.message || 'Failed to scan business card');
     } finally {
       setIsProcessing(false);
     }

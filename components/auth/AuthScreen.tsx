@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -40,9 +39,9 @@ export function AuthScreen({ mode }: { mode: 'signin' | 'signup' }) {
         }
         await signUp(email, password, name)
       }
-    } catch (error: any) {
-      console.error('Auth error:', error)
-      toast.error(error.message || (mode === 'signin' ? 'Failed to sign in' : 'Failed to create account'))
+    } catch (error) {
+      console.error('Auth error:', error instanceof Error ? error.message : 'Unknown error')
+      toast.error(error instanceof Error ? error.message : (mode === 'signin' ? 'Failed to sign in' : 'Failed to create account'))
     } finally {
       setIsLoading(false)
     }

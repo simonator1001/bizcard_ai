@@ -15,7 +15,6 @@ interface BusinessCard {
 
 export function CardDatabase() {
   const [searchTerm, setSearchTerm] = React.useState("")
-  const [isFilterOpen, setIsFilterOpen] = React.useState(false)
   const [cards, setCards] = React.useState<BusinessCard[]>([])
 
   return (
@@ -63,7 +62,6 @@ export function CardDatabase() {
               <Button 
                 variant="outline" 
                 className="flex items-center w-10 h-10 p-0 justify-center"
-                onClick={() => setIsFilterOpen(true)}
                 title="Filter cards"
               >
                 <Filter className="h-4 w-4" />

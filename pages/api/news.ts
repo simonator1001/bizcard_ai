@@ -1,20 +1,48 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabase } from '@/lib/supabase-client'
-import https from 'https';
+import https from 'https'
+import type { SecureVersion } from 'tls'
 
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY
 
+interface ApiResponse {
+  ok: boolean;
+  status: number;
+  data: {
+    choices?: Array<{
+      message?: {
+        content?: string;
+      };
+    }>;
+  };
+}
+
+interface Employee {
+  name: string;
+  title: string;
+}
+
+interface NewsArticle {
+  title: string;
+  summary: string;
+  url: string;
+  publishedDate: string;
+  source: string;
+  company: string;
+  imageUrl: string;
+}
+
 // Helper function to delay execution
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
 // Helper function to make HTTPS requests with retry logic
 async function makeHttpsRequestWithRetry(
   options: https.RequestOptions, 
-  data: any, 
+  data: Record<string, unknown>, 
   maxRetries: number = 3,
   initialDelay: number = 1000
-): Promise<any> {
-  let lastError;
+): Promise<ApiResponse> {
+  let lastError: Error | unknown;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`API request attempt ${attempt}/${maxRetries}`);
@@ -22,7 +50,9 @@ async function makeHttpsRequestWithRetry(
       return result;
     } catch (error) {
       lastError = error;
-      console.error(`Attempt ${attempt} failed:`, error.message);
+      if (error instanceof Error) {
+        console.error(`Attempt ${attempt} failed:`, error.message);
+      }
       
       if (attempt < maxRetries) {
         const delayTime = initialDelay * Math.pow(2, attempt - 1); // Exponential backoff
@@ -35,7 +65,7 @@ async function makeHttpsRequestWithRetry(
 }
 
 // Helper function to make HTTPS requests
-function makeHttpsRequest(options: https.RequestOptions, data: any): Promise<any> {
+function makeHttpsRequest(options: https.RequestOptions, data: Record<string, unknown>): Promise<ApiResponse> {
   return new Promise((resolve, reject) => {
     const req = https.request(options, (res) => {
       let responseData = '';
@@ -47,9 +77,9 @@ function makeHttpsRequest(options: https.RequestOptions, data: any): Promise<any
       res.on('end', () => {
         try {
           const parsedData = JSON.parse(responseData);
-          resolve({ ok: res.statusCode === 200, status: res.statusCode, data: parsedData });
-        } catch (error) {
-          reject(new Error(`Failed to parse response: ${error.message}`));
+          resolve({ ok: res.statusCode === 200, status: res.statusCode || 500, data: parsedData });
+        } catch {
+          reject(new Error('Failed to parse response'));
         }
       });
     });
@@ -65,44 +95,21 @@ function makeHttpsRequest(options: https.RequestOptions, data: any): Promise<any
   });
 }
 
-interface NewsArticle {
-  title: string
-  summary: string
-  url: string
-  publishedDate: string
-  source: string
-  mentionedEmployees?: Array<{
-    name: string
-    title: string
-    company: string
-  }>
-}
-
-interface NewsArticleResponse {
-  title?: string;
-  summary?: string;
-  url?: string;
-  publishedDate?: string;
-  source?: string;
-  company?: string;
-  imageUrl?: string;
-}
-
-async function getEmployeesForCompany(company: string) {
+async function getEmployeesForCompany(company: string): Promise<Employee[]> {
   const { data: employees, error } = await supabase
     .from('business_cards')
     .select('name, title')
-    .eq('company', company)
+    .eq('company', company);
 
   if (error) {
-    console.error('Error fetching employees:', error)
-    return []
+    console.error('Error fetching employees:', error);
+    return [];
   }
 
-  return employees
+  return employees || [];
 }
 
-function createFallbackArticles(company: string, count: number) {
+function createFallbackArticles(company: string, count: number): NewsArticle[] {
   return Array(Math.min(count, 10)).fill(null).map((_, i) => ({
     title: `${company} Business Update ${i + 1}`,
     summary: `Latest updates and developments from ${company}.`,
@@ -231,7 +238,7 @@ Important:
           'Content-Type': 'application/json'
         },
         timeout: 15000, // Increased timeout
-        minVersion: 'TLSv1.2',
+        minVersion: 'TLSv1.2' as SecureVersion,
         rejectUnauthorized: true,
         servername: 'api.perplexity.ai' // Explicitly set the server name for SNI
       };
@@ -253,93 +260,63 @@ Important:
 
       if (!response.ok) {
         console.error('Perplexity API error:', response.status);
-        throw new Error(`API error: ${response.status}`);
+        throw new Error(`API request failed with status ${response.status}`);
       }
 
-      if (!response.data?.choices?.[0]?.message?.content) {
-        console.error('Invalid API response format');
-        throw new Error('Invalid API response format');
+      const articles = response.data.choices?.[0]?.message?.content;
+      if (!articles) {
+        console.error('No content in API response');
+        throw new Error('No content in API response');
       }
 
-      console.log('Raw API response:', response.data.choices[0].message.content);
-
+      let parsedArticles: NewsArticle[];
       try {
-        // Try to parse the response
-        const content = response.data.choices[0].message.content;
-        let articles = [];
-
-        try {
-          // First try: Direct parse
-          articles = JSON.parse(content);
-          console.log('Successfully parsed articles directly');
-        } catch (e) {
-          console.log('Direct parse failed, trying to extract JSON array');
-          // Second try: Find JSON array in text
-          const match = content.match(/\[\s*\{[\s\S]*\}\s*\]/);
-          if (match) {
-            articles = JSON.parse(match[0]);
-            console.log('Successfully parsed articles from extracted JSON');
-          } else {
-            console.error('No valid JSON array found in response');
-            return res.status(200).json({ 
-              articles: fallbackArticles,
-              source: 'mock',
-              reason: 'Failed to parse API response'
-            });
+        parsedArticles = JSON.parse(articles);
+        
+        // Validate and clean up articles
+        parsedArticles = await Promise.all(parsedArticles.map(async article => {
+          // Ensure all required fields are present
+          if (!article.title || !article.summary || !article.url || !article.source || !article.imageUrl) {
+            throw new Error('Missing required fields in article');
           }
-        }
 
-        // Validate and clean articles, ensuring we only return the requested count
-        articles = await Promise.all(
-          articles
-            .slice(0, count) // Limit to requested count
-            .map(async (article: NewsArticleResponse) => {
-              const imageUrl = article.imageUrl || '';
-              const isValidImage = await isValidImageUrl(imageUrl);
-              
-              return {
-                title: String(article.title || '').trim(),
-                summary: String(article.summary || '').trim(),
-                url: String(article.url || '').trim(),
-                publishedDate: new Date(article.publishedDate || Date.now()).toISOString().split('T')[0],
-                source: String(article.source || '').trim(),
-                company: article.company || company,
-                imageUrl: isValidImage ? imageUrl : getFallbackImageUrl(company)
-              };
-            })
-        );
+          // Validate image URL
+          const isValidImage = await isValidImageUrl(article.imageUrl);
+          if (!isValidImage) {
+            article.imageUrl = getFallbackImageUrl(company);
+          }
 
-        console.log('Processed articles:', articles.length);
+          return {
+            ...article,
+            company, // Add company field
+            publishedDate: article.publishedDate || new Date().toISOString().split('T')[0]
+          };
+        }));
 
-        // Return parsed articles if valid, otherwise use fallback
         return res.status(200).json({ 
-          articles: articles.length > 0 ? articles : fallbackArticles,
-          source: articles.length > 0 ? 'api' : 'mock',
-          reason: articles.length === 0 ? 'Failed to parse API response' : undefined
+          articles: parsedArticles,
+          source: 'perplexity',
+          employees
         });
-      } catch (error) {
-        // Return fallback articles if parsing fails
-        console.error('Failed to parse articles:', error);
-        return res.status(200).json({ 
-          articles: fallbackArticles,
-          source: 'mock',
-          reason: 'Failed to parse API response'
-        });
+      } catch (parseError) {
+        console.error('Failed to parse articles:', parseError);
+        throw new Error('Failed to parse articles');
       }
-    } catch (fetchError) {
-      console.error('Perplexity API fetch error:', fetchError);
+    } catch (apiError) {
+      console.error('API request failed:', apiError);
       return res.status(200).json({ 
         articles: fallbackArticles,
         source: 'mock',
-        reason: 'API connection failed'
+        reason: 'API request failed',
+        employees
       });
     }
   } catch (error) {
-    console.error('News API Error:', error);
+    console.error('Error in news API:', error);
     return res.status(200).json({ 
       articles: createFallbackArticles(company, count),
       source: 'mock',
-      reason: 'Internal server error'
+      reason: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 } 

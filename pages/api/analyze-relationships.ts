@@ -3,14 +3,6 @@ import type { BusinessCard } from '@/types/business-card'
 
 const TOGETHER_API_KEY = process.env.TOGETHER_API_KEY
 
-interface OrgNode {
-  id: string
-  name: string
-  title: string
-  subordinates: OrgNode[]
-  level?: number
-}
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -37,19 +29,19 @@ export default async function handler(
 ${cards.map(card => `
 Name: ${card.name}
 Title: ${card.title}${card.titleZh ? ` / ${card.titleZh}` : ''}
-Department: ${card.department || 'N/A'}${card.departmentZh ? ` / ${card.departmentZh}` : ''}`).join('\n')}
+Position: ${card.position || 'N/A'}`).join('\n')}
 
 Create a single hierarchical structure where:
 1. The company is at the root
 2. Each person appears exactly once
-3. People are placed under their most likely supervisor based on title and department
+3. People are placed under their most likely supervisor based on title and position
 4. The structure is clean and logical
 
 Format as JSON:
 {
   "id": "company",
   "name": "${cards[0]?.company || 'Organization'}",
-  "title": "${cards[0]?.companyZh || 'Company'}",
+  "title": "Company",
   "subordinates": [
     {
       "id": "person_1",

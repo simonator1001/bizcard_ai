@@ -176,8 +176,8 @@ const ArticleDetailView = ({ article, onClose }: { article: NewsArticle; onClose
           ))}
         </div>
         <div className="flex gap-2">
-          <Button asChild>
-            <a href={article.url} target="_blank" rel="noopener noreferrer">Read Full Article</a>
+          <Button onClick={() => window.open(article.url, '_blank', 'noopener noreferrer')}>
+            Read Full Article
           </Button>
           <Button variant="outline">Save Article</Button>
         </div>
@@ -335,8 +335,15 @@ const ScanButton = ({ icon, label, onClick }: { icon: React.ReactNode; label: st
   </Button>
 )
 
+type ViewMode = 'list' | 'grid' | 'carousel' | 'stack';
 
-const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: { card: Contact; onEdit: (card: Contact) => void; onDelete: (card: Contact) => void; viewMode: string; onDragEnd?: (direction: 'left' | 'right') => void }) => {
+const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: { 
+  card: Contact; 
+  onEdit: (card: Contact) => void; 
+  onDelete: (card: Contact) => void; 
+  viewMode: ViewMode; 
+  onDragEnd?: (direction: 'left' | 'right') => void 
+}) => {
   const [emailContent, setEmailContent] = useState("")
   const [emailPurpose, setEmailPurpose] = useState("introduction")
 
@@ -370,86 +377,159 @@ const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: { card: Conta
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
     >
-      <Card 
-        className={`overflow-hidden transition-all duration-300 hover:shadow-lg ${viewMode === 'list' ? 'mb-4' : ''}`}
-        {...(viewMode === 'stack' ? {
-          ref: cardRef,
-          style: { x, rotate, opacity },
-          drag: 'x',
-          dragConstraints: { left: 0, right: 0 },
-          onDragEnd: handleDragEnd
-        } : {})}
-      >
-        <CardContent className={`p-6 ${viewMode === 'grid' || viewMode === 'carousel' ? 'flex flex-col items-center text-center' : ''}`}>
-          <div className={`flex ${viewMode === 'grid' || viewMode === 'carousel' ? 'flex-col' : 'items-start'} space-y-4 ${viewMode === 'list' ? 'space-x-4' : ''}`}>
-            <Avatar className={`${viewMode === 'list' ? 'w-16 h-16' : 'w-20 h-20'}`}>
-              <AvatarFallback className="text-2xl font-bold">{card.name[0]}</AvatarFallback>
-            </Avatar>
-            <div className={`flex-1 space-y-2 ${viewMode === 'grid' || viewMode === 'carousel' ? 'text-center' : ''}`}>
-              <h3 className="text-xl font-semibold">{card.name}</h3>
-              <p className="text-sm text-muted-foreground">{card.title}</p>
-              <p className="text-sm font-medium">{card.company}</p>
-              <div className="flex space-x-4 text-sm">
-                <span>{card.email}</span>
+      {viewMode === 'stack' ? (
+        <motion.div
+          ref={cardRef}
+          style={{ x, rotate, opacity }}
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          onDragEnd={handleDragEnd}
+        >
+          <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg">
+            <CardContent className="p-6 flex flex-col items-center text-center">
+              <Avatar className="w-20 h-20">
+                <AvatarFallback className="text-2xl font-bold">{card.name[0]}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 space-y-2 text-center">
+                <h3 className="text-xl font-semibold">{card.name}</h3>
+                <p className="text-sm text-muted-foreground">{card.title}</p>
+                <p className="text-sm font-medium">{card.company}</p>
+                <div className="flex space-x-4 text-sm justify-center">
+                  <span>{card.email}</span>
+                </div>
+              </div>
+              <div className="flex justify-center mt-4">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="icon">
+                      <Mail className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Generate Email</DialogTitle>
+                      <DialogDescription>
+                        Use AI to generate an email for {card.name}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="purpose" className="text-right">
+                          Purpose
+                        </Label>
+                        <Select value={emailPurpose} onValueChange={setEmailPurpose}>
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select purpose" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="introduction">Introduction</SelectItem>
+                            <SelectItem value="followUp">Follow Up</SelectItem>
+                            <SelectItem value="meeting">Schedule Meeting</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="email" className="text-right">
+                          Email
+                        </Label>
+                        <Textarea
+                          id="email"
+                          value={emailContent}
+                          onChange={(e) => setEmailContent(e.target.value)}
+                          className="col-span-3 h-[200px]"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button onClick={generateEmail}>Generate Email</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+                <Button variant="ghost" size="icon" onClick={() => onEdit(card)}>
+                  <Edit2 className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => onDelete(card)}>
+                  <Trash2 className="h-5 w-5" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      ) : (
+        <Card 
+          className={`overflow-hidden transition-all duration-300 hover:shadow-lg ${viewMode === 'list' ? 'mb-4' : ''}`}
+        >
+          <CardContent className={`p-6 ${viewMode === 'grid' || viewMode === 'carousel' ? 'flex flex-col items-center text-center' : ''}`}>
+            <div className={`flex ${viewMode === 'grid' || viewMode === 'carousel' ? 'flex-col' : 'items-start'} space-y-4 ${viewMode === 'list' ? 'space-x-4' : ''}`}>
+              <Avatar className={viewMode === 'list' ? 'w-16 h-16' : 'w-20 h-20'}>
+                <AvatarFallback className="text-2xl font-bold">{card.name[0]}</AvatarFallback>
+              </Avatar>
+              <div className={`flex-1 space-y-2 ${viewMode === 'grid' || viewMode === 'carousel' ? 'text-center' : ''}`}>
+                <h3 className="text-xl font-semibold">{card.name}</h3>
+                <p className="text-sm text-muted-foreground">{card.title}</p>
+                <p className="text-sm font-medium">{card.company}</p>
+                <div className="flex space-x-4 text-sm">
+                  <span>{card.email}</span>
+                </div>
+              </div>
+              <div className={`flex ${viewMode === 'grid' || viewMode === 'carousel' ? 'justify-center mt-4' : 'space-x-2'}`}>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="icon">
+                      <Mail className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Generate Email</DialogTitle>
+                      <DialogDescription>
+                        Use AI to generate an email for {card.name}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="purpose" className="text-right">
+                          Purpose
+                        </Label>
+                        <Select value={emailPurpose} onValueChange={setEmailPurpose}>
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select purpose" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="introduction">Introduction</SelectItem>
+                            <SelectItem value="followUp">Follow Up</SelectItem>
+                            <SelectItem value="meeting">Schedule Meeting</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="email" className="text-right">
+                          Email
+                        </Label>
+                        <Textarea
+                          id="email"
+                          value={emailContent}
+                          onChange={(e) => setEmailContent(e.target.value)}
+                          className="col-span-3 h-[200px]"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button onClick={generateEmail}>Generate Email</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+                <Button variant="ghost" size="icon" onClick={() => onEdit(card)}>
+                  <Edit2 className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => onDelete(card)}>
+                  <Trash2 className="h-5 w-5" />
+                </Button>
               </div>
             </div>
-            <div className={`flex ${viewMode === 'grid' || viewMode === 'carousel' ? 'justify-center mt-4' : 'space-x-2'}`}>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="icon">
-                    <Mail className="h-4 w-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Generate Email</DialogTitle>
-                    <DialogDescription>
-                      Use AI to generate an email for {card.name}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="purpose" className="text-right">
-                        Purpose
-                      </Label>
-                      <Select value={emailPurpose} onValueChange={setEmailPurpose}>
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Select purpose" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="introduction">Introduction</SelectItem>
-                          <SelectItem value="followUp">Follow Up</SelectItem>
-                          <SelectItem value="meeting">Schedule Meeting</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="email" className="text-right">
-                        Email
-                      </Label>
-                      <Textarea
-                        id="email"
-                        value={emailContent}
-                        onChange={(e) => setEmailContent(e.target.value)}
-                        className="col-span-3 h-[200px]"
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button onClick={generateEmail}>Generate Email</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-              <Button variant="ghost" size="icon" onClick={() => onEdit(card)}>
-                <Edit2 className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => onDelete(card)}>
-                <Trash2 className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </motion.div>
   )
 }
@@ -490,7 +570,7 @@ export default function Component() {
   const [isScanning, setIsScanning] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null)
-  const [viewMode, setViewMode] = useState('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [orgChartViewMode, setOrgChartViewMode] = useState('tree');
   const totalContacts = mockCompanies.reduce((acc, company) => acc + company.contacts.length, 0)
   const selectedCompanyData = mockCompanies.find(c => c.id === selectedCompany)
@@ -575,6 +655,8 @@ export default function Component() {
     setSelectedContact(contact)
   }
 
+  const modes: ViewMode[] = ['list', 'grid', 'carousel', 'stack'];
+
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-purple-50 to-pink-50">
       <header className="bg-white shadow-sm py-6 px-8">
@@ -655,7 +737,10 @@ export default function Component() {
                         <SelectItem value="company">By Company</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Select value={viewMode} onValueChange={setViewMode}>
+                    <Select 
+                      value={viewMode} 
+                      onValueChange={(value: string) => setViewMode(value as ViewMode)}
+                    >
                       <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Select view" />
                       </SelectTrigger>
@@ -672,7 +757,6 @@ export default function Component() {
                       variant="outline"
                       size="icon"
                       onClick={() => {
-                        const modes = ['list', 'grid', 'carousel', 'stack'];
                         const currentIndex = modes.indexOf(viewMode);
                         const nextIndex = (currentIndex + 1) % modes.length;
                         setViewMode(modes[nextIndex]);
@@ -1027,7 +1111,7 @@ export default function Component() {
                   </Button>
                 </div>
                 <div className="pt-6">
-                  <Button variant="destructive" className="w-full">
+                  <Button variant="outline" className="w-full text-red-600 hover:bg-red-50 hover:text-red-700">
                     <LogOut className="mr-2 h-4 w-4" />
                     Log Out
                   </Button>

@@ -1,10 +1,13 @@
+"use client";
+
 import { useSubscription } from '@/lib/hooks/useSubscription';
 import { SUBSCRIPTION_PLANS } from '@/types/subscription';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function SubscriptionStatus() {
   const { subscription, usage, loading, error } = useSubscription();
@@ -23,9 +26,12 @@ export function SubscriptionStatus() {
   if (error) {
     return (
       <Card className="p-6">
-        <div className="text-center text-destructive">
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error.message || 'Failed to load subscription data'}
+          </AlertDescription>
+        </Alert>
       </Card>
     );
   }
@@ -51,10 +57,10 @@ export function SubscriptionStatus() {
           <h3 className="text-lg font-semibold mb-2">
             Current Plan: {currentPlan.name}
           </h3>
-          {subscription?.status === 'active' && (
+          {subscription?.status === 'active' && subscription.currentPeriodEnd && (
             <p className="text-sm text-muted-foreground">
               Your subscription will renew on{' '}
-              {new Date(subscription.current_period_end).toLocaleDateString()}
+              {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
             </p>
           )}
         </div>
@@ -82,11 +88,11 @@ export function SubscriptionStatus() {
         </div>
 
         {subscription?.status === 'active' ? (
-          subscription.cancel_at_period_end ? (
+          subscription.cancelAtPeriodEnd ? (
             <div className="text-center space-y-4">
               <p className="text-sm text-muted-foreground">
                 Your subscription will end on{' '}
-                {new Date(subscription.current_period_end).toLocaleDateString()}
+                {subscription.currentPeriodEnd && new Date(subscription.currentPeriodEnd).toLocaleDateString()}
               </p>
               <Button
                 variant="outline"

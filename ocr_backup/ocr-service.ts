@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { TOGETHER_API_KEY, VISION_MODEL } from './ocr-config';
 
 interface OCRResponse {
@@ -15,6 +15,11 @@ interface OCRResponse {
     ADDR_ZH?: { words: string };
   };
   raw_text?: string;
+}
+
+// Extend the Axios config type
+interface ExtendedAxiosConfig extends InternalAxiosRequestConfig {
+  retryCount?: number;
 }
 
 // Constants for retry logic
@@ -57,7 +62,7 @@ axiosInstance.interceptors.request.use(request => {
 axiosInstance.interceptors.response.use(
   response => response,
   async (error: AxiosError) => {
-    const config = error.config;
+    const config = error.config as ExtendedAxiosConfig;
     if (!config) return Promise.reject(error);
 
     // Add retry count to config if it doesn't exist
@@ -251,19 +256,21 @@ export async function recognizeBusinessCard(imageBase64: string): Promise<OCRRes
                     "english": "Company Name (ONLY English text)"
                   },
                   "contact": {
-                    "phone": ["Phone Numbers"],
-                    "email": "Email",
-                    "address": {
-                      "chinese": "中文地址 (ONLY Chinese characters)",
-                      "english": "English Address (ONLY English text)"
-                    }
+                    "email": "email@example.com",
+                    "phone": "+1234567890",
+                    "mobile": "+1234567890",
+                    "fax": "+1234567890"
+                  },
+                  "address": {
+                    "chinese": "地址 (ONLY Chinese characters)",
+                    "english": "Address (ONLY English text)"
+                  },
+                  "website": "www.example.com",
+                  "social": {
+                    "wechat": "WeChat ID",
+                    "linkedin": "LinkedIn URL"
                   }
-                }
-                IMPORTANT: 
-                1. Return ONLY the JSON object above
-                2. Keep English and Chinese text strictly separated
-                3. Never mix languages in the same field
-                4. If text is only in one language, leave the other field empty`
+                }`
               },
               {
                 type: "image_url",
@@ -274,48 +281,39 @@ export async function recognizeBusinessCard(imageBase64: string): Promise<OCRRes
             ]
           }
         ],
-        max_tokens: 1500,
-        temperature: 0,
-        request_id: requestId,
-        stream: false, // Explicitly disable streaming
+        temperature: 0.1,
+        max_tokens: 2000,
+        top_p: 0.9,
+        frequency_penalty: 0.1,
+        presence_penalty: 0.1
       };
 
-      console.log(`[OCR] Making API request to ${VISION_MODEL}`);
-      console.time(`OCR Request ${requestId}`);
-      
-      let response;
-      try {
-        response = await axiosInstance.post('/v1/chat/completions', requestBody, {
-          timeout: TIMEOUT,
-          onUploadProgress: (progressEvent) => {
-            console.log(`[OCR] Upload progress: ${Math.round((progressEvent.loaded * 100) / progressEvent.total)}%`);
-          },
-          validateStatus: (status) => status < 500, // Don't reject if status < 500
-        });
-        
-        console.timeEnd(`OCR Request ${requestId}`);
-        console.log(`[OCR] Response status: ${response.status}`);
+      // Make the API request with proper error handling and retry logic
+      const response = await axiosInstance.post('/v1/chat/completions', requestBody, {
+        timeout: TIMEOUT,
+        onUploadProgress: (progressEvent) => {
+          const total = progressEvent.total || progressEvent.loaded;
+          const progress = Math.round((progressEvent.loaded * 100) / total);
+          console.log(`[OCR] Upload progress: ${progress}%`);
+        },
+        validateStatus: (status) => status < 500, // Don't reject if status < 500
+      });
 
-        // Check for rate limiting
-        if (response.status === 429) {
-          const retryAfter = parseInt(response.headers['retry-after'] || '5');
-          console.log(`[OCR] Rate limited. Waiting ${retryAfter} seconds...`);
-          await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-          throw new Error('Rate limited');
-        }
+      console.timeEnd(`OCR Request ${requestId}`);
+      console.log(`[OCR] Response status: ${response.status}`);
 
-        // Check for other error responses
-        if (response.status !== 200) {
-          console.error('[OCR] API Error Response:', response.data);
-          throw new Error(`API returned status ${response.status}`);
-        }
+      // Check for rate limiting
+      if (response.status === 429) {
+        const retryAfter = parseInt(response.headers['retry-after'] || '5');
+        console.log(`[OCR] Rate limited. Waiting ${retryAfter} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+        throw new Error('Rate limited');
+      }
 
-      } catch (error: any) {
-        if (error.code === 'ECONNABORTED') {
-          console.log('[OCR] Request timed out, will retry with increased timeout');
-          axiosInstance.defaults.timeout = axiosInstance.defaults.timeout * 1.5;
-        }
-        throw error;
+      // Check for other error responses
+      if (response.status !== 200) {
+        console.error('[OCR] API Error Response:', response.data);
+        throw new Error(`API returned status ${response.status}`);
       }
 
       if (!response.data?.choices?.[0]?.message?.content) {
@@ -369,7 +367,7 @@ export async function recognizeBusinessCard(imageBase64: string): Promise<OCRRes
       return result;
 
     } catch (error: any) {
-      lastError = error;
+      lastError = error instanceof Error ? error : new Error(error?.message || 'Unknown error');
       console.error(`[OCR] Attempt ${attempt + 1} failed:`, {
         message: error.message,
         code: error.code,
@@ -461,32 +459,6 @@ const optimizeImageForChinese = async (base64: string): Promise<string> => {
     img.src = base64;
   });
 };
-
-// Update the handleFileUpload function in pages/index.tsx to use the optimized image
-const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-  // ... existing code ...
-
-  try {
-    // Load and optimize image
-    const base64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target?.result as string);
-      reader.onerror = () => reject(new Error(`Failed to read file ${file.name}`));
-      reader.readAsDataURL(file);
-    });
-
-    // Optimize image specifically for Chinese text
-    const optimizedBase64 = await optimizeImageForChinese(base64);
-    
-    // Process with OCR
-    const result = await recognizeBusinessCard(optimizedBase64);
-    console.log('OCR Result:', result);
-
-    // ... rest of the code ...
-  } catch (error) {
-    // ... error handling ...
-  }
-}; 
 
 // Export the preprocessing function
 export const preprocessImageForOCR = async (base64: string): Promise<string> => {

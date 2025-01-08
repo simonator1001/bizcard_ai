@@ -10,10 +10,11 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast';
 import { CustomBranding } from '@/types/subscription';
 import { useUser } from '@/lib/hooks/useUser';
+import Image from 'next/image'
 
 export function BrandingSettings() {
   const { user } = useUser();
-  const { subscription, error } = useSubscription();
+  const { subscription } = useSubscription();
   const [loading, setLoading] = useState(false);
   const [branding, setBranding] = useState<CustomBranding>(
     subscription?.customBranding || {
@@ -72,13 +73,15 @@ export function BrandingSettings() {
         <div className="space-y-2">
           <Label htmlFor="logo">Company Logo</Label>
           <div className="flex items-center gap-4">
-            {branding.logoUrl && (
-              <img
-                src={branding.logoUrl}
+            <div className="relative w-full h-[200px]">
+              <Image
+                src={branding.logoUrl || '/images/placeholder-logo.jpg'}
                 alt="Company Logo"
-                className="w-16 h-16 object-contain"
+                fill
+                className="object-contain"
+                unoptimized
               />
-            )}
+            </div>
             <Input
               id="logo"
               type="file"

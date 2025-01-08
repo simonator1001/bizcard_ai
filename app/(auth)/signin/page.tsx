@@ -22,9 +22,13 @@ export default function SignInPage() {
       const email = formData.get('email') as string
       const password = formData.get('password') as string
       await signIn(email, password)
-    } catch (error: any) {
+    } catch (error) {
       console.error('Sign in error:', error)
-      toast.error(error.message || 'Failed to sign in')
+      if (error instanceof Error) {
+        toast.error(error.message || 'Failed to sign in')
+      } else {
+        toast.error('Failed to sign in')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -111,7 +115,7 @@ export default function SignInPage() {
           </Button>
 
           <div className="text-center">
-            <span className="text-gray-600">Don't have an account? </span>
+            <span className="text-gray-600">Don&apos;t have an account? </span>
             <Link href="/signup" className="text-blue-500 hover:underline">
               Sign Up
             </Link>
@@ -120,10 +124,11 @@ export default function SignInPage() {
 
         <div className="hidden lg:flex flex-col items-center max-w-[400px]">
           <div className="relative w-[300px] h-[600px]">
-            <img
+            <Image
               src="/images/bizcard-preview.png"
               alt="BizCard App Preview"
-              className="w-full h-full object-contain"
+              fill
+              className="object-contain"
             />
           </div>
         </div>

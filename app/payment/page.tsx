@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import * as React from 'react'
 import { motion, useAnimation } from 'framer-motion'
 import { Check, Scan, List, Building2, Crown, Newspaper, Settings } from 'lucide-react'
 import { Button } from "@/components/ui/button"
@@ -10,10 +10,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 
 export default function PaymentPage() {
-  const [isYearly, setIsYearly] = useState(false)
+  const [isYearly, setIsYearly] = React.useState(false)
   const proControls = useAnimation()
 
-  useEffect(() => {
+  React.useEffect(() => {
     const sequence = async () => {
       await proControls.start({ scale: 1.05, transition: { duration: 0.3 } })
       await proControls.start({ scale: 1, transition: { duration: 0.3 } })
@@ -65,21 +65,7 @@ export default function PaymentPage() {
         />
       </div>
       
-      <motion.div
-        className="absolute top-1/2 left-1/2 w-[800px] h-[800px] rounded-full blur-[100px] opacity-50"
-        style={{
-          background: 'radial-gradient(circle, rgba(147,197,253,0.8) 0%, rgba(59,130,246,0.8) 100%)',
-        }}
-        animate={{
-          scale: [1, 1.2, 1],
-          rotate: [0, 180, 360],
-        }}
-        transition={{
-          duration: 20,
-          repeat: Infinity,
-          ease: "linear",
-        }}
-      />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full blur-[100px] opacity-50 bg-gradient-radial from-blue-300/80 to-blue-500/80" />
       
       <div className="relative z-10 w-full max-w-5xl flex-1 flex flex-col items-center justify-center">
         <motion.h1 

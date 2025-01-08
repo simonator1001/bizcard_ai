@@ -17,12 +17,12 @@ const PaywallModal = ({ isOpen, onClose }: PaywallModalProps) => {
           <div className="relative">
             <button
               onClick={onClose}
-              className="absolute right-4 top-4 z-10 text-gray-500 hover:text-gray-700"
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
             >
-              <X size={24} />
+              <X className="h-6 w-6" />
             </button>
             
-            <SubscriptionPage showHeader={false} />
+            <SubscriptionPage />
           </div>
         </Dialog.Panel>
       </div>

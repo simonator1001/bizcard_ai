@@ -2,18 +2,22 @@
 
 import { useState } from 'react';
 import { useUser } from '@/lib/hooks/useUser';
+import { useSubscription } from '@/lib/hooks/useSubscription';
 import { SubscriptionService } from '@/lib/subscription';
 import { SUBSCRIPTION_PLANS, SubscriptionTier } from '@/types/subscription';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, X } from 'lucide-react';
+import { AlertCircle, Check, X } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function PricingPlans() {
   const { user } = useUser();
+  const { subscription, error: subscriptionError, refetch } = useSubscription();
   const [isYearly, setIsYearly] = useState(false);
   const [loading, setLoading] = useState<SubscriptionTier | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   const handleUpgrade = async (tier: SubscriptionTier) => {
     if (!user) {
@@ -25,7 +29,14 @@ export function PricingPlans() {
       return;
     }
 
+    // Handle enterprise tier separately
+    if (tier === 'enterprise') {
+      window.location.href = 'mailto:sales@bizcard.com';
+      return;
+    }
+
     setLoading(tier);
+    setError(null);
     try {
       // TODO: Integrate with payment provider
       const success = await SubscriptionService.upgradeSubscription(user.id, tier, {
@@ -38,13 +49,17 @@ export function PricingPlans() {
           title: 'Subscription upgraded!',
           description: `You've successfully upgraded to the ${tier} plan.`,
         });
+        // Refresh subscription data
+        await refetch();
       } else {
         throw new Error('Failed to upgrade subscription');
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upgrade subscription';
+      setError(new Error(errorMessage));
       toast({
         title: 'Error',
-        description: 'Failed to upgrade subscription. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -52,8 +67,30 @@ export function PricingPlans() {
     }
   };
 
+  if (subscriptionError) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {subscriptionError.message || 'Failed to load subscription data'}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-16">
+      {error && (
+        <Alert variant="destructive" className="mb-8">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Billing Toggle */}
       <div className="flex justify-center items-center gap-4 mb-8">
         <span className={!isYearly ? 'font-bold' : ''}>Monthly</span>
@@ -110,23 +147,16 @@ export function PricingPlans() {
               ))}
             </ul>
 
-            {plan.tier === 'enterprise' ? (
-              <Button
-                className="w-full"
-                variant="outline"
-                onClick={() => window.location.href = 'mailto:sales@bizcard.com'}
-              >
-                Contact Sales
-              </Button>
-            ) : (
-              <Button
-                className="w-full"
-                onClick={() => handleUpgrade(plan.tier)}
-                disabled={loading === plan.tier}
-              >
-                {loading === plan.tier ? 'Processing...' : 'Upgrade'}
-              </Button>
-            )}
+            <Button
+              className="w-full"
+              variant={plan.tier === 'enterprise' ? 'outline' : 'default'}
+              onClick={() => handleUpgrade(plan.tier)}
+              disabled={loading === plan.tier || subscription?.tier === plan.tier}
+            >
+              {loading === plan.tier ? 'Processing...' : 
+               subscription?.tier === plan.tier ? 'Current Plan' : 
+               plan.tier === 'enterprise' ? 'Contact Sales' : 'Upgrade'}
+            </Button>
           </Card>
         ))}
       </div>
@@ -163,6 +193,10 @@ export function PricingPlans() {
           </div>
         </div>
       </div>
+
+      <p className="text-sm text-gray-500">
+        Don&apos;t see what you&apos;re looking for?
+      </p>
     </div>
   );
 } 

@@ -7,7 +7,6 @@ import { User } from '@supabase/supabase-js';
 export function useUser() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -28,11 +27,10 @@ export function useUser() {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase.auth]);
 
   return {
     user,
     loading,
-    error,
   };
 } 

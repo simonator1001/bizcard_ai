@@ -3,12 +3,22 @@ import { BusinessCard } from '@/types/business-card'
 const TOGETHER_API_KEY = process.env.NEXT_PUBLIC_TOGETHER_API_KEY
 const API_URL = 'https://api.together.xyz/v1/chat/completions'
 
+interface Relationship {
+  manager_id: string;
+  reports_to: string[];
+}
+
 interface HierarchyResponse {
-  relationships: {
-    manager_id: string;
-    reports_to: string[];
-  }[];
+  relationships: Relationship[];
   reasoning: string;
+}
+
+interface APIResponse {
+  choices?: {
+    message?: {
+      content: string;
+    };
+  }[];
 }
 
 export async function analyzeTitlesHierarchy(cards: BusinessCard[]): Promise<HierarchyResponse> {
@@ -61,8 +71,8 @@ ${JSON.stringify(cards.map(card => ({
   id: card.id,
   name: card.name,
   title: card.title,
-  company: card.company,
-  department: card.department
+  position: card.position,
+  company: card.company
 })), null, 2)}
 
 Required JSON format (use exactly this structure):
@@ -80,9 +90,8 @@ Rules:
 1. manager_id must be a valid ID from the input cards
 2. reports_to must be an array of valid IDs from the input cards
 3. Only create relationships within the same company
-4. Base hierarchy on titles: CEO/President > VP > Director > Manager > Staff
-5. Consider department relationships
-6. Return ONLY the JSON object, no other text or formatting`;
+4. Base hierarchy on titles and positions: CEO/President > VP > Director > Manager > Staff
+5. Return ONLY the JSON object, no other text or formatting`;
 
   try {
     const response = await fetch(API_URL, {
@@ -103,7 +112,7 @@ Rules:
             content: prompt
           }
         ],
-        temperature: 0.1, // Lower temperature for more consistent JSON
+        temperature: 0.1,
         max_tokens: 2000,
         top_p: 0.9,
         frequency_penalty: 0.1,
@@ -116,7 +125,7 @@ Rules:
       return createFallbackHierarchy();
     }
 
-    const data = await response.json();
+    const data = await response.json() as APIResponse;
     
     if (!data.choices?.[0]?.message?.content) {
       console.error('Unexpected API response:', data);
@@ -139,7 +148,7 @@ Rules:
         return createFallbackHierarchy();
       }
 
-      const parsedResponse = JSON.parse(content);
+      const parsedResponse = JSON.parse(content) as HierarchyResponse;
       
       // Validate response structure
       if (!parsedResponse.relationships || !Array.isArray(parsedResponse.relationships)) {
@@ -148,7 +157,7 @@ Rules:
       }
 
       // Validate relationships
-      const validRelationships = parsedResponse.relationships.filter(rel => 
+      const validRelationships = parsedResponse.relationships.filter((rel: Relationship) => 
         rel && 
         typeof rel.manager_id === 'string' && 
         Array.isArray(rel.reports_to) &&

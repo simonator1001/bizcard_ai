@@ -169,7 +169,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
           )}
           <Button
             size="icon"
-            variant="secondary"
+            variant="outline"
             className="absolute top-4 right-4"
             onClick={handleDownload}
           >
@@ -251,8 +251,8 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                 </div>
                 <Button
                   size="icon"
-                  variant="secondary"
-                  className="absolute top-2 right-2"
+                  variant="outline"
+                  className="absolute top-4 right-4"
                   onClick={handleDownload}
                 >
                   <Download className="h-4 w-4" />

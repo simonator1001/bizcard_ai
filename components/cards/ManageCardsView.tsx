@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase-client';
-import Image from 'next/image';
 import { Mail, Phone, MapPin } from 'lucide-react';
+import Image from 'next/image';
 
 interface BusinessCard {
   id: string;
@@ -82,11 +82,12 @@ export function ManageCardsView() {
           <div className="flex items-start space-x-4">
             {card.image_url && (
               <div className="w-32 h-20 relative rounded-lg overflow-hidden bg-gray-100">
-                <img 
+                <Image 
                   src={card.image_url}
                   alt="Business Card"
-                  className="object-cover w-full h-full"
-                  loading="lazy"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 128px, 128px"
                   onError={(e) => {
                     console.error('Error loading image:', e, 'URL:', card.image_url);
                     const target = e.target as HTMLImageElement;

@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase-client'
 import { BusinessCardDetails } from '@/components/cards/BusinessCardDetails'
 
@@ -9,13 +9,7 @@ export default function SharedCardPage() {
   const [card, setCard] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (id) {
-      fetchCard()
-    }
-  }, [id])
-
-  const fetchCard = async () => {
+  const fetchCard = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('business_cards')
@@ -30,7 +24,13 @@ export default function SharedCardPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [id])
+
+  useEffect(() => {
+    if (id) {
+      fetchCard()
+    }
+  }, [id, fetchCard])
 
   if (loading) return <div>Loading...</div>
   if (!card) return <div>Card not found</div>
@@ -39,7 +39,6 @@ export default function SharedCardPage() {
     <div className="container mx-auto p-4">
       <BusinessCardDetails 
         card={card} 
-        onClose={() => router.push('/')}
       />
     </div>
   )
