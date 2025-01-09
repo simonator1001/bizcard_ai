@@ -68,10 +68,8 @@ export async function analyzeTitlesHierarchy(cards: BusinessCard[]): Promise<Hie
   const prompt = `Analyze these business cards and create a JSON response showing the organizational hierarchy.
 Input cards:
 ${JSON.stringify(cards.map(card => ({
-  id: card.id,
   name: card.name,
   title: card.title,
-  position: card.position,
   company: card.company
 })), null, 2)}
 

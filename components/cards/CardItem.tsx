@@ -1,142 +1,263 @@
 'use client'
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Mail, Trash2, Phone } from 'lucide-react'
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import type { BusinessCard } from '@/types/business-card'
+import { BusinessCard } from '@/types/business-card';
+import { PremiumButton } from '@/components/ui';
+import { Mail, Phone, MoreVertical, Pencil, Trash } from 'lucide-react';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import Image from 'next/image'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface CardItemProps {
-  card: BusinessCard
-  onEdit: (card: BusinessCard) => void
-  onDelete: (id: string) => void
-  viewMode: 'list' | 'grid'
+  card: BusinessCard;
+  viewMode: 'list' | 'grid' | 'carousel';
+  isSelected: boolean;
+  onSelect: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }
 
-export function CardItem({ card, onEdit, onDelete, viewMode }: CardItemProps) {
-  const [isHovered, setIsHovered] = useState(false)
-  const [showDeleteAlert, setShowDeleteAlert] = useState(false)
-  const initials = card.name.split(' ').map(n => n[0]).join('').toUpperCase()
+export function CardItem({ card, viewMode, isSelected, onSelect, onEdit, onDelete }: CardItemProps) {
+  const initials = card.name
+    ? card.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+    : '?';
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setShowDeleteAlert(true)
-  }
+  const handleSelect = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Selecting card:', card.id);
+    onSelect();
+  };
 
-  const confirmDelete = () => {
-    onDelete(card.id)
-    setShowDeleteAlert(false)
-  }
+  const handleCheckboxChange = () => {
+    console.log('Checkbox clicked for card:', card.id);
+    onSelect();
+  };
 
-  return (
-    <>
-      <motion.div
-        layout
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.2 }}
-        onHoverStart={() => setIsHovered(true)}
-        onHoverEnd={() => setIsHovered(false)}
-        onClick={() => onEdit(card)}
-        className="cursor-pointer"
+  if (viewMode === 'list') {
+    return (
+      <div 
+        className={cn(
+          "relative flex items-center space-x-4 rounded-lg border p-4",
+          "hover:bg-accent/50 transition-colors cursor-pointer select-none",
+          isSelected && "bg-accent"
+        )}
+        onClick={handleSelect}
       >
-        <Card className={`relative overflow-hidden transition-shadow duration-200 ${isHovered ? 'shadow-lg' : 'shadow'}`}>
-          <CardContent className={`p-6 ${viewMode === 'list' ? 'flex gap-6' : ''}`}>
-            <div className={viewMode === 'list' ? 'flex-shrink-0' : 'mb-4'}>
-              <Avatar className={viewMode === 'list' ? 'h-16 w-16' : 'h-20 w-20 mx-auto'}>
-                {card.imageUrl ? (
-                  <div className="relative w-full h-full">
-                    <Image 
-                      src={card.imageUrl} 
-                      alt={card.name} 
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                ) : (
-                  <AvatarFallback className="bg-primary/10 text-primary text-xl">
-                    {initials}
-                  </AvatarFallback>
-                )}
-              </Avatar>
+        <div 
+          className="absolute left-4 top-1/2 transform -translate-y-1/2"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCheckboxChange();
+          }}
+        >
+          <Checkbox
+            id={`card-${card.id}`}
+            checked={isSelected}
+            onCheckedChange={handleCheckboxChange}
+            className="cursor-pointer"
+          />
+        </div>
+        <div className="flex items-center space-x-4 pl-8">
+          <Avatar className="h-12 w-12">
+            {card.image_url ? (
+              <AvatarImage src={card.image_url} alt={card.name || ''} />
+            ) : (
+              <AvatarFallback>{initials}</AvatarFallback>
+            )}
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">{card.name}</p>
+            <p className="text-sm text-muted-foreground">{card.title}</p>
+            <p className="text-sm text-muted-foreground">{card.company}</p>
+          </div>
+          <div className="flex items-center space-x-2">
+            {card.email && (
+              <a
+                href={`mailto:${card.email}`}
+                className="text-muted-foreground hover:text-primary"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Mail className="h-4 w-4" />
+              </a>
+            )}
+            {card.phone && (
+              <a
+                href={`tel:${card.phone}`}
+                className="text-muted-foreground hover:text-primary"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Phone className="h-4 w-4" />
+              </a>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <PremiumButton variant="ghost" size="icon">
+                  <MoreVertical className="h-4 w-4" />
+                </PremiumButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                  <Pencil className="mr-2 h-4 w-4" /> Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
+                  <Trash className="mr-2 h-4 w-4" /> Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (viewMode === 'grid') {
+    return (
+      <div 
+        className={cn(
+          "relative group rounded-lg border",
+          "hover:shadow-md transition-all",
+          isSelected && "ring-2 ring-primary"
+        )}
+        onClick={handleSelect}
+      >
+        <div className="absolute right-2 top-2 z-10">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onSelect()}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+        <div className="p-4">
+          <div className="flex items-center space-x-4">
+            <Avatar className="h-12 w-12">
+              {card.image_url ? (
+                <AvatarImage src={card.image_url} alt={card.name || ''} />
+              ) : (
+                <AvatarFallback>{initials}</AvatarFallback>
+              )}
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">{card.name}</p>
+              <p className="text-sm text-muted-foreground">{card.title}</p>
+              <p className="text-sm text-muted-foreground">{card.company}</p>
             </div>
-
-            <div className="flex-1">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold text-lg">{card.name}</h3>
-                  <p className="text-sm text-muted-foreground">{card.title}</p>
-                  <p className="text-sm font-medium text-primary">{card.company}</p>
-                </div>
-                
-                <div className="flex gap-1">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={handleDelete}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="mt-4 space-y-2">
-                {card.email && (
-                  <a 
-                    href={`mailto:${card.email}`}
-                    className="flex items-center text-sm text-muted-foreground hover:text-primary"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    {card.email}
-                  </a>
-                )}
-                {card.phone && (
-                  <a 
-                    href={`tel:${card.phone}`}
-                    className="flex items-center text-sm text-muted-foreground hover:text-primary"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Phone className="h-4 w-4 mr-2" />
-                    {card.phone}
-                  </a>
-                )}
-              </div>
+          </div>
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex space-x-2">
+              {card.email && (
+                <a
+                  href={`mailto:${card.email}`}
+                  className="text-muted-foreground hover:text-primary"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Mail className="h-4 w-4" />
+                </a>
+              )}
+              {card.phone && (
+                <a
+                  href={`tel:${card.phone}`}
+                  className="text-muted-foreground hover:text-primary"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Phone className="h-4 w-4" />
+                </a>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <PremiumButton variant="ghost" size="icon">
+                  <MoreVertical className="h-4 w-4" />
+                </PremiumButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                  <Pencil className="mr-2 h-4 w-4" /> Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
+                  <Trash className="mr-2 h-4 w-4" /> Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Business Card</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this business card? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
-  )
+  // Carousel view
+  return (
+    <div 
+      className={cn(
+        "relative aspect-[3/4] rounded-lg border",
+        "hover:shadow-md transition-all",
+        isSelected && "ring-2 ring-primary"
+      )}
+      onClick={handleSelect}
+    >
+      <div className="absolute right-2 top-2 z-10">
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={() => onSelect()}
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
+      <div className="h-full p-6 flex flex-col items-center justify-center text-center">
+        <Avatar className="h-24 w-24 mb-4">
+          {card.image_url ? (
+            <AvatarImage src={card.image_url} alt={card.name || ''} />
+          ) : (
+            <AvatarFallback className="text-xl">{initials}</AvatarFallback>
+          )}
+        </Avatar>
+        <h3 className="font-medium">{card.name}</h3>
+        <p className="text-sm text-muted-foreground">{card.title}</p>
+        <p className="text-sm text-muted-foreground">{card.company}</p>
+        <div className="mt-4 flex items-center space-x-4">
+          {card.email && (
+            <a
+              href={`mailto:${card.email}`}
+              className="text-muted-foreground hover:text-primary"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Mail className="h-4 w-4" />
+            </a>
+          )}
+          {card.phone && (
+            <a
+              href={`tel:${card.phone}`}
+              className="text-muted-foreground hover:text-primary"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Phone className="h-4 w-4" />
+            </a>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <PremiumButton variant="ghost" size="icon">
+                <MoreVertical className="h-4 w-4" />
+              </PremiumButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
+                <Trash className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    </div>
+  );
 } 

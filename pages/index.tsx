@@ -18,6 +18,7 @@ import { useAuth } from '@/lib/auth-context'
 import { BusinessCard } from '@/types/business-card'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-client'
+import { ManageCardsView } from '@/components/cards/ManageCardsView'
 
 interface NewsArticle {
   id: string
@@ -100,7 +101,7 @@ const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: {
       }`}
       tabIndex={0}
       role="button"
-      aria-label={`Business card for ${card.name || card.nameZh}`}
+      aria-label={`Business card for ${card.name || card.name_zh}`}
     >
       <div className="flex items-start gap-4">
         <Avatar className="h-12 w-12 ring-2 ring-purple-100">
@@ -112,21 +113,21 @@ const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: {
           <div className="flex items-start justify-between">
             <div className="min-w-0">
               <h3 className="font-semibold text-lg truncate">
-                {card.name || card.nameZh}
-                {card.name && card.nameZh && (
-                  <span className="ml-2 text-sm text-gray-500">({card.nameZh})</span>
+                {card.name || card.name_zh}
+                {card.name && card.name_zh && (
+                  <span className="ml-2 text-sm text-gray-500">({card.name_zh})</span>
                 )}
               </h3>
-              <p className="text-sm text-gray-600 truncate">
-                {card.title || card.titleZh}
-                {card.title && card.titleZh && (
-                  <span className="ml-2 text-xs text-gray-500">({card.titleZh})</span>
+              <p className="text-sm text-gray-600">
+                {card.title || card.title_zh}
+                {card.title && card.title_zh && (
+                  <span className="ml-2">({card.title_zh})</span>
                 )}
               </p>
-              <p className="text-sm font-medium text-purple-600 truncate">
-                {card.company || card.companyZh}
-                {card.company && card.companyZh && (
-                  <span className="ml-2 text-xs text-gray-500">({card.companyZh})</span>
+              <p className="text-sm font-medium text-gray-700">
+                {card.company || card.company_zh}
+                {card.company && card.company_zh && (
+                  <span className="ml-2">({card.company_zh})</span>
                 )}
               </p>
             </div>
@@ -168,13 +169,13 @@ const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: {
                 </a>
               </p>
             )}
-            {(card.address || card.addressZh) && (
+            {(card.address || card.address_zh) && (
               <p className="text-sm text-gray-600 flex items-center gap-2">
                 <HelpCircle className="h-4 w-4" />
                 <span className="truncate">
-                  {card.address || card.addressZh}
-                  {card.address && card.addressZh && (
-                    <span className="ml-2 text-xs text-gray-500">({card.addressZh})</span>
+                  {card.address || card.address_zh}
+                  {card.address && card.address_zh && (
+                    <span className="ml-2 text-xs text-gray-500">({card.address_zh})</span>
                   )}
                 </span>
               </p>
@@ -388,7 +389,6 @@ export default function Component() {
                           }
                           
                           const data = await response.json()
-                          await addCard(data)
                           setUploadedImage(null)
                           setActiveTab('manage')
                         } catch (error: any) {
@@ -411,146 +411,7 @@ export default function Component() {
           </TabsContent>
 
           <TabsContent value="manage" className="h-full p-8 overflow-auto">
-            <div className="space-y-6">
-              {/* Sticky Toolbar */}
-              <div className="sticky top-0 bg-white/80 backdrop-blur-sm shadow-sm z-10 py-4 -mt-8 -mx-8 px-8">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                    Business Cards
-                  </h2>
-                  <div className="flex items-center gap-4">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <Input
-                        type="search"
-                        placeholder="Search cards..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 w-[250px] transition-all duration-300 focus:w-[300px] bg-white/50 backdrop-blur-sm"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="toolbar-button"
-                        title="Export as CSV"
-                      >
-                        <Download className="h-5 w-5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="toolbar-button"
-                        title="Remove Selected"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="toolbar-button"
-                        title="Merge Cards"
-                      >
-                        <Users className="h-5 w-5" />
-                      </Button>
-                      <Select value={viewMode} onValueChange={(value: ViewMode) => setViewMode(value)}>
-                        <SelectTrigger className="w-[120px] bg-white/50 backdrop-blur-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="list">
-                            <div className="flex items-center">
-                              <LayoutList className="w-4 h-4 mr-2" />
-                              List
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="grid">
-                            <div className="flex items-center">
-                              <LayoutGrid className="w-4 h-4 mr-2" />
-                              Grid
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="carousel">
-                            <div className="flex items-center">
-                              <Star className="w-4 h-4 mr-2" />
-                              Carousel
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {loading ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                </div>
-              ) : error ? (
-                <div className="text-center py-8 text-red-500">
-                  Error loading cards: {error.message}
-                </div>
-              ) : filteredCards.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-                  <img src="/empty-state.svg" alt="No cards" className="h-16 mb-4" />
-                  <p>No business cards found. Start by uploading a new card.</p>
-                  <Button 
-                    className="mt-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-md hover:from-purple-700 hover:to-pink-700 transition-all duration-300"
-                    onClick={() => setActiveTab('scan')}
-                  >
-                    Upload Card
-                  </Button>
-                </div>
-              ) : viewMode === 'carousel' ? (
-                <div className="flex justify-center items-center h-[500px]">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={currentCardIndex}
-                      initial={{ opacity: 0, x: 200 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -200 }}
-                      className="w-full max-w-md"
-                    >
-                      <CardItem
-                        card={filteredCards[currentCardIndex]}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        viewMode={viewMode}
-                        onDragEnd={handleDragEnd}
-                      />
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
-              ) : (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className={`grid gap-6 ${
-                    viewMode === 'grid' 
-                      ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' 
-                      : ''
-                  }`}
-                >
-                  {filteredCards.map((card, index) => (
-                    <motion.div
-                      key={card.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                    >
-                      <CardItem
-                        card={card}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        viewMode={viewMode}
-                      />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-            </div>
+            <ManageCardsView />
           </TabsContent>
 
           <TabsContent value="network" className="h-full p-8 overflow-auto">
@@ -614,12 +475,12 @@ export default function Component() {
                                 </Avatar>
                                 <div>
                                   <h3 className="font-medium">
-                                    {contact.name || contact.nameZh}
-                                    {contact.name && contact.nameZh && ` (${contact.nameZh})`}
+                                    {contact.name || contact.name_zh}
+                                    {contact.name && contact.name_zh && ` (${contact.name_zh})`}
                                   </h3>
                                   <p className="text-sm text-gray-500">
-                                    {contact.title || contact.titleZh}
-                                    {contact.title && contact.titleZh && ` (${contact.titleZh})`}
+                                    {contact.title || contact.title_zh}
+                                    {contact.title && contact.title_zh && ` (${contact.title_zh})`}
                                   </p>
                                 </div>
                               </div>

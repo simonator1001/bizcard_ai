@@ -28,8 +28,8 @@ export default async function handler(
 <|user|>Based on these business cards, create an organizational chart JSON:
 ${cards.map(card => `
 Name: ${card.name}
-Title: ${card.title}${card.titleZh ? ` / ${card.titleZh}` : ''}
-Position: ${card.position || 'N/A'}`).join('\n')}
+Title: ${card.title}${card.title_zh ? ` / ${card.title_zh}` : ''}
+Company: ${card.company || 'N/A'}`).join('\n')}
 
 Create a single hierarchical structure where:
 1. The company is at the root

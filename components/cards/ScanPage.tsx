@@ -384,11 +384,6 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       setProcessingStatus('success');
       setProcessingStage('Card scanned successfully!');
       
-      // Notify parent component
-      if (onAddCard) {
-        onAddCard(savedCard);
-      }
-
       // Refresh usage stats
       refreshUsage?.();
 

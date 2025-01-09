@@ -1,44 +1,25 @@
 import { useRouter } from 'next/router'
-import { useEffect, useState, useCallback } from 'react'
-import { supabase } from '@/lib/supabase-client'
+import { useBusinessCards } from '@/lib/hooks/useBusinessCards'
 import { BusinessCardDetails } from '@/components/cards/BusinessCardDetails'
 
 export default function SharedCardPage() {
   const router = useRouter()
   const { id } = router.query
-  const [card, setCard] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { cards } = useBusinessCards()
 
-  const fetchCard = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('business_cards')
-        .select('*')
-        .eq('id', id)
-        .single()
+  const card = cards.find(c => c.id === id)
 
-      if (error) throw error
-      setCard(data)
-    } catch (error) {
-      console.error('Error fetching card:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [id])
-
-  useEffect(() => {
-    if (id) {
-      fetchCard()
-    }
-  }, [id, fetchCard])
-
-  if (loading) return <div>Loading...</div>
-  if (!card) return <div>Card not found</div>
+  if (!card) {
+    return <div>Card not found</div>
+  }
 
   return (
     <div className="container mx-auto p-4">
       <BusinessCardDetails 
-        card={card} 
+        card={card}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onClose={() => router.push('/')}
       />
     </div>
   )

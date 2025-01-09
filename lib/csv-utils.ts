@@ -4,45 +4,37 @@ export const convertToCSV = (cards: BusinessCard[]) => {
   // Define CSV headers
   const headers = [
     'Name',
-    'Position',
+    'Name (Chinese)',
     'Title',
     'Title (Chinese)',
     'Company',
+    'Company (Chinese)',
     'Email',
     'Phone',
-    'Reports To',
+    'Address',
+    'Address (Chinese)',
     'Image URL',
-    'Date Added'
+    'Notes',
+    'Date Added',
+    'Last Modified'
   ].join(',')
 
   // Convert each card to CSV row
   const rows = cards.map(card => [
     `"${card.name || ''}"`,
-    `"${card.position || ''}"`,
+    `"${card.name_zh || ''}"`,
     `"${card.title || ''}"`,
-    `"${card.titleZh || ''}"`,
+    `"${card.title_zh || ''}"`,
     `"${card.company || ''}"`,
-    `"${card.companyZh || ''}"`,
+    `"${card.company_zh || ''}"`,
     `"${card.email || ''}"`,
     `"${card.phone || ''}"`,
-    `"${card.mobile || ''}"`,
-    `"${card.fax || ''}"`,
-    `"${card.wechat || ''}"`,
-    `"${card.instagram || ''}"`,
-    `"${card.linkedin || ''}"`,
-    `"${card.website || ''}"`,
     `"${card.address || ''}"`,
-    `"${card.addressZh || ''}"`,
-    `"${card.department || ''}"`,
-    `"${card.departmentZh || ''}"`,
-    `"${card.whatsapp || ''}"`,
-    `"${card.line || ''}"`,
-    `"${card.telegram || ''}"`,
-    `"${card.facebook || ''}"`,
-    `"${card.twitter || ''}"`,
-    `"${card.imageUrl || ''}"`,
+    `"${card.address_zh || ''}"`,
+    `"${card.image_url || ''}"`,
     `"${card.notes || ''}"`,
-    `"${card.dateAdded || ''}"`,
+    `"${card.created_at || ''}"`,
+    `"${card.lastModified || ''}"`,
   ].join(','))
 
   return [headers, ...rows].join('\n')

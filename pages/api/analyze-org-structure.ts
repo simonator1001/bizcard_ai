@@ -43,10 +43,9 @@ export default async function handler(
       role: 'user',
       content: `Analyze these business cards and return a JSON array of reporting relationships:
         ${JSON.stringify(cards.map(c => ({
-          id: c.id,
           name: c.name,
           title: c.title,
-          titleZh: c.titleZh,
+          title_zh: c.title_zh,
           company: c.company
         })), null, 2)}
 

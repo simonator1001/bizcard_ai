@@ -1,11 +1,10 @@
 'use client'
 
-import * as React from 'react'
-import Image from 'next/image'
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Mail, Edit2, Trash2, PenTool } from 'lucide-react'
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import React from 'react'
+import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,147 +14,153 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { useTranslation } from 'react-i18next'
+} from '@/components/ui/alert-dialog'
+import { Mail, Phone, MapPin, Trash2, Edit } from 'lucide-react'
+import Image from 'next/image'
 import { BusinessCard } from '@/types/business-card'
 
 interface BusinessCardDetailsProps {
   card: BusinessCard
-  layout?: 'list' | 'grid' | 'scroll'
-  onDelete?: (id: string) => void
-  onEdit?: (id: string) => void
+  onEdit: (card: BusinessCard) => void
+  onDelete: (id: string) => void
+  onClose: () => void
 }
 
-export const BusinessCardDetails: React.FC<BusinessCardDetailsProps> = ({
+export function BusinessCardDetails({
   card,
-  layout = 'list',
+  onEdit,
   onDelete,
-  onEdit
-}) => {
+  onClose,
+}: BusinessCardDetailsProps) {
   const { t } = useTranslation()
   const [showDeleteAlert, setShowDeleteAlert] = React.useState(false)
   const initials = card.name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
+    ? card.name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+    : '?'
 
   const handleDelete = () => {
     setShowDeleteAlert(true)
   }
 
   const confirmDelete = () => {
-    onDelete?.(card.id)
+    onDelete(card.id)
     setShowDeleteAlert(false)
+    onClose()
   }
 
   return (
     <>
-      <Card className="relative hover:shadow-md transition-shadow">
+      <Card className="w-full max-w-2xl mx-auto">
         <CardContent className="p-6">
-          <div className="flex items-start gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-purple-100 to-pink-100 text-purple-700">
-                {initials}
-              </AvatarFallback>
+          <div className="flex items-start gap-6">
+            <Avatar className="h-24 w-24">
+              {card.image_url ? (
+                <div className="relative w-full h-full">
+                  <Image
+                    src={card.image_url}
+                    alt={card.name || 'Business Card'}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <AvatarFallback className="bg-primary/10 text-primary text-2xl">
+                  {initials}
+                </AvatarFallback>
+              )}
             </Avatar>
 
-            <div className="flex-1 min-w-0">
+            <div className="flex-1">
               <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <h3 className="text-xl font-semibold">
+                <div>
+                  <h2 className="text-2xl font-semibold">
                     {card.name}
-                    {card.nameZh && (
-                      <span className="ml-2 text-gray-500">{card.nameZh}</span>
+                    {card.name_zh && (
+                      <span className="ml-2 text-gray-500">({card.name_zh})</span>
                     )}
-                  </h3>
-                  <p className="text-sm text-gray-500">
+                  </h2>
+                  <p className="text-gray-600">
                     {card.title}
-                    {card.titleZh && (
-                      <span className="ml-2">{card.titleZh}</span>
-                    )}
+                    {card.title_zh && <span className="ml-2">({card.title_zh})</span>}
                   </p>
-                  <p className="text-base font-medium">
+                  <p className="font-medium text-primary">
                     {card.company}
-                    {card.companyZh && (
-                      <span className="ml-2 text-gray-500">{card.companyZh}</span>
+                    {card.company_zh && (
+                      <span className="ml-2">({card.company_zh})</span>
                     )}
                   </p>
                 </div>
 
-                <div className="flex gap-1">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => onEdit?.(card.id)}
-                    title={t('actions.edit')}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(card)}
                   >
-                    <Edit2 className="h-4 w-4" />
+                    <Edit className="h-4 w-4 mr-2" />
+                    {t('actions.edit')}
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={handleDelete}
-                    title={t('actions.delete')}
+                    className="text-red-600 hover:text-red-700"
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    title={t('actions.email')}
-                  >
-                    <Mail className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    title={t('actions.notes')}
-                  >
-                    <PenTool className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {t('actions.delete')}
                   </Button>
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-1">{t('card.contact')}</h4>
-                  <div className="space-y-1">
-                    {card.email && (
-                      <p className="text-sm truncate">{card.email}</p>
-                    )}
-                    {card.phone && (
-                      <p className="text-sm">{card.phone}</p>
-                    )}
-                    {card.mobile && (
-                      <p className="text-sm">{card.mobile}</p>
-                    )}
+              <div className="mt-6 space-y-4">
+                {card.email && (
+                  <div className="flex items-center">
+                    <Mail className="h-5 w-5 text-gray-400 mr-3" />
+                    <a
+                      href={`mailto:${card.email}`}
+                      className="text-primary hover:underline"
+                    >
+                      {card.email}
+                    </a>
                   </div>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-1">{t('card.address')}</h4>
-                  <div className="space-y-1">
-                    {card.address && (
-                      <p className="text-sm">{card.address}</p>
-                    )}
-                    {card.addressZh && (
-                      <p className="text-sm text-gray-500">{card.addressZh}</p>
-                    )}
+                )}
+
+                {card.phone && (
+                  <div className="flex items-center">
+                    <Phone className="h-5 w-5 text-gray-400 mr-3" />
+                    <a
+                      href={`tel:${card.phone}`}
+                      className="text-primary hover:underline"
+                    >
+                      {card.phone}
+                    </a>
                   </div>
-                </div>
+                )}
+
+                {(card.address || card.address_zh) && (
+                  <div className="flex items-center">
+                    <MapPin className="h-5 w-5 text-gray-400 mr-3" />
+                    <div>
+                      {card.address && <div>{card.address}</div>}
+                      {card.address_zh && (
+                        <div className="text-gray-600">{card.address_zh}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {card.notes && (
+                <div className="mt-6">
+                  <h3 className="font-medium mb-2">{t('card.notes')}</h3>
+                  <p className="text-gray-600">{card.notes}</p>
+                </div>
+              )}
             </div>
-
-            {card.imageUrl && layout !== 'list' && (
-              <div className="relative w-32 h-20">
-                <Image 
-                  src={card.imageUrl} 
-                  alt={`Business card for ${card.name}`}
-                  fill
-                  className="object-cover rounded-lg"
-                />
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -163,15 +168,20 @@ export const BusinessCardDetails: React.FC<BusinessCardDetailsProps> = ({
       <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('dialogs.delete.title')}</AlertDialogTitle>
+            <AlertDialogTitle>{t('dialogs.deleteCard.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('dialogs.delete.description')}
+              {t('dialogs.deleteCard.description')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('actions.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>
-              {t('actions.delete')}
+            <AlertDialogCancel>
+              {t('dialogs.deleteCard.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {t('dialogs.deleteCard.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

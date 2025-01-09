@@ -1,158 +1,340 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase-client';
-import { Mail, Phone, MapPin } from 'lucide-react';
+import { Mail, Phone, MapPin, Users, Trash2, Download, X } from 'lucide-react';
 import Image from 'next/image';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CardItem } from './CardItem';
+import { DuplicateManager } from './DuplicateManager';
+import type { BusinessCard } from '@/types/business-card';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { downloadCSV } from '@/lib/csv-utils';
+import { cn } from '@/lib/utils';
 
-interface BusinessCard {
-  id: string;
-  name: string;
-  name_zh: string;
-  company: string;
-  company_zh: string;
-  title: string;
-  title_zh: string;
-  email: string;
-  phone: string;
-  address: string;
-  address_zh: string;
-  image_url: string;
-  notes: string;
-  created_at: string;
-  updated_at: string;
-}
+type ViewMode = 'list' | 'grid' | 'carousel';
+type SortField = 'name' | 'company' | 'title' | 'created_at';
+type SortDirection = 'asc' | 'desc';
 
 export function ManageCardsView() {
   const [cards, setCards] = useState<BusinessCard[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
+  const [showDuplicateManager, setShowDuplicateManager] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('created_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const { user } = useAuth();
 
-  useEffect(() => {
+  const fetchCards = useCallback(async () => {
     if (!user) {
       console.log('No user found');
       return;
     }
 
-    const fetchCards = async () => {
-      console.log('Fetching cards for user:', user.id);
-      
-      const { data, error } = await supabase
-        .from('business_cards')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+    console.log('Fetching cards for user:', user.id);
+    
+    const { data, error } = await supabase
+      .from('business_cards')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching cards:', error);
-        return;
-      }
+    if (error) {
+      console.error('Error fetching cards:', error);
+      return;
+    }
 
-      console.log('Fetched cards:', data);
-
-      const mappedCards: BusinessCard[] = data?.map(card => ({
-        id: card.id,
-        name: card.name || '',
-        name_zh: card.name_zh || '',
-        company: card.company || '',
-        company_zh: card.company_zh || '',
-        title: card.title || '',
-        title_zh: card.title_zh || '',
-        email: card.email || '',
-        phone: card.phone || '',
-        address: card.address || '',
-        address_zh: card.address_zh || '',
-        image_url: card.image_url || '',
-        notes: card.notes || '',
-        created_at: card.created_at,
-        updated_at: card.updated_at
-      })) || [];
-
-      console.log('Mapped cards:', mappedCards);
-      setCards(mappedCards);
-    };
-
-    fetchCards();
+    console.log('Fetched cards:', data);
+    setCards(data || []);
   }, [user]);
 
-  console.log('Rendering cards:', cards);
+  useEffect(() => {
+    fetchCards();
+  }, [fetchCards]);
+
+  const filteredCards = cards.filter(card => 
+    (card.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (card.company || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (card.title || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const sortedAndFilteredCards = React.useMemo(() => {
+    return filteredCards.sort((a, b) => {
+      if (sortField === 'created_at') {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+      }
+      
+      const aValue = String(a[sortField] || '').toLowerCase();
+      const bValue = String(b[sortField] || '').toLowerCase();
+      return sortDirection === 'asc' 
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
+    });
+  }, [filteredCards, sortField, sortDirection]);
+
+  useEffect(() => {
+    console.log('Selected cards:', Array.from(selectedCards));
+  }, [selectedCards]);
+
+  const handleCardSelect = useCallback((cardId: string) => {
+    console.log('Selecting card:', cardId);
+    setSelectedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(cardId)) {
+        newSet.delete(cardId);
+      } else {
+        newSet.add(cardId);
+      }
+      console.log('Selected cards:', Array.from(newSet));
+      return newSet;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedCards(prev => {
+      if (prev.size === sortedAndFilteredCards.length) {
+        console.log('Deselecting all cards');
+        return new Set();
+      }
+      const newSet = new Set(sortedAndFilteredCards.map(card => card.id));
+      console.log('Selecting all cards:', Array.from(newSet));
+      return newSet;
+    });
+  }, [sortedAndFilteredCards]);
+
+  const handleDeleteSelected = useCallback(async () => {
+    const selectedCardIds = Array.from(selectedCards);
+    if (selectedCardIds.length === 0) return;
+
+    try {
+      // Delete cards one by one
+      for (const cardId of selectedCardIds) {
+        const { error } = await supabase
+          .from('business_cards')
+          .delete()
+          .eq('id', cardId);
+        
+        if (error) {
+          console.error(`Error deleting card ${cardId}:`, error);
+          throw error;
+        }
+      }
+
+      // Update local state
+      setCards(prev => prev.filter(card => !selectedCards.has(card.id)));
+      setSelectedCards(new Set());
+    } catch (error) {
+      console.error('Error deleting cards:', error);
+      await fetchCards();
+    }
+  }, [selectedCards, fetchCards, supabase]);
+
+  const handleMergeCard = useCallback(async (mergedCard: BusinessCard) => {
+    try {
+      const { error } = await supabase
+        .from('business_cards')
+        .upsert([mergedCard]);
+      
+      if (error) throw error;
+      
+      await fetchCards();
+    } catch (error) {
+      console.error('Error merging card:', error);
+    }
+  }, [fetchCards]);
+
+  const handleDeleteCard = useCallback(async (cardId: string) => {
+    try {
+      const { error } = await supabase
+        .from('business_cards')
+        .delete()
+        .eq('id', cardId);
+      
+      if (error) throw error;
+      
+      setCards(prev => prev.filter(card => card.id !== cardId));
+    } catch (error) {
+      console.error('Error deleting card:', error);
+    }
+  }, []);
+
+  const handleExportCSV = useCallback(() => {
+    downloadCSV(cards);
+  }, [cards]);
+
+  const handleDuplicateManagerOpen = useCallback(() => {
+    setShowDuplicateManager(true);
+  }, []);
+
+  const handleDuplicateManagerClose = useCallback(() => {
+    setShowDuplicateManager(false);
+  }, []);
+
+  const handleDuplicateManagerChange = useCallback((open: boolean) => {
+    setShowDuplicateManager(open);
+  }, []);
+
+  // Add a useEffect to monitor selectedCards changes
+  useEffect(() => {
+    console.log('Selected cards count:', selectedCards.size);
+  }, [selectedCards]);
+
+  // Add a useEffect to monitor cards changes
+  useEffect(() => {
+    console.log('Total cards count:', cards.length);
+  }, [cards]);
 
   return (
-    <div className="space-y-4">
-      {cards.map(card => (
-        <div key={card.id} className="p-4 border rounded-lg shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-start space-x-4">
-            {card.image_url && (
-              <div className="w-32 h-20 relative rounded-lg overflow-hidden bg-gray-100">
-                <Image 
-                  src={card.image_url}
-                  alt="Business Card"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 128px, 128px"
-                  onError={(e) => {
-                    console.error('Error loading image:', e, 'URL:', card.image_url);
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/placeholder-card.png';
-                    target.classList.add('error');
-                  }}
-                />
-              </div>
-            )}
-            <div className="flex-1">
-              <div className="flex items-baseline justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">
-                    {card.name || card.name_zh}
-                    {card.name && card.name_zh && ` (${card.name_zh})`}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {card.title || card.title_zh}
-                    {card.title && card.title_zh && ` (${card.title_zh})`}
-                  </p>
-                  <p className="text-sm font-medium text-gray-700">
-                    {card.company || card.company_zh}
-                    {card.company && card.company_zh && ` (${card.company_zh})`}
-                  </p>
-                </div>
-                <div className="text-sm text-gray-500">
-                  {new Date(card.created_at).toLocaleDateString()}
-                </div>
-              </div>
-              <div className="mt-2 space-y-1 text-sm text-gray-600">
-                {card.email && (
-                  <p className="flex items-center">
-                    <Mail className="w-4 h-4 mr-2" />
-                    <a href={`mailto:${card.email}`} className="hover:text-primary">
-                      {card.email}
-                    </a>
-                  </p>
-                )}
-                {card.phone && (
-                  <p className="flex items-center">
-                    <Phone className="w-4 h-4 mr-2" />
-                    <a href={`tel:${card.phone}`} className="hover:text-primary">
-                      {card.phone}
-                    </a>
-                  </p>
-                )}
-                {(card.address || card.address_zh) && (
-                  <p className="flex items-center">
-                    <MapPin className="w-4 h-4 mr-2" />
-                    <span>
-                      {card.address || card.address_zh}
-                      {card.address && card.address_zh && ` (${card.address_zh})`}
+    <div className="space-y-6">
+      <div className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+        <div className="flex h-16 items-center px-8">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-4">
+              <h2 className="text-lg font-semibold">
+                Business Cards
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSelectAll}
+                className="text-sm"
+              >
+                {selectedCards.size === sortedAndFilteredCards.length ? 'Deselect All' : 'Select All'}
+                {selectedCards.size > 0 && ` (${selectedCards.size} selected)`}
+              </Button>
+            </div>
+            <div className="flex items-center gap-4">
+              <Input
+                type="search"
+                placeholder="Search cards..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-[250px]"
+              />
+              <div className="flex items-center gap-2">
+                <Select 
+                  value={sortField} 
+                  onValueChange={(value: SortField) => setSortField(value)}
+                >
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="created_at">Date Added</SelectItem>
+                    <SelectItem value="name">Name</SelectItem>
+                    <SelectItem value="company">Company</SelectItem>
+                    <SelectItem value="title">Title</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+                  title={`Sort ${sortDirection === 'asc' ? 'Ascending' : 'Descending'}`}
+                  type="button"
+                >
+                  {sortDirection === 'asc' ? '↑' : '↓'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleExportCSV}
+                  title="Export as CSV"
+                  type="button"
+                >
+                  <Download className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleDeleteSelected}
+                  title={`Remove Selected (${selectedCards.size})`}
+                  type="button"
+                  className={cn(
+                    "relative transition-colors",
+                    selectedCards.size > 0 
+                      ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
+                      : "opacity-50 cursor-not-allowed pointer-events-none"
+                  )}
+                >
+                  <Trash2 className="h-5 w-5" />
+                  {selectedCards.size > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-white text-destructive rounded-full w-5 h-5 text-xs flex items-center justify-center border-2 border-current font-medium">
+                      {selectedCards.size}
                     </span>
-                  </p>
-                )}
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleDuplicateManagerOpen}
+                  title="Manage Duplicates"
+                  className="hover:bg-gray-100"
+                  type="button"
+                >
+                  <Users className="h-5 w-5" />
+                </Button>
+                <Select value={viewMode} onValueChange={(value: ViewMode) => setViewMode(value)}>
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="list">List</SelectItem>
+                    <SelectItem value="grid">Grid</SelectItem>
+                    <SelectItem value="carousel">Carousel</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
         </div>
-      ))}
-      {cards.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          No business cards found. Start by scanning some cards!
+      </div>
+
+      <div className="px-8">
+        <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : ''}`}>
+          {sortedAndFilteredCards.map(card => (
+            <CardItem
+              key={card.id}
+              card={card}
+              viewMode={viewMode}
+              isSelected={selectedCards.has(card.id)}
+              onSelect={() => handleCardSelect(card.id)}
+              onEdit={() => {}}
+              onDelete={() => handleDeleteCard(card.id)}
+            />
+          ))}
         </div>
-      )}
+
+        {sortedAndFilteredCards.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            No business cards found. Start by scanning some cards!
+          </div>
+        )}
+      </div>
+
+      <Dialog 
+        open={showDuplicateManager} 
+        onOpenChange={handleDuplicateManagerChange}
+        modal={true}
+      >
+        <DialogContent 
+          className="max-w-4xl h-[85vh] p-0 bg-white rounded-lg overflow-hidden"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
+          <DuplicateManager
+            cards={cards}
+            onMerge={handleMergeCard}
+            onDelete={handleDeleteCard}
+            onClose={handleDuplicateManagerClose}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

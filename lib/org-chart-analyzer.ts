@@ -1,107 +1,69 @@
 import { BusinessCard } from '@/types/business-card'
 
-// Fallback function to analyze relationships based on titles
-function analyzeRelationshipsByTitle(cards: BusinessCard[]) {
-  const titleHierarchy = {
-    level1: ['ceo', 'chief', 'president', 'founder', 'chairman'],
-    level2: ['vp', 'vice president', 'director', 'head'],
-    level3: ['manager', 'lead', 'supervisor'],
-    level4: ['senior', 'sr', 'principal'],
-    level5: ['associate', 'junior', 'staff'],
-  };
+// Helper function to determine the level of a position
+function getLevel(title: string | undefined): number {
+  if (!title) return 999; // Put undefined titles at the end
 
-  // Sort cards by hierarchy level
-  const getLevel = (title?: string): number => {
-    if (!title) return 6; // Default level for undefined/null titles
-    
-    const lowerTitle = title.toLowerCase();
-    for (const [level, keywords] of Object.entries(titleHierarchy)) {
-      if (keywords.some(keyword => lowerTitle.includes(keyword))) {
-        return parseInt(level.replace('level', ''));
-      }
-    }
-    return 6;
-  };
+  title = title.toLowerCase();
+  
+  if (title.includes('ceo') || title.includes('chairman') || title.includes('president')) {
+    return 1;
+  }
+  if (title.includes('chief') || title.includes('cto') || title.includes('cfo') || title.includes('coo')) {
+    return 2;
+  }
+  if (title.includes('director') || title.includes('head of')) {
+    return 3;
+  }
+  if (title.includes('manager')) {
+    return 4;
+  }
+  if (title.includes('lead') || title.includes('senior')) {
+    return 5;
+  }
+  
+  return 6; // Default level for other positions
+}
 
-  // Sort cards by level, handling undefined positions
+export function analyzeOrgChart(cards: BusinessCard[]) {
+  // Sort cards by level, handling undefined titles
   const sortedCards = [...cards].sort((a, b) => {
-    const levelA = getLevel(a?.position);
-    const levelB = getLevel(b?.position);
+    const levelA = getLevel(a?.title);
+    const levelB = getLevel(b?.title);
     return levelA - levelB;
   });
 
-  // Assign reporting relationships
-  return sortedCards.map((card, currentIndex) => {
-    if (!card) return null; // Handle null/undefined cards
-    
-    const cardLevel = getLevel(card.position);
-    let reportsTo = null;
-
-    // Find the nearest superior by looking at previous cards
-    for (let i = currentIndex - 1; i >= 0; i--) {
-      const potentialManager = sortedCards[i];
-      if (!potentialManager) continue; // Skip null/undefined managers
-      
-      const managerLevel = getLevel(potentialManager.position);
-      if (managerLevel < cardLevel) {
-        reportsTo = potentialManager.id;
-        break;
-      }
+  // Group cards by company
+  const companies = new Map<string, BusinessCard[]>();
+  
+  sortedCards.forEach(card => {
+    if (card.company) {
+      const companyCards = companies.get(card.company) || [];
+      companyCards.push(card);
+      companies.set(card.company, companyCards);
     }
+  });
 
-    return {
-      ...card,
-      reportsTo
-    };
-  }).filter(Boolean) as BusinessCard[]; // Remove any null results
-}
-
-export async function analyzeOrgStructure(cards: BusinessCard[]) {
-  if (!Array.isArray(cards) || cards.length === 0) {
-    console.error('❌ Invalid or empty cards array:', cards);
-    return [];
-  }
-
-  try {
-    // Log the cards we're analyzing
-    console.log('📊 Analyzing org structure for:', cards.map(card => ({
-      id: card.id,
-      name: card.name,
-      position: card.position,
-      company: card.company
-    })));
-
-    const response = await fetch('/api/analyze-org-structure', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ cards })
+  // Create org chart structure for each company
+  const orgCharts = new Map<string, any>();
+  
+  companies.forEach((companyCards, company) => {
+    const levels = new Map<number, BusinessCard[]>();
+    
+    companyCards.forEach(card => {
+      const level = getLevel(card.title);
+      const levelCards = levels.get(level) || [];
+      levelCards.push(card);
+      levels.set(level, levelCards);
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('❌ API error:', error);
-      return analyzeRelationshipsByTitle(cards);
-    }
+    orgCharts.set(company, {
+      company,
+      levels: Array.from(levels.entries()).sort(([a], [b]) => a - b)
+    });
+  });
 
-    const { relationships } = await response.json();
-    
-    if (!Array.isArray(relationships)) {
-      console.error('❌ Invalid response format:', relationships);
-      return analyzeRelationshipsByTitle(cards);
-    }
-
-    // Map the relationships back to the original cards
-    return cards.map(card => ({
-      ...card,
-      reportsTo: relationships.find(r => r.id === card.id)?.reportsTo || null
-    }));
-
-  } catch (error) {
-    console.error('❌ Error in analyzeOrgStructure:', error);
-    return analyzeRelationshipsByTitle(cards);
-  }
+  return Array.from(orgCharts.values());
 }
 
 // Update the test function to use the same model

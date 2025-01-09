@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { Loader2, LucideIcon } from "lucide-react"
 
-const buttonVariants = cva(
+const premiumButtonVariants = cva(
   "inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none",
   {
     variants: {
@@ -30,7 +30,7 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+    VariantProps<typeof premiumButtonVariants> {
   icon?: LucideIcon
   loading?: boolean
   label?: string
@@ -40,7 +40,7 @@ const PremiumButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, icon: Icon, loading, label, children, ...props }, ref) => {
     return (
       <button
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(premiumButtonVariants({ variant, size, className }))}
         ref={ref}
         {...props}
       >
@@ -56,4 +56,4 @@ const PremiumButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
 )
 PremiumButton.displayName = "PremiumButton"
 
-export { PremiumButton, buttonVariants } 
+export { PremiumButton, premiumButtonVariants } 
