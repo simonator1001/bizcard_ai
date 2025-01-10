@@ -1,17 +1,41 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase-client';
-import { Mail, Phone, MapPin, Users, Trash2, Download, X } from 'lucide-react';
+import { 
+  Mail, 
+  Phone, 
+  MapPin, 
+  Users, 
+  Trash2, 
+  Download, 
+  X, 
+  Check,
+  List,
+  Grid,
+  Image as ImageIcon,
+  ChevronDown
+} from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu"
 import { CardItem } from './CardItem';
+import { CardDetailView } from './CardDetailView';
 import { DuplicateManager } from './DuplicateManager';
 import type { BusinessCard } from '@/types/business-card';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { downloadCSV } from '@/lib/csv-utils';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 type ViewMode = 'list' | 'grid' | 'carousel';
 type SortField = 'name' | 'company' | 'title' | 'created_at';
@@ -25,6 +49,7 @@ export function ManageCardsView() {
   const [showDuplicateManager, setShowDuplicateManager] = useState(false);
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [selectedCard, setSelectedCard] = useState<BusinessCard | null>(null);
   const { user } = useAuth();
 
   const fetchCards = useCallback(async () => {
@@ -37,17 +62,41 @@ export function ManageCardsView() {
     
     const { data, error } = await supabase
       .from('business_cards')
-      .select('*')
+      .select(`
+        id,
+        name,
+        name_zh,
+        company,
+        company_zh,
+        title,
+        title_zh,
+        email,
+        phone,
+        address,
+        address_zh,
+        notes,
+        image_url,
+        created_at,
+        updated_at,
+        user_id
+      `)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching cards:', error);
+      toast.error('Failed to load business cards');
       return;
     }
 
-    console.log('Fetched cards:', data);
-    setCards(data || []);
+    // Transform the data to include images array with image_url
+    const cardsWithImages = data?.map(card => ({
+      ...card,
+      images: card.image_url ? [card.image_url] : []
+    })) || [];
+
+    console.log('Fetched cards:', cardsWithImages);
+    setCards(cardsWithImages);
   }, [user]);
 
   useEffect(() => {
@@ -188,6 +237,47 @@ export function ManageCardsView() {
     console.log('Total cards count:', cards.length);
   }, [cards]);
 
+  const handleCardClick = useCallback((card: BusinessCard) => {
+    setSelectedCard(card);
+  }, []);
+
+  const handleCardEdit = useCallback(async (updatedCard: BusinessCard) => {
+    try {
+      // Remove the images field before sending to Supabase
+      const { images, ...cardDataToUpdate } = updatedCard;
+      
+      const { error } = await supabase
+        .from('business_cards')
+        .update(cardDataToUpdate)
+        .eq('id', updatedCard.id);
+      
+      if (error) throw error;
+      
+      setCards(prev => prev.map(card => 
+        card.id === updatedCard.id ? {
+          ...updatedCard,
+          images: updatedCard.image_url ? [updatedCard.image_url] : []
+        } : card
+      ));
+      toast.success('Card updated successfully');
+    } catch (error) {
+      console.error('Error updating card:', error);
+      toast.error('Failed to update card');
+    }
+  }, []);
+
+  const viewModeIcons = {
+    list: <List className="h-4 w-4" />,
+    grid: <Grid className="h-4 w-4" />,
+    carousel: <ImageIcon className="h-4 w-4" />
+  };
+
+  const viewModeLabels = {
+    list: 'List View',
+    grid: 'Grid View',
+    carousel: 'Carousel View'
+  };
+
   return (
     <div className="space-y-6">
       <div className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
@@ -216,20 +306,24 @@ export function ManageCardsView() {
                 className="w-[250px]"
               />
               <div className="flex items-center gap-2">
-                <Select 
-                  value={sortField} 
-                  onValueChange={(value: SortField) => setSortField(value)}
-                >
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="created_at">Date Added</SelectItem>
-                    <SelectItem value="name">Name</SelectItem>
-                    <SelectItem value="company">Company</SelectItem>
-                    <SelectItem value="title">Title</SelectItem>
-                  </SelectContent>
-                </Select>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-[150px] justify-between">
+                      {sortField === 'created_at' ? 'Date Added' :
+                       sortField === 'name' ? 'Name' :
+                       sortField === 'company' ? 'Company' : 'Title'}
+                      <span className="ml-2">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-[150px]">
+                    <DropdownMenuRadioGroup value={sortField} onValueChange={(value: SortField) => setSortField(value)}>
+                      <DropdownMenuRadioItem value="created_at">Date Added</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="company">Company</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="title">Title</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button
                   variant="outline"
                   size="icon"
@@ -278,16 +372,49 @@ export function ManageCardsView() {
                 >
                   <Users className="h-5 w-5" />
                 </Button>
-                <Select value={viewMode} onValueChange={(value: ViewMode) => setViewMode(value)}>
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="list">List</SelectItem>
-                    <SelectItem value="grid">Grid</SelectItem>
-                    <SelectItem value="carousel">Carousel</SelectItem>
-                  </SelectContent>
-                </Select>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-[140px] justify-between">
+                      <div className="flex items-center gap-2">
+                        {viewModeIcons[viewMode]}
+                        <span>{viewModeLabels[viewMode]}</span>
+                      </div>
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent 
+                    align="end" 
+                    className="w-[140px] bg-white shadow-lg border rounded-md"
+                    sideOffset={5}
+                  >
+                    <DropdownMenuRadioGroup value={viewMode} onValueChange={(value: ViewMode) => setViewMode(value)}>
+                      <DropdownMenuRadioItem 
+                        value="list" 
+                        className="flex items-center gap-2 cursor-pointer px-2 py-1.5 outline-none hover:bg-gray-100 focus:bg-gray-100"
+                      >
+                        <List className="h-4 w-4" />
+                        <span className="flex-1">List View</span>
+                        {viewMode === 'list' && <Check className="h-4 w-4" />}
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem 
+                        value="grid" 
+                        className="flex items-center gap-2 cursor-pointer px-2 py-1.5 outline-none hover:bg-gray-100 focus:bg-gray-100"
+                      >
+                        <Grid className="h-4 w-4" />
+                        <span className="flex-1">Grid View</span>
+                        {viewMode === 'grid' && <Check className="h-4 w-4" />}
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem 
+                        value="carousel" 
+                        className="flex items-center gap-2 cursor-pointer px-2 py-1.5 outline-none hover:bg-gray-100 focus:bg-gray-100"
+                      >
+                        <ImageIcon className="h-4 w-4" />
+                        <span className="flex-1">Carousel View</span>
+                        {viewMode === 'carousel' && <Check className="h-4 w-4" />}
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </div>
@@ -303,7 +430,8 @@ export function ManageCardsView() {
               viewMode={viewMode}
               isSelected={selectedCards.has(card.id)}
               onSelect={() => handleCardSelect(card.id)}
-              onEdit={() => {}}
+              onClick={() => handleCardClick(card)}
+              onEdit={() => handleCardClick(card)}
               onDelete={() => handleDeleteCard(card.id)}
             />
           ))}
@@ -315,6 +443,15 @@ export function ManageCardsView() {
           </div>
         )}
       </div>
+
+      {selectedCard && (
+        <CardDetailView
+          card={selectedCard}
+          onClose={() => setSelectedCard(null)}
+          onEdit={handleCardEdit}
+          onDelete={handleDeleteCard}
+        />
+      )}
 
       <Dialog 
         open={showDuplicateManager} 

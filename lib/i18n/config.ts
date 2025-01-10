@@ -5,51 +5,66 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 const resources = {
   en: {
     translation: {
-      scan: {
-        title: "Scan Business Card",
-        uploadButton: "Click or drag and drop to upload business card images",
-        dragAndDrop: "Multiple files supported",
-        processing: "Processing...",
-        success: "Card processed successfully",
-        error: "Failed to process card"
+      card: {
+        details: {
+          title: 'Business Card Details',
+          description: 'View and edit business card information',
+          nameEnglish: 'Name (English)',
+          nameChinese: 'Name (Chinese)',
+          companyEnglish: 'Company (English)',
+          companyChinese: 'Company (Chinese)',
+          titleEnglish: 'Title (English)',
+          titleChinese: 'Title (Chinese)',
+          email: 'Email',
+          phone: 'Phone',
+          addressEnglish: 'Address (English)',
+          addressChinese: 'Address (Chinese)',
+          remarks: 'Remarks'
+        },
+        noImage: 'No image available',
+        download: {
+          noImage: 'No image available to download',
+          success: 'Business card image downloaded successfully',
+          error: 'Failed to download business card image'
+        },
+        delete: {
+          title: 'Delete Business Card',
+          description: 'Are you sure you want to delete this business card? This action cannot be undone.',
+          cancel: 'Cancel',
+          confirm: 'Delete'
+        }
+      },
+      actions: {
+        save: 'Save',
+        cancel: 'Cancel',
+        copyLink: 'Copy Link'
       },
       errors: {
-        notLoggedIn: "Please log in to scan business cards"
-      }
-    }
-  },
-  zh: {
-    translation: {
-      scan: {
-        title: "扫描名片",
-        uploadButton: "点击或拖放上传名片图片",
-        dragAndDrop: "支持多个文件",
-        processing: "处理中...",
-        success: "名片处理成功",
-        error: "名片处理失败"
-      },
-      errors: {
-        notLoggedIn: "请登录后扫描名片"
+        chineseOnly: 'This field only accepts Chinese characters',
+        englishOnly: 'This field only accepts English characters'
       }
     }
   }
 };
 
-if (!i18n.isInitialized) {
-  i18n
-    .use(LanguageDetector)
-    .use(initReactI18next)
-    .init({
-      resources,
-      fallbackLng: 'en',
-      interpolation: {
-        escapeValue: false,
-      },
-      detection: {
-        order: ['localStorage', 'navigator'],
-        caches: ['localStorage'],
-      },
-    });
-}
+i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources,
+    fallbackLng: 'en',
+    defaultNS: 'translation',
+    ns: ['translation'],
+    interpolation: {
+      escapeValue: false,
+    },
+    react: {
+      useSuspense: false
+    },
+    detection: {
+      order: ['localStorage', 'navigator'],
+      caches: ['localStorage'],
+    },
+  });
 
 export default i18n; 

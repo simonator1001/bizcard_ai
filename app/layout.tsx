@@ -1,41 +1,33 @@
-import { Navigation } from '@/components/ui/navigation';
-import { Providers } from '@/components/layout/providers';
-import '@/styles/globals.css';
+import '@/styles/globals.css'
+import { Inter } from 'next/font/google'
+import { Toaster } from '@/components/ui/toaster'
+import { AuthProvider } from '@/lib/auth-context'
+import '@/lib/i18n/config'
+import { I18nextProvider } from 'react-i18next'
+import i18n from '@/lib/i18n/config'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'Biz.ai - AI-Powered Business Card Management',
-  description: 'Transform your business cards into digital contacts with AI-powered scanning and organization.',
-  icons: {
-    icon: [
-      {
-        url: '/favicon.ico',
-        sizes: 'any',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: {
-      url: '/apple-touch-icon.png',
-      sizes: '180x180',
-    },
-  },
-};
+  title: 'Simon.AI BizCard Digital Archive',
+  description: 'Digitize and manage your business cards with AI',
+}
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
-        <Providers>
-          <Navigation />
-          <main>{children}</main>
-        </Providers>
+    <html lang="en">
+      <body className={inter.className}>
+        <I18nextProvider i18n={i18n}>
+          <AuthProvider>
+            {children}
+            <Toaster />
+          </AuthProvider>
+        </I18nextProvider>
       </body>
     </html>
-  );
+  )
 }
