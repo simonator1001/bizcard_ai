@@ -316,7 +316,7 @@ export function ManageCardsView() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-[150px]">
-                    <DropdownMenuRadioGroup value={sortField} onValueChange={(value: SortField) => setSortField(value)}>
+                    <DropdownMenuRadioGroup value={sortField} onValueChange={(value) => setSortField(value as SortField)}>
                       <DropdownMenuRadioItem value="created_at">Date Added</DropdownMenuRadioItem>
                       <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
                       <DropdownMenuRadioItem value="company">Company</DropdownMenuRadioItem>
@@ -387,7 +387,7 @@ export function ManageCardsView() {
                     className="w-[140px] bg-white shadow-lg border rounded-md"
                     sideOffset={5}
                   >
-                    <DropdownMenuRadioGroup value={viewMode} onValueChange={(value: ViewMode) => setViewMode(value)}>
+                    <DropdownMenuRadioGroup value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
                       <DropdownMenuRadioItem 
                         value="list" 
                         className="flex items-center gap-2 cursor-pointer px-2 py-1.5 outline-none hover:bg-gray-100 focus:bg-gray-100"

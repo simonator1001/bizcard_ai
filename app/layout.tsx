@@ -1,10 +1,7 @@
 import '@/styles/globals.css'
 import { Inter } from 'next/font/google'
 import { Toaster } from '@/components/ui/toaster'
-import { AuthProvider } from '@/lib/auth-context'
-import '@/lib/i18n/config'
-import { I18nextProvider } from 'react-i18next'
-import i18n from '@/lib/i18n/config'
+import { ClientProviders } from '@/components/providers/client-providers'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -21,12 +18,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <I18nextProvider i18n={i18n}>
-          <AuthProvider>
-            {children}
-            <Toaster />
-          </AuthProvider>
-        </I18nextProvider>
+        <ClientProviders>
+          {children}
+          <Toaster />
+        </ClientProviders>
       </body>
     </html>
   )

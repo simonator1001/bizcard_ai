@@ -14,10 +14,10 @@ interface ShareDialogProps {
 
 export function ShareDialog({ card, open, onOpenChange }: ShareDialogProps) {
   const handleCopyLink = async () => {
-    if (!card.imageUrl) return;
+    if (!card.image_url) return;
     
     try {
-      await navigator.clipboard.writeText(card.imageUrl);
+      await navigator.clipboard.writeText(card.image_url);
       toast.success('Link copied to clipboard');
     } catch (error) {
       console.error('Error copying link:', error);
@@ -25,18 +25,39 @@ export function ShareDialog({ card, open, onOpenChange }: ShareDialogProps) {
     }
   };
 
+  const handleDownload = async () => {
+    if (!card.image_url) return;
+
+    try {
+      const response = await fetch(card.image_url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${card.name || 'card'}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Image downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      toast.error('Failed to download image');
+    }
+  };
+
   const handleEmailShare = () => {
-    if (!card.imageUrl) return;
+    if (!card.image_url) return;
     
     const subject = encodeURIComponent(`Business Card - ${card.name || ''}`);
-    const body = encodeURIComponent(`View this business card: ${card.imageUrl}`);
+    const body = encodeURIComponent(`View this business card: ${card.image_url}`);
     window.open(`mailto:?subject=${subject}&body=${body}`);
   };
 
   const handleWhatsAppShare = () => {
-    if (!card.imageUrl) return;
+    if (!card.image_url) return;
     
-    const text = encodeURIComponent(`Business Card - ${card.name || ''}\n${card.imageUrl}`);
+    const text = encodeURIComponent(`Business Card - ${card.name || ''}\n${card.image_url}`);
     window.open(`https://wa.me/?text=${text}`);
   };
 
@@ -51,14 +72,14 @@ export function ShareDialog({ card, open, onOpenChange }: ShareDialogProps) {
             <div className="grid flex-1 gap-2">
               <div className="flex items-center justify-between gap-2 rounded-md border p-2">
                 <span className="text-sm text-gray-600 truncate">
-                  {card.imageUrl || 'No image available'}
+                  {card.image_url || 'No image available'}
                 </span>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   onClick={handleCopyLink}
-                  disabled={!card.imageUrl}
+                  disabled={!card.image_url}
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
@@ -71,7 +92,7 @@ export function ShareDialog({ card, open, onOpenChange }: ShareDialogProps) {
               variant="outline"
               className="flex-1"
               onClick={handleEmailShare}
-              disabled={!card.imageUrl}
+              disabled={!card.image_url}
             >
               <Mail className="mr-2 h-4 w-4" />
               Share via Email
@@ -81,7 +102,7 @@ export function ShareDialog({ card, open, onOpenChange }: ShareDialogProps) {
               variant="outline"
               className="flex-1"
               onClick={handleWhatsAppShare}
-              disabled={!card.imageUrl}
+              disabled={!card.image_url}
             >
               <Share2 className="mr-2 h-4 w-4" />
               Share via WhatsApp

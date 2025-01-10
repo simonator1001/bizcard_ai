@@ -11,6 +11,7 @@ export interface BusinessCard {
   address?: string;
   address_zh?: string;
   image_url?: string;
+  images?: string[];
   notes?: string;
   created_at: string;
   lastModified?: string;

@@ -47,24 +47,26 @@ const resources = {
   }
 };
 
-i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources,
-    fallbackLng: 'en',
-    defaultNS: 'translation',
-    ns: ['translation'],
-    interpolation: {
-      escapeValue: false,
-    },
-    react: {
-      useSuspense: false
-    },
-    detection: {
-      order: ['localStorage', 'navigator'],
-      caches: ['localStorage'],
-    },
-  });
+if (!i18n.isInitialized) {
+  i18n
+    .use(LanguageDetector)
+    .use(initReactI18next)
+    .init({
+      resources,
+      fallbackLng: 'en',
+      defaultNS: 'translation',
+      ns: ['translation'],
+      interpolation: {
+        escapeValue: false,
+      },
+      react: {
+        useSuspense: false
+      },
+      detection: {
+        order: ['localStorage', 'navigator'],
+        caches: ['localStorage'],
+      },
+    });
+}
 
 export default i18n; 

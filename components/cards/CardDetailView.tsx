@@ -9,6 +9,7 @@ import { Edit, Share, Download, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
+import type { BusinessCard } from '@/types/business-card'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,24 +20,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-
-interface BusinessCard {
-  id: string
-  name: string
-  name_zh: string
-  company: string
-  company_zh: string
-  title: string
-  title_zh: string
-  email: string
-  phone: string
-  address: string
-  address_zh: string
-  image_url: string
-  notes: string
-  created_at: string
-  updated_at: string
-}
 
 interface CardDetailViewProps {
   card: BusinessCard
@@ -58,7 +41,8 @@ const defaultLabels = {
   phone: 'Phone',
   addressEnglish: 'Address (English)',
   addressChinese: 'Address (Chinese)',
-  remarks: 'Remarks'
+  remarks: 'Remarks',
+  noImage: 'No image available'
 };
 
 export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailViewProps) {
@@ -66,6 +50,8 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
   const [editedCard, setEditedCard] = useState<BusinessCard>(card);
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [isImageEnlarged, setIsImageEnlarged] = useState(false);
 
   const containsChinese = (text: string) => /[\u4e00-\u9fa5]/.test(text);
   const containsEnglish = (text: string) => /[a-zA-Z]/.test(text);
