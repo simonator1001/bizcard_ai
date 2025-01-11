@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
-import { Edit, Share, Download, Trash2, X } from 'lucide-react'
+import { Edit, Share, Download, Trash2, X, Mail, Share2, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
@@ -50,8 +50,28 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
   const [editedCard, setEditedCard] = useState<BusinessCard>(card);
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
-  const [showShareDialog, setShowShareDialog] = useState(false);
   const [isImageEnlarged, setIsImageEnlarged] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
+  const shareButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        shareMenuRef.current && 
+        !shareMenuRef.current.contains(event.target as Node) &&
+        shareButtonRef.current &&
+        !shareButtonRef.current.contains(event.target as Node)
+      ) {
+        setShowShareMenu(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const containsChinese = (text: string) => /[\u4e00-\u9fa5]/.test(text);
   const containsEnglish = (text: string) => /[a-zA-Z]/.test(text);
@@ -76,30 +96,68 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
     setIsEditing(false);
   };
 
-  const handleDownload = async () => {
+  const handleCopyLink = async () => {
+    if (!editedCard.image_url) {
+      toast.error('No image available to copy');
+      return;
+    }
+    
     try {
-      if (!editedCard.image_url) {
-        toast.error(t('card.download.noImage', 'No image available to download'));
-        return;
-      }
+      await navigator.clipboard.writeText(editedCard.image_url);
+      toast.success('Link copied to clipboard');
+      setShowShareMenu(false);
+    } catch (error) {
+      console.error('Error copying link:', error);
+      toast.error('Failed to copy link');
+    }
+  };
 
+  const handleDownload = async () => {
+    if (!editedCard.image_url) {
+      toast.error('No image available to download');
+      return;
+    }
+
+    try {
       const response = await fetch(editedCard.image_url);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const sanitizedName = editedCard.name?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'card';
-      const sanitizedCompany = editedCard.company?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'company';
-      link.download = `${sanitizedName}_${sanitizedCompany}.jpg`;
+      link.download = `${editedCard.name || 'card'}.jpg`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      toast.success(t('card.download.success', 'Business card image downloaded successfully'));
+      toast.success('Image downloaded successfully');
+      setShowShareMenu(false);
     } catch (error) {
       console.error('Error downloading image:', error);
-      toast.error(t('card.download.error', 'Failed to download business card image'));
+      toast.error('Failed to download image');
     }
+  };
+
+  const handleEmailShare = () => {
+    if (!editedCard.image_url) {
+      toast.error('No image available to share');
+      return;
+    }
+    
+    const subject = encodeURIComponent(`Business Card - ${editedCard.name || ''}`);
+    const body = encodeURIComponent(`View this business card: ${editedCard.image_url}`);
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+    setShowShareMenu(false);
+  };
+
+  const handleWhatsAppShare = () => {
+    if (!editedCard.image_url) {
+      toast.error('No image available to share');
+      return;
+    }
+    
+    const text = encodeURIComponent(`Business Card - ${editedCard.name || ''}\n${editedCard.image_url}`);
+    window.open(`https://wa.me/?text=${text}`);
+    setShowShareMenu(false);
   };
 
   const handleDelete = () => {
@@ -141,13 +199,52 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setShowShareDialog(true)}
-                >
-                  <Share className="h-4 w-4" />
-                </Button>
+                <div className="relative">
+                  <Button
+                    ref={shareButtonRef}
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowShareMenu(!showShareMenu)}
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                  {showShareMenu && (
+                    <div 
+                      ref={shareMenuRef}
+                      className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center"
+                        onClick={handleEmailShare}
+                      >
+                        <Mail className="mr-2 h-4 w-4" />
+                        Share via Email
+                      </button>
+                      <button
+                        className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center"
+                        onClick={handleWhatsAppShare}
+                      >
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Share via WhatsApp
+                      </button>
+                      <button
+                        className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center"
+                        onClick={handleCopyLink}
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copy Link
+                      </button>
+                      <button
+                        className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center"
+                        onClick={handleDownload}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Image
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </DialogHeader>

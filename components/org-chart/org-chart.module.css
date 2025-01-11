@@ -1,1 +1,72 @@
- 
+.nodeEnter {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.nodeHover {
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+  transform: scale(1.05);
+}
+
+.pathHover {
+  stroke-width: 3;
+  stroke-opacity: 1;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.zoomControls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  background: white;
+  padding: 8px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.zoomButton {
+  padding: 6px;
+  border-radius: 4px;
+  background: #f3f4f6;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.zoomButton:hover {
+  background: #e5e7eb;
+}
+
+.breadcrumb {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.breadcrumbItem {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.breadcrumbItem:hover {
+  color: #3b82f6;
+}
+
+.breadcrumbSeparator {
+  color: #9ca3af;
+} 
