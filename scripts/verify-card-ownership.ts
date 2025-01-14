@@ -1,74 +1,47 @@
 require('dotenv').config({ path: '.env.local' });
-import { createClient } from '@supabase/supabase-js';
+const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const adminClient = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing environment variables');
-}
+async function main() {
+  // User IDs
+  const glowgirlsId = '5b888a04-79a4-4c96-bf2d-2c97f1ed0ccf';
+  const simonId = '59e6e6b7-3ffd-4141-bd18-1e6d00de41c9'; // Replace with actual ID
 
-const adminClient = createClient(supabaseUrl, supabaseServiceKey);
-
-async function verifyCardOwnership() {
-  // Find simon.ckchow's user ID
-  const { data: user, error: userError } = await adminClient
-    .from('users')
+  // Check cards for glowgirls
+  const { data: glowgirlsCards } = await adminClient
+    .from('business_cards')
     .select('*')
-    .eq('email', 'simon.ckchow@gmail.com')
+    .eq('user_id', glowgirlsId);
+
+  console.log(`Cards owned by glowgirls (${glowgirlsId}):`, glowgirlsCards?.length || 0);
+
+  // Check cards for simon
+  const { data: simonCards } = await adminClient
+    .from('business_cards')
+    .select('*')
+    .eq('user_id', simonId);
+
+  console.log(`Cards owned by simon (${simonId}):`, simonCards?.length || 0);
+
+  // Check subscription status
+  const { data: glowgirlsSub } = await adminClient
+    .from('users')
+    .select('subscription_tier')
+    .eq('id', glowgirlsId)
     .single();
 
-  if (userError) {
-    console.error('Error finding user:', userError);
-    return;
-  }
+  const { data: simonSub } = await adminClient
+    .from('users')
+    .select('subscription_tier')
+    .eq('id', simonId)
+    .single();
 
-  if (!user) {
-    console.error('User not found');
-    return;
-  }
-
-  console.log('Found user:', user);
-
-  // Get all cards owned by simon.ckchow
-  const { data: cards, error: cardsError } = await adminClient
-    .from('business_cards')
-    .select('*')
-    .eq('user_id', user.id);
-
-  if (cardsError) {
-    console.error('Error getting cards:', cardsError);
-    return;
-  }
-
-  if (!cards) {
-    console.log('No cards found');
-    return;
-  }
-
-  console.log(`User owns ${cards.length} cards`);
-  console.log('Sample cards:');
-  cards.slice(0, 3).forEach(card => console.log(card));
-
-  // Check for any remaining cards with the old user_id
-  const { data: oldCards, error: oldCardsError } = await adminClient
-    .from('business_cards')
-    .select('*')
-    .eq('user_id', '5b888a04-79a4-4c96-bf2d-2c97f1ed0ccf');
-
-  if (oldCardsError) {
-    console.error('Error checking old cards:', oldCardsError);
-    return;
-  }
-
-  if (oldCards && oldCards.length > 0) {
-    console.log(`Found ${oldCards.length} cards still with old user_id`);
-    console.log('Sample old cards:');
-    oldCards.slice(0, 3).forEach(card => console.log(card));
-  } else {
-    console.log('No cards found with old user_id - migration successful!');
-  }
+  console.log('Glowgirls subscription:', glowgirlsSub?.subscription_tier);
+  console.log('Simon subscription:', simonSub?.subscription_tier);
 }
 
-verifyCardOwnership()
-  .catch(console.error); 
+main().catch(console.error); 

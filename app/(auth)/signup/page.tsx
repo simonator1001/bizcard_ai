@@ -8,10 +8,12 @@ import { Card } from "@/components/ui/card"
 import { useAuth } from '@/lib/auth-context'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 
 export default function SignUpPage() {
   const { signUp, signInWithProvider } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -30,6 +32,8 @@ export default function SignUpPage() {
       }
 
       await signUp(email, password, name)
+      toast.success('Account created successfully')
+      router.push('/')
     } catch (error: Error | unknown) {
       console.error('Sign up error:', error)
       if (error instanceof Error) {

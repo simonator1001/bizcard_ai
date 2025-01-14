@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [initialized, setInitialized] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     setMounted(true)
@@ -139,19 +140,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
         signUp: async (email, password, name) => {
           console.log('[AuthContext] Signing up with email:', email)
-          const { error } = await supabase.auth.signUp({
+          const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
               data: { name },
+              emailRedirectTo: `${window.location.origin}/auth/callback`
             },
           })
           if (error) throw error
+
+          // Automatically sign in after signup
+          if (data?.user) {
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            })
+            if (signInError) throw signInError
+          }
         },
         signOut: async () => {
           console.log('[AuthContext] Signing out')
           const { error } = await supabase.auth.signOut()
           if (error) throw error
+          router.push('/signin')
         },
         signInWithProvider: async (provider) => {
           console.log('[AuthContext] Signing in with provider:', provider)

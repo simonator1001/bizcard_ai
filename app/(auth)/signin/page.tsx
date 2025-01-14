@@ -8,10 +8,12 @@ import { Card } from "@/components/ui/card"
 import { useAuth } from '@/lib/auth-context'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 
 export default function SignInPage() {
   const { signIn, signInWithProvider } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -22,10 +24,15 @@ export default function SignInPage() {
       const email = formData.get('email') as string
       const password = formData.get('password') as string
       await signIn(email, password)
+      router.push('/')
     } catch (error) {
       console.error('Sign in error:', error)
       if (error instanceof Error) {
-        toast.error(error.message || 'Failed to sign in')
+        if (error.message.includes('Invalid login credentials')) {
+          toast.error('Invalid email or password')
+        } else {
+          toast.error(error.message || 'Failed to sign in')
+        }
       } else {
         toast.error('Failed to sign in')
       }
