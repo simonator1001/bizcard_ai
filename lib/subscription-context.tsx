@@ -32,6 +32,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     if (!user) return;
     
     try {
+      console.log('[SubscriptionContext] Refreshing card count for user:', {
+        id: user.id,
+        email: user.email
+      });
+
       const { data: userData, error } = await supabase
         .from('users')
         .select('subscription_type, card_count, max_cards')
@@ -49,9 +54,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         canAddCard: userData.subscription_type === 'pro' || userData.card_count < userData.max_cards
       }));
 
-      console.log('Updated subscription data:', userData);
+      console.log('[SubscriptionContext] Updated subscription data:', userData);
     } catch (error) {
-      console.error('Error refreshing card count:', error);
+      console.error('[SubscriptionContext] Error refreshing card count:', error);
     }
   }, [user]);
 
@@ -60,18 +65,24 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     refreshCardCount();
   }, [user, refreshCardCount]);
 
-  const checkLimit = async () => {
+  const checkLimit = useCallback(async () => {
     if (!user) return false;
-    await refreshCardCount();
-    return subscriptionData.canAddCard;
-  };
+
+    try {
+      const result = await checkSubscriptionLimit(user.id);
+      return result.canAddCard;
+    } catch (error) {
+      console.error('[SubscriptionContext] Error checking limit:', error);
+      return false;
+    }
+  }, [user]);
 
   return (
-    <SubscriptionContext.Provider 
+    <SubscriptionContext.Provider
       value={{
         ...subscriptionData,
         checkLimit,
-        refreshCardCount
+        refreshCardCount,
       }}
     >
       {children}

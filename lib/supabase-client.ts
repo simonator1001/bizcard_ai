@@ -33,13 +33,40 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // Create a single instance of the Supabase client for client-side use
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true
-  }
-});
+let _supabase = null;
+
+// Initialize client with proper configuration
+if (typeof window !== 'undefined') {
+  _supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce',
+      storage: window.localStorage,
+      storageKey: 'supabase.auth.token',
+      debug: true
+    },
+    db: {
+      schema: 'public'
+    }
+  });
+  console.log('[Supabase] Client initialized with PKCE flow');
+} else {
+  _supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      flowType: 'pkce'
+    },
+    db: {
+      schema: 'public'
+    }
+  });
+  console.log('[Supabase] Server client initialized');
+}
+
+export const supabase = _supabase;
 
 // Create service role client only on server-side and only if key is available
 let _supabaseAdmin = null;
@@ -48,26 +75,23 @@ let _supabaseAdmin = null;
 if (typeof window === 'undefined') {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     console.error('[Supabase] Service role key missing in server environment');
-    console.error('[Supabase] Available environment variables:', 
-      Object.keys(process.env).filter(key => key.includes('SUPABASE'))
-    );
   } else {
-    try {
-      _supabaseAdmin = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      });
-      console.log('[Supabase] Service role client initialized successfully');
-    } catch (error) {
-      console.error('[Supabase] Failed to initialize service role client:', error);
-    }
+    _supabaseAdmin = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      },
+      db: {
+        schema: 'public'
+      }
+    });
+    console.log('[Supabase] Service role client initialized successfully');
   }
 } else {
   console.log('[Supabase] Skipping admin client initialization on client-side');
 }
 
+// Export admin client for server-side use
 export const supabaseAdmin = _supabaseAdmin;
 
 // Add logging to help debug
@@ -78,19 +102,34 @@ export const testConnection = async () => {
     console.log('[Supabase] Context:', typeof window === 'undefined' ? 'server' : 'client');
     console.log('[Supabase] Has service role:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
     
-    const { data, error } = await supabase
-      .from('business_cards')
-      .select('*', { count: 'exact', head: true });
-
-    if (error) {
-      console.error('[Supabase] Connection test failed:', error);
-      console.error('[Supabase] Error code:', error.code);
-      console.error('[Supabase] Error message:', error.message);
-      console.error('[Supabase] Error hint:', error.hint);
-      console.error('[Supabase] Error details:', error.details);
+    // Get current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error('[Supabase] Session error:', sessionError);
       return false;
     }
-    console.log('[Supabase] Connection test successful:', data);
+    
+    console.log('[Supabase] Current session:', session ? 'Found' : 'None');
+    
+    if (session) {
+      // Test database access
+      const { data, error } = await supabase
+        .from('business_cards')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', session.user.id);
+
+      if (error) {
+        console.error('[Supabase] Connection test failed:', error);
+        console.error('[Supabase] Error code:', error.code);
+        console.error('[Supabase] Error message:', error.message);
+        console.error('[Supabase] Error hint:', error.hint);
+        console.error('[Supabase] Error details:', error.details);
+        return false;
+      }
+      console.log('[Supabase] Connection test successful:', data);
+    }
+    
     return true;
   } catch (error) {
     console.error('[Supabase] Connection test error:', error);

@@ -1,77 +1,79 @@
 const { createClient } = require('@supabase/supabase-js');
+const dotenv = require('dotenv');
+const path = require('path');
+const fs = require('fs');
 
-const supabaseUrl = 'https://supabase.simon-gpt.com';
-const supabaseKey = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTczMjYwMDg2MCwiZXhwIjo0ODg4Mjc0NDYwLCJyb2xlIjoic2VydmljZV9yb2xlIn0.WQXqcz3zsp7ee_M-BkEnPkdRliKB9WeNYjWz7Mp5_6g';
+// Load environment variables from .env.local
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-async function applyMigration() {
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('Missing required environment variables');
+  process.exit(1);
+}
+
+// Create service client
+const serviceClient = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
+
+async function main() {
   try {
-    // Add lastModified column
-    const { error: columnError } = await supabase.rpc('exec_sql', {
-      sql: `
-        ALTER TABLE business_cards
-        ADD COLUMN IF NOT EXISTS "lastModified" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
-      `
-    });
+    // Read migration file
+    const migrationPath = path.resolve(__dirname, '../supabase/migrations/20240113_enable_rls.sql');
+    const migration = fs.readFileSync(migrationPath, 'utf8');
 
-    if (columnError) {
-      console.error('Error adding column:', columnError);
-      return;
+    // Split migration into individual statements
+    const statements = migration
+      .split(';')
+      .map((s: string) => s.trim())
+      .filter((s: string) => s.length > 0);
+
+    // Execute each statement
+    for (const statement of statements) {
+      console.log('\nExecuting statement:', statement);
+      
+      const { data, error } = await serviceClient.rpc('exec_sql', {
+        sql_query: statement
+      });
+
+      if (error) {
+        console.error('Error executing statement:', error);
+      } else {
+        console.log('Statement executed successfully');
+      }
     }
 
-    // Update existing rows
-    const { error: updateError } = await supabase.rpc('exec_sql', {
-      sql: `
-        UPDATE business_cards
-        SET "lastModified" = updated_at
-        WHERE "lastModified" IS NULL;
-      `
+    // Verify RLS is enabled
+    const { data: rlsData, error: rlsError } = await serviceClient.rpc('check_rls', {
+      table_name: 'business_cards'
     });
 
-    if (updateError) {
-      console.error('Error updating rows:', updateError);
-      return;
+    if (rlsError) {
+      console.error('Error checking RLS:', rlsError);
+    } else {
+      console.log('\nRLS status:', rlsData);
     }
 
-    // Create trigger function
-    const { error: functionError } = await supabase.rpc('exec_sql', {
-      sql: `
-        CREATE OR REPLACE FUNCTION update_last_modified()
-        RETURNS TRIGGER AS $$
-        BEGIN
-          NEW."lastModified" = CURRENT_TIMESTAMP;
-          RETURN NEW;
-        END;
-        $$ LANGUAGE plpgsql;
-      `
+    // Verify policies
+    const { data: policiesData, error: policiesError } = await serviceClient.rpc('get_policies', {
+      table_name: 'business_cards'
     });
 
-    if (functionError) {
-      console.error('Error creating function:', functionError);
-      return;
+    if (policiesError) {
+      console.error('Error checking policies:', policiesError);
+    } else {
+      console.log('\nCurrent policies:', policiesData);
     }
 
-    // Create trigger
-    const { error: triggerError } = await supabase.rpc('exec_sql', {
-      sql: `
-        DROP TRIGGER IF EXISTS update_business_cards_last_modified ON business_cards;
-        CREATE TRIGGER update_business_cards_last_modified
-        BEFORE UPDATE ON business_cards
-        FOR EACH ROW
-        EXECUTE FUNCTION update_last_modified();
-      `
-    });
-
-    if (triggerError) {
-      console.error('Error creating trigger:', triggerError);
-      return;
-    }
-
-    console.log('Migration applied successfully');
   } catch (error) {
-    console.error('Error applying migration:', error);
+    console.error('Error:', error);
   }
 }
 
-applyMigration(); 
+main(); 

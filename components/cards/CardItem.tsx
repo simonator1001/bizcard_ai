@@ -1,7 +1,7 @@
 'use client'
 
 import { BusinessCard } from '@/types/business-card';
-import { PremiumButton } from '@/components/ui';
+import { Button } from '@/components/ui/button';
 import { Mail, Phone, MoreVertical, Pencil, Trash } from 'lucide-react';
 import {
   DropdownMenu,
@@ -95,9 +95,9 @@ export function CardItem({
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <PremiumButton variant="ghost" size="icon">
+                <Button variant="ghost" size="icon-sm">
                   <MoreVertical className="h-4 w-4" />
-                </PremiumButton>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
@@ -165,9 +165,9 @@ export function CardItem({
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <PremiumButton variant="ghost" size="icon">
+                <Button variant="ghost" size="icon-sm">
                   <MoreVertical className="h-4 w-4" />
-                </PremiumButton>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
@@ -235,9 +235,9 @@ export function CardItem({
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <PremiumButton variant="ghost" size="icon">
+              <Button variant="ghost" size="icon-sm">
                 <MoreVertical className="h-4 w-4" />
-              </PremiumButton>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>

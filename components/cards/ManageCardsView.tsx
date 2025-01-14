@@ -43,6 +43,7 @@ type SortDirection = 'asc' | 'desc';
 
 export function ManageCardsView() {
   const [cards, setCards] = useState<BusinessCard[]>([]);
+  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
@@ -54,162 +55,138 @@ export function ManageCardsView() {
 
   const fetchCards = useCallback(async () => {
     if (!user) {
-      console.log('No user found');
+      console.log('No user found, skipping card fetch');
+      setLoading(false);
+      setCards([]);
       return;
     }
 
-    console.log('Fetching cards for user:', user.id);
-    
-    const { data, error } = await supabase
-      .from('business_cards')
-      .select(`
-        id,
-        name,
-        name_zh,
-        company,
-        company_zh,
-        title,
-        title_zh,
-        email,
-        phone,
-        address,
-        address_zh,
-        notes,
-        image_url,
-        created_at,
-        updated_at,
-        user_id
-      `)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    try {
+      console.log('Fetching cards for user:', {
+        id: user.id,
+        email: user.email,
+        role: user.role
+      });
+      setLoading(true);
+      
+      // First, try to get the total count of cards
+      const { count, error: countError } = await supabase
+        .from('business_cards')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
 
-    if (error) {
-      console.error('Error fetching cards:', error);
+      if (countError) {
+        console.error('Error getting card count:', countError);
+        throw countError;
+      }
+
+      console.log('Total cards in database:', count, 'for user:', user.id);
+
+      // Then fetch the actual cards
+      const { data, error } = await supabase
+        .from('business_cards')
+        .select(`
+          id,
+          name,
+          name_zh,
+          company,
+          company_zh,
+          title,
+          title_zh,
+          email,
+          phone,
+          address,
+          address_zh,
+          notes,
+          image_url,
+          created_at,
+          updated_at,
+          user_id
+        `)
+        .eq('user_id', user.id)
+        .order(sortField, { ascending: sortDirection === 'asc' });
+
+      if (error) {
+        console.error('Error fetching cards:', error);
+        throw error;
+      }
+
+      // Log the raw response
+      console.log('Raw Supabase response:', data);
+
+      // Transform the data to include images array with image_url
+      const cardsWithImages = data?.map(card => ({
+        ...card,
+        images: card.image_url ? [card.image_url] : []
+      })) || [];
+
+      console.log('Transformed cards:', cardsWithImages);
+      setCards(cardsWithImages);
+    } catch (err) {
+      console.error('Error in fetchCards:', err);
       toast.error('Failed to load business cards');
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    // Transform the data to include images array with image_url
-    const cardsWithImages = data?.map(card => ({
-      ...card,
-      images: card.image_url ? [card.image_url] : []
-    })) || [];
-
-    console.log('Fetched cards:', cardsWithImages);
-    setCards(cardsWithImages);
-  }, [user]);
+  }, [user, sortField, sortDirection]);
 
   useEffect(() => {
     fetchCards();
   }, [fetchCards]);
 
-  const filteredCards = cards.filter(card => 
-    (card.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (card.company || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (card.title || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const sortedAndFilteredCards = React.useMemo(() => {
-    return filteredCards.sort((a, b) => {
-      if (sortField === 'created_at') {
-        const dateA = new Date(a.created_at || 0).getTime();
-        const dateB = new Date(b.created_at || 0).getTime();
-        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
-      }
-      
-      const aValue = String(a[sortField] || '').toLowerCase();
-      const bValue = String(b[sortField] || '').toLowerCase();
-      return sortDirection === 'asc' 
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue);
-    });
-  }, [filteredCards, sortField, sortDirection]);
-
-  useEffect(() => {
-    console.log('Selected cards:', Array.from(selectedCards));
-  }, [selectedCards]);
-
-  const handleCardSelect = useCallback((cardId: string) => {
-    console.log('Selecting card:', cardId);
-    setSelectedCards(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(cardId)) {
-        newSet.delete(cardId);
-      } else {
-        newSet.add(cardId);
-      }
-      console.log('Selected cards:', Array.from(newSet));
-      return newSet;
-    });
-  }, []);
-
-  const handleSelectAll = useCallback(() => {
-    setSelectedCards(prev => {
-      if (prev.size === sortedAndFilteredCards.length) {
-        console.log('Deselecting all cards');
-        return new Set();
-      }
-      const newSet = new Set(sortedAndFilteredCards.map(card => card.id));
-      console.log('Selecting all cards:', Array.from(newSet));
-      return newSet;
-    });
-  }, [sortedAndFilteredCards]);
-
-  const handleDeleteSelected = useCallback(async () => {
-    const selectedCardIds = Array.from(selectedCards);
-    if (selectedCardIds.length === 0) return;
-
-    try {
-      // Delete cards one by one
-      for (const cardId of selectedCardIds) {
-        const { error } = await supabase
-          .from('business_cards')
-          .delete()
-          .eq('id', cardId);
-        
-        if (error) {
-          console.error(`Error deleting card ${cardId}:`, error);
-          throw error;
-        }
-      }
-
-      // Update local state
-      setCards(prev => prev.filter(card => !selectedCards.has(card.id)));
-      setSelectedCards(new Set());
-    } catch (error) {
-      console.error('Error deleting cards:', error);
-      await fetchCards();
-    }
-  }, [selectedCards, fetchCards, supabase]);
-
   const handleMergeCard = useCallback(async (mergedCard: BusinessCard) => {
+    if (!user) {
+      toast.error('You must be signed in to merge cards');
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('business_cards')
-        .upsert([mergedCard]);
+        .upsert([{
+          ...mergedCard,
+          user_id: user.id,
+          lastModified: new Date().toISOString()
+        }]);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error merging card:', error);
+        throw error;
+      }
       
       await fetchCards();
+      toast.success('Cards merged successfully');
     } catch (error) {
       console.error('Error merging card:', error);
+      toast.error('Failed to merge cards');
     }
-  }, [fetchCards]);
+  }, [user, fetchCards]);
 
   const handleDeleteCard = useCallback(async (cardId: string) => {
+    if (!user) {
+      toast.error('You must be signed in to delete cards');
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('business_cards')
         .delete()
-        .eq('id', cardId);
+        .eq('id', cardId)
+        .eq('user_id', user.id);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting card:', error);
+        throw error;
+      }
       
       setCards(prev => prev.filter(card => card.id !== cardId));
+      toast.success('Card deleted successfully');
     } catch (error) {
       console.error('Error deleting card:', error);
+      toast.error('Failed to delete card');
     }
-  }, []);
+  }, [user]);
 
   const handleExportCSV = useCallback(() => {
     downloadCSV(cards);
@@ -227,248 +204,198 @@ export function ManageCardsView() {
     setShowDuplicateManager(open);
   }, []);
 
-  // Add a useEffect to monitor selectedCards changes
-  useEffect(() => {
-    console.log('Selected cards count:', selectedCards.size);
-  }, [selectedCards]);
+  // Filter and sort cards
+  const filteredCards = cards.filter(card => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      card.name?.toLowerCase().includes(searchLower) ||
+      card.name_zh?.toLowerCase().includes(searchLower) ||
+      card.company?.toLowerCase().includes(searchLower) ||
+      card.company_zh?.toLowerCase().includes(searchLower) ||
+      card.title?.toLowerCase().includes(searchLower) ||
+      card.title_zh?.toLowerCase().includes(searchLower) ||
+      card.email?.toLowerCase().includes(searchLower)
+    );
+  });
 
-  // Add a useEffect to monitor cards changes
-  useEffect(() => {
-    console.log('Total cards count:', cards.length);
-  }, [cards]);
-
-  const handleCardClick = useCallback((card: BusinessCard) => {
-    setSelectedCard(card);
-  }, []);
-
-  const handleCardEdit = useCallback(async (updatedCard: BusinessCard) => {
-    try {
-      // Remove the images field before sending to Supabase
-      const { images, ...cardDataToUpdate } = updatedCard;
-      
-      const { error } = await supabase
-        .from('business_cards')
-        .update(cardDataToUpdate)
-        .eq('id', updatedCard.id);
-      
-      if (error) throw error;
-      
-      setCards(prev => prev.map(card => 
-        card.id === updatedCard.id ? {
-          ...updatedCard,
-          images: updatedCard.image_url ? [updatedCard.image_url] : []
-        } : card
-      ));
-      toast.success('Card updated successfully');
-    } catch (error) {
-      console.error('Error updating card:', error);
-      toast.error('Failed to update card');
+  // Group cards by company
+  const companiesMap = filteredCards.reduce((acc, card) => {
+    const company = card.company || 'Unknown';
+    if (!acc[company]) {
+      acc[company] = [];
     }
-  }, []);
+    acc[company].push(card);
+    return acc;
+  }, {} as Record<string, BusinessCard[]>);
 
-  const viewModeIcons = {
-    list: <List className="h-4 w-4" />,
-    grid: <Grid className="h-4 w-4" />,
-    carousel: <ImageIcon className="h-4 w-4" />
-  };
+  // Get total contacts
+  const totalContacts = filteredCards.length;
 
-  const viewModeLabels = {
-    list: 'List View',
-    grid: 'Grid View',
-    carousel: 'Carousel View'
-  };
+  // Get selected company data
+  const selectedCompanyData = selectedCard?.company ? companiesMap[selectedCard.company] : [];
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
+        <h2 className="text-2xl font-semibold mb-4">Sign in to manage your business cards</h2>
+        <p className="text-gray-600 mb-8">You need to be signed in to view and manage your business cards.</p>
+        <Button asChild>
+          <a href="/signin">Sign In</a>
+        </Button>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="text-sm text-gray-500">Loading your business cards...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-        <div className="flex h-16 items-center px-8">
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-4">
-              <h2 className="text-lg font-semibold">
-                Business Cards
-              </h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSelectAll}
-                className="text-sm"
-              >
-                {selectedCards.size === sortedAndFilteredCards.length ? 'Deselect All' : 'Select All'}
-                {selectedCards.size > 0 && ` (${selectedCards.size} selected)`}
-              </Button>
-            </div>
-            <div className="flex items-center gap-4">
-              <Input
-                type="search"
-                placeholder="Search cards..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-[250px]"
-              />
-              <div className="flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-[150px] justify-between">
-                      {sortField === 'created_at' ? 'Date Added' :
-                       sortField === 'name' ? 'Name' :
-                       sortField === 'company' ? 'Company' : 'Title'}
-                      <span className="ml-2">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[150px]">
-                    <DropdownMenuRadioGroup value={sortField} onValueChange={(value) => setSortField(value as SortField)}>
-                      <DropdownMenuRadioItem value="created_at">Date Added</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="company">Company</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="title">Title</DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-                  title={`Sort ${sortDirection === 'asc' ? 'Ascending' : 'Descending'}`}
-                  type="button"
-                >
-                  {sortDirection === 'asc' ? '↑' : '↓'}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleExportCSV}
-                  title="Export as CSV"
-                  type="button"
-                >
-                  <Download className="h-5 w-5" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleDeleteSelected}
-                  title={`Remove Selected (${selectedCards.size})`}
-                  type="button"
-                  className={cn(
-                    "relative transition-colors",
-                    selectedCards.size > 0 
-                      ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
-                      : "opacity-50 cursor-not-allowed pointer-events-none"
-                  )}
-                >
-                  <Trash2 className="h-5 w-5" />
-                  {selectedCards.size > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-white text-destructive rounded-full w-5 h-5 text-xs flex items-center justify-center border-2 border-current font-medium">
-                      {selectedCards.size}
-                    </span>
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleDuplicateManagerOpen}
-                  title="Manage Duplicates"
-                  className="hover:bg-gray-100"
-                  type="button"
-                >
-                  <Users className="h-5 w-5" />
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-[140px] justify-between">
-                      <div className="flex items-center gap-2">
-                        {viewModeIcons[viewMode]}
-                        <span>{viewModeLabels[viewMode]}</span>
-                      </div>
-                      <ChevronDown className="h-4 w-4 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent 
-                    align="end" 
-                    className="w-[140px] bg-white shadow-lg border rounded-md"
-                    sideOffset={5}
-                  >
-                    <DropdownMenuRadioGroup value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
-                      <DropdownMenuRadioItem 
-                        value="list" 
-                        className="flex items-center gap-2 cursor-pointer px-2 py-1.5 outline-none hover:bg-gray-100 focus:bg-gray-100"
-                      >
-                        <List className="h-4 w-4" />
-                        <span className="flex-1">List View</span>
-                        {viewMode === 'list' && <Check className="h-4 w-4" />}
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem 
-                        value="grid" 
-                        className="flex items-center gap-2 cursor-pointer px-2 py-1.5 outline-none hover:bg-gray-100 focus:bg-gray-100"
-                      >
-                        <Grid className="h-4 w-4" />
-                        <span className="flex-1">Grid View</span>
-                        {viewMode === 'grid' && <Check className="h-4 w-4" />}
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem 
-                        value="carousel" 
-                        className="flex items-center gap-2 cursor-pointer px-2 py-1.5 outline-none hover:bg-gray-100 focus:bg-gray-100"
-                      >
-                        <ImageIcon className="h-4 w-4" />
-                        <span className="flex-1">Carousel View</span>
-                        {viewMode === 'carousel' && <Check className="h-4 w-4" />}
-                      </DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex-1 w-full sm:w-auto">
+          <Input
+            placeholder="Search cards..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        
+        <div className="flex flex-wrap gap-2 items-center">
+          <Select
+            value={sortField}
+            onValueChange={(value) => setSortField(value as SortField)}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="created_at">Date Added</SelectItem>
+              <SelectItem value="name">Name</SelectItem>
+              <SelectItem value="company">Company</SelectItem>
+              <SelectItem value="title">Title</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+          >
+            <ChevronDown className={cn(
+              "h-4 w-4 transition-transform",
+              sortDirection === 'asc' && "rotate-180"
+            )} />
+          </Button>
+
+          <div className="flex items-center rounded-md border">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "rounded-r-none",
+                viewMode === 'list' && "bg-muted"
+              )}
+              onClick={() => setViewMode('list')}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "rounded-l-none",
+                viewMode === 'grid' && "bg-muted"
+              )}
+              onClick={() => setViewMode('grid')}
+            >
+              <Grid className="h-4 w-4" />
+            </Button>
           </div>
+
+          <Button
+            variant="outline"
+            onClick={handleDuplicateManagerOpen}
+          >
+            Manage Duplicates
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={handleExportCSV}
+          >
+            Export CSV
+          </Button>
         </div>
       </div>
 
-      <div className="px-8">
-        <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : ''}`}>
-          {sortedAndFilteredCards.map(card => (
+      {filteredCards.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 mb-4">
+            <ImageIcon className="h-6 w-6 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">No business cards found</h3>
+          <p className="text-gray-500 mb-4">
+            {searchTerm ? 'Try adjusting your search terms' : 'Start by scanning some business cards'}
+          </p>
+          <Button asChild>
+            <a href="/scan">Scan Business Card</a>
+          </Button>
+        </div>
+      ) : (
+        <div className={cn(
+          "grid gap-4",
+          viewMode === 'grid' ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
+        )}>
+          {filteredCards.map((card) => (
             <CardItem
               key={card.id}
               card={card}
               viewMode={viewMode}
-              isSelected={selectedCards.has(card.id)}
-              onSelect={() => handleCardSelect(card.id)}
-              onClick={() => handleCardClick(card)}
-              onEdit={() => handleCardClick(card)}
+              selected={selectedCards.has(card.id)}
+              onSelect={() => {
+                const newSelected = new Set(selectedCards);
+                if (newSelected.has(card.id)) {
+                  newSelected.delete(card.id);
+                } else {
+                  newSelected.add(card.id);
+                }
+                setSelectedCards(newSelected);
+              }}
               onDelete={() => handleDeleteCard(card.id)}
+              onClick={() => setSelectedCard(card)}
             />
           ))}
         </div>
-
-        {sortedAndFilteredCards.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No business cards found. Start by scanning some cards!
-          </div>
-        )}
-      </div>
-
-      {selectedCard && (
-        <CardDetailView
-          card={selectedCard}
-          onClose={() => setSelectedCard(null)}
-          onEdit={handleCardEdit}
-          onDelete={handleDeleteCard}
-        />
       )}
 
-      <Dialog 
-        open={showDuplicateManager} 
-        onOpenChange={handleDuplicateManagerChange}
-        modal={true}
-      >
-        <DialogContent 
-          className="max-w-4xl h-[85vh] p-0 bg-white rounded-lg overflow-hidden"
-          onInteractOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-          onPointerDownOutside={(e) => e.preventDefault()}
-        >
+      <Dialog open={!!selectedCard} onOpenChange={(open) => !open && setSelectedCard(null)}>
+        <DialogContent className="max-w-3xl">
+          {selectedCard && (
+            <CardDetailView
+              card={selectedCard}
+              companyCards={selectedCompanyData}
+              onClose={() => setSelectedCard(null)}
+              onDelete={handleDeleteCard}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDuplicateManager} onOpenChange={handleDuplicateManagerChange}>
+        <DialogContent className="max-w-4xl">
           <DuplicateManager
             cards={cards}
-            onMerge={handleMergeCard}
-            onDelete={handleDeleteCard}
             onClose={handleDuplicateManagerClose}
+            onMerge={handleMergeCard}
           />
         </DialogContent>
       </Dialog>
