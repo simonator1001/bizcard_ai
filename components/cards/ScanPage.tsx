@@ -230,8 +230,21 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     if (!files || files.length === 0) return;
 
     try {
+      // Check if user can perform scan action
+      if (!user) {
+        toast.error('Please sign in to scan business cards');
+        return;
+      }
+
+      const canScan = await SubscriptionService.canPerformAction(user.id, 'scan');
+      if (!canScan) {
+        setShowUpgradePrompt(true);
+        return;
+      }
+
       setTotalFiles(files.length);
       setProcessedFiles(0);
+      setIsProcessing(true);
       
       // Convert FileList to Array
       const fileArray = Array.from(files);
@@ -257,10 +270,15 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       setFile(null);
       setPreview(null);
       setExtractedInfo(null);
-      toast.success(`Successfully processed ${processedFiles} business cards`);
+      toast.success(`Successfully processed ${files.length} business cards`);
     } catch (error) {
       console.error('Error processing files:', error);
-      toast.error('Failed to process business cards');
+      toast.error('Failed to process some business cards');
+    } finally {
+      setIsProcessing(false);
+      setTotalFiles(0);
+      setProcessedFiles(0);
+      setUploadProgress(0);
     }
   };
 
@@ -482,32 +500,30 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
               </div>
             </motion.div>
 
-            {file && !extractedInfo && (
+            {isProcessing && (
               <div className="space-y-4 mt-6">
-                {isProcessing && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex flex-col items-center bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-sm"
-                  >
-                    <Loader2 className="mb-2 h-5 w-5 animate-spin text-primary" />
-                    <span className="text-sm font-medium text-gray-700">{processingStage}</span>
-                    {totalFiles > 0 && (
-                      <div className="w-full mt-3">
-                        <div className="w-full bg-gray-100 rounded-full h-2">
-                          <div
-                            className="bg-primary h-2 rounded-full transition-all duration-300 ease-out"
-                            style={{ width: `${uploadProgress}%` }}
-                          />
-                        </div>
-                        <p className="text-sm text-gray-600 text-center mt-2">
-                          Processing {processedFiles} of {totalFiles} files
-                        </p>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex flex-col items-center bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-sm"
+                >
+                  <Loader2 className="mb-2 h-5 w-5 animate-spin text-primary" />
+                  <span className="text-sm font-medium text-gray-700">{processingStage}</span>
+                  {totalFiles > 0 && (
+                    <div className="w-full mt-3">
+                      <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div
+                          className="bg-primary h-2 rounded-full transition-all duration-300 ease-out"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
                       </div>
-                    )}
-                  </motion.div>
-                )}
+                      <p className="text-sm text-gray-600 text-center mt-2">
+                        Processing {processedFiles} of {totalFiles} files
+                      </p>
+                    </div>
+                  )}
+                </motion.div>
               </div>
             )}
 

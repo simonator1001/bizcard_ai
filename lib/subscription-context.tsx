@@ -1,99 +1,104 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useAuth } from './auth-context'
-import { checkSubscriptionLimit } from './subscription-service'
-import { supabase } from './supabase'
+import { SubscriptionService } from './subscription-service'
+import { supabase } from './supabase-client'
 
 interface SubscriptionState {
-  isProUser: boolean;
-  cardCount: number;
-  maxCards: number | null;
-  canAddCard: boolean;
-  subscriptionType: 'free' | 'pro';
+  canScan: boolean
+  canAddCompany: boolean
+  canAddCard: boolean
+  loading: boolean
+  checkAction: (action: 'scan' | 'company' | 'card') => Promise<boolean>
+  incrementUsage: (action: 'scan' | 'company' | 'card') => Promise<void>
 }
 
-interface SubscriptionContextType extends SubscriptionState {
-  checkLimit: () => Promise<boolean>;
-  refreshCardCount: () => Promise<void>;
-}
-
-const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
+const SubscriptionContext = createContext<SubscriptionState>({
+  canScan: false,
+  canAddCompany: false,
+  canAddCard: false,
+  loading: true,
+  checkAction: async () => false,
+  incrementUsage: async () => {},
+})
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const [subscriptionData, setSubscriptionData] = useState<SubscriptionState>({
-    isProUser: false,
-    cardCount: 0,
-    maxCards: 5,
-    canAddCard: true,
-    subscriptionType: 'free'
-  });
+  const [state, setState] = useState<Omit<SubscriptionState, 'checkAction' | 'incrementUsage'>>({
+    canScan: false,
+    canAddCompany: false,
+    canAddCard: false,
+    loading: true,
+  })
+  const { user } = useAuth()
 
-  const refreshCardCount = useCallback(async () => {
-    if (!user) return;
-    
-    try {
-      console.log('[SubscriptionContext] Refreshing card count for user:', {
-        id: user.id,
-        email: user.email
-      });
-
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('subscription_type, card_count, max_cards')
-        .eq('id', user.id)
-        .single();
-
-      if (error) throw error;
-
-      setSubscriptionData(prev => ({
-        ...prev,
-        cardCount: userData.card_count,
-        maxCards: userData.max_cards,
-        isProUser: userData.subscription_type === 'pro',
-        subscriptionType: userData.subscription_type,
-        canAddCard: userData.subscription_type === 'pro' || userData.card_count < userData.max_cards
-      }));
-
-      console.log('[SubscriptionContext] Updated subscription data:', userData);
-    } catch (error) {
-      console.error('[SubscriptionContext] Error refreshing card count:', error);
+  const checkAllActions = useCallback(async () => {
+    if (!user) {
+      setState(prev => ({ ...prev, loading: false }))
+      return
     }
-  }, [user]);
 
-  // Refresh on mount and when user changes
+    try {
+      const [canScan, canAddCompany, canAddCard] = await Promise.all([
+        SubscriptionService.canPerformAction(user.id, 'scan'),
+        SubscriptionService.canPerformAction(user.id, 'company'),
+        SubscriptionService.canPerformAction(user.id, 'card'),
+      ])
+
+      setState({
+        canScan,
+        canAddCompany,
+        canAddCard,
+        loading: false,
+      })
+    } catch (error) {
+      console.error('Error checking subscription limits:', error)
+      setState(prev => ({ ...prev, loading: false }))
+    }
+  }, [user])
+
   useEffect(() => {
-    refreshCardCount();
-  }, [user, refreshCardCount]);
+    checkAllActions()
+  }, [checkAllActions])
 
-  const checkLimit = useCallback(async () => {
-    if (!user) return false;
+  const checkAction = useCallback(async (action: 'scan' | 'company' | 'card') => {
+    if (!user) return false
 
     try {
-      const result = await checkSubscriptionLimit(user.id);
-      return result.canAddCard;
+      const canPerform = await SubscriptionService.canPerformAction(user.id, action)
+      setState(prev => ({
+        ...prev,
+        [`can${action.charAt(0).toUpperCase() + action.slice(1)}`]: canPerform,
+      }))
+      return canPerform
     } catch (error) {
-      console.error('[SubscriptionContext] Error checking limit:', error);
-      return false;
+      console.error(`Error checking ${action} limit:`, error)
+      return false
     }
-  }, [user]);
+  }, [user])
+
+  const incrementUsage = useCallback(async (action: 'scan' | 'company' | 'card') => {
+    if (!user) return
+
+    try {
+      await SubscriptionService.incrementUsage(user.id, action)
+      checkAllActions() // Refresh limits after incrementing usage
+    } catch (error) {
+      console.error(`Error incrementing ${action} usage:`, error)
+    }
+  }, [user, checkAllActions])
 
   return (
     <SubscriptionContext.Provider
       value={{
-        ...subscriptionData,
-        checkLimit,
-        refreshCardCount,
+        ...state,
+        checkAction,
+        incrementUsage,
       }}
     >
       {children}
     </SubscriptionContext.Provider>
-  );
+  )
 }
 
 export function useSubscription() {
-  const context = useContext(SubscriptionContext);
-  if (context === undefined) {
-    throw new Error('useSubscription must be used within a SubscriptionProvider');
-  }
-  return context;
+  return useContext(SubscriptionContext)
 }

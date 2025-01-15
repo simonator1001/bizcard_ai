@@ -19,6 +19,8 @@ import { BusinessCard } from '@/types/business-card'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-client'
 import { ManageCardsView } from '@/components/cards/ManageCardsView'
+import { SubscriptionService } from '@/lib/subscription-service'
+import { toast } from 'sonner'
 
 interface NewsArticle {
   id: string
@@ -198,6 +200,7 @@ export default function Component() {
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [orgChartViewMode, setOrgChartViewMode] = useState('tree')
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
   const { cards, loading, error, addCard, updateCard, deleteCard } = useBusinessCards()
   const { user, signOut } = useAuth()
   const [currentCardIndex, setCurrentCardIndex] = useState(0)
@@ -343,21 +346,144 @@ export default function Component() {
                           const input = document.createElement('input')
                           input.type = 'file'
                           input.accept = 'image/*'
-                          input.onchange = (e) => {
-                            const file = (e.target as HTMLInputElement).files?.[0]
-                            if (file) {
-                              const reader = new FileReader()
-                              reader.onload = (e) => {
-                                setUploadedImage(e.target?.result as string)
+                          input.multiple = true
+                          input.onchange = async (e) => {
+                            const files = (e.target as HTMLInputElement).files
+                            if (!files || files.length === 0) return
+
+                            setIsScanning(true)
+                            let successCount = 0
+                            let failedFiles: string[] = []
+                            let hitScanLimit = false
+
+                            try {
+                              const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+                              if (sessionError || !session) {
+                                throw new Error('Not authenticated')
                               }
-                              reader.readAsDataURL(file)
+
+                              // Check subscription status before processing
+                              const canScan = await SubscriptionService.canPerformAction(user?.id || '', 'scan')
+                              if (!canScan) {
+                                setShowUpgradePrompt(true)
+                                throw new Error('Monthly scan limit reached')
+                              }
+
+                              // Process all files
+                              for (let i = 0; i < files.length; i++) {
+                                if (hitScanLimit) break; // Stop processing if scan limit reached
+                                
+                                const file = files[i]
+                                const reader = new FileReader()
+                                
+                                try {
+                                  // Process each file
+                                  await new Promise((resolve, reject) => {
+                                    reader.onload = async (e) => {
+                                      try {
+                                        const base64Image = e.target?.result as string
+                                        const response = await fetch('/api/scan', {
+                                          method: 'POST',
+                                          headers: {
+                                            'Content-Type': 'application/json',
+                                            'Authorization': `Bearer ${session.access_token}`
+                                          },
+                                          body: JSON.stringify({ image: base64Image }),
+                                        })
+                                        
+                                        let responseData
+                                        try {
+                                          responseData = await response.json()
+                                        } catch (parseError) {
+                                          throw new Error('Invalid response from OCR service')
+                                        }
+
+                                        if (!response.ok) {
+                                          // Check for scan limit error
+                                          if (responseData.error?.toLowerCase().includes('monthly scan limit') || 
+                                              responseData.error?.toLowerCase().includes('scan limit reached') || 
+                                              responseData.message?.toLowerCase().includes('monthly scan limit') ||
+                                              responseData.message?.toLowerCase().includes('scan limit reached')) {
+                                            hitScanLimit = true
+                                            setShowUpgradePrompt(true)
+                                            throw new Error('Monthly scan limit reached')
+                                          }
+                                          throw new Error(responseData.message || responseData.error || 'Failed to scan card')
+                                        }
+                                        
+                                        successCount++
+                                        resolve(null)
+                                      } catch (error: any) {
+                                        console.error(`Error processing file ${file.name}:`, error)
+                                        if (error.message.toLowerCase().includes('scan limit')) {
+                                          hitScanLimit = true
+                                          setShowUpgradePrompt(true)
+                                          reject(error)
+                                        } else {
+                                          failedFiles.push(file.name)
+                                          reject(error)
+                                        }
+                                      }
+                                    }
+                                    reader.onerror = (error) => {
+                                      console.error(`Error reading file ${file.name}:`, error)
+                                      failedFiles.push(file.name)
+                                      reject(new Error(`Failed to read file ${file.name}`))
+                                    }
+                                    reader.readAsDataURL(file)
+                                  }).catch((error) => {
+                                    if (error.message.toLowerCase().includes('scan limit')) {
+                                      throw error; // Propagate scan limit error
+                                    }
+                                    console.warn(`Continuing after error with file ${file.name}:`, error)
+                                  })
+                                } catch (fileError: any) {
+                                  if (fileError.message.toLowerCase().includes('scan limit')) {
+                                    throw fileError; // Propagate scan limit error
+                                  }
+                                  console.error(`Error processing file ${file.name}:`, fileError)
+                                  failedFiles.push(file.name)
+                                }
+                              }
+                              
+                              // Show appropriate success/failure message
+                              if (hitScanLimit) {
+                                if (successCount > 0) {
+                                  toast.success(`Successfully processed ${successCount} business cards`)
+                                }
+                                toast.error('Monthly scan limit reached. Please upgrade your plan to continue scanning.')
+                              } else if (successCount === files.length) {
+                                toast.success(`Successfully processed all ${files.length} business cards`)
+                              } else if (successCount > 0) {
+                                toast.success(`Successfully processed ${successCount} out of ${files.length} business cards`)
+                                if (failedFiles.length > 0) {
+                                  toast.error(`Failed to process: ${failedFiles.join(', ')}`)
+                                }
+                              } else {
+                                throw new Error(`Failed to process any cards. Please try again.`)
+                              }
+
+                              if (successCount > 0) {
+                                setActiveTab('manage')
+                              }
+                            } catch (error: any) {
+                              console.error('Error scanning cards:', error)
+                              const errorMessage = error.message.toLowerCase()
+                              if (errorMessage.includes('scan limit') || errorMessage.includes('monthly limit')) {
+                                setShowUpgradePrompt(true)
+                                toast.error('Monthly scan limit reached. Please upgrade your plan to continue scanning.')
+                              } else {
+                                toast.error(error.message || 'Failed to scan cards. Please try again.')
+                              }
+                            } finally {
+                              setIsScanning(false)
                             }
                           }
                           input.click()
                         }}
                       >
                         <Upload className="h-8 w-8 mr-3" />
-                        Upload Image
+                        {isScanning ? 'Processing...' : 'Upload Images'}
                       </Button>
                     </div>
                   </div>
@@ -411,7 +537,7 @@ export default function Component() {
           </TabsContent>
 
           <TabsContent value="manage" className="h-full p-8 overflow-auto">
-            <ManageCardsView />
+            <ManageCardsView setActiveTab={setActiveTab} />
           </TabsContent>
 
           <TabsContent value="network" className="h-full p-8 overflow-auto">
@@ -613,6 +739,35 @@ export default function Component() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <Dialog open={showUpgradePrompt} onOpenChange={setShowUpgradePrompt}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upgrade Your Plan</DialogTitle>
+            <DialogDescription>
+              You've reached your monthly scan limit. Upgrade your plan to continue scanning business cards.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Button
+              className="w-full"
+              onClick={() => {
+                router.push('/upgrade')
+                setShowUpgradePrompt(false)
+              }}
+            >
+              Upgrade Now
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setShowUpgradePrompt(false)}
+            >
+              Maybe Later
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

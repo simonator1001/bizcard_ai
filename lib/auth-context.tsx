@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     console.log('[AuthContext] Initializing auth state')
     
-    let subscription;
+    let subscription: { unsubscribe: () => void } | undefined;
 
     // Get initial session
     const initializeAuth = async () => {

@@ -1,113 +1,119 @@
-import { supabase } from '@/lib/supabase-client';
+import { supabase } from './supabase-client'
 
-async function ensureUser(userId: string) {
-  // Check if user exists
-  const { data: existingUser, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', userId)
-    .single();
+interface SubscriptionUsage {
+  id: string
+  user_id: string
+  month: string
+  scans_count: number
+  companies_tracked: number
+  total_cards: number
+}
 
-  if (error && error.code !== 'PGRST116') {
-    console.error('Error checking user:', error);
-    throw error;
-  }
-
-  if (!existingUser) {
-    // Get user details from auth
-    const { data: { user }, error: authError } = await supabase.auth.admin.getUserById(userId);
-    
-    if (authError) {
-      console.error('Error getting user details:', authError);
-      throw authError;
-    }
-
-    // Insert new user
-    const { error: insertError } = await supabase.from('users').insert({
-      id: userId,
-      email: user?.email,
-      subscription_type: 'free',
-      card_count: 0,
-      max_cards: 5
-    });
-
-    if (insertError) {
-      console.error('Error creating user:', insertError);
-      throw insertError;
-    }
+const LIMITS = {
+  FREE: {
+    scan: 10,
+    companies: 5,
+    cards: 50
+  },
+  PRO: {
+    scan: 100,
+    companies: 50,
+    cards: 500
+  },
+  ENTERPRISE: {
+    scan: Infinity,
+    companies: Infinity,
+    cards: Infinity
   }
 }
 
-export async function checkSubscriptionLimit(userId: string): Promise<{
-  canAddCard: boolean;
-  currentCount: number;
-  maxCards: number | null;
-  message?: string;
-}> {
-  try {
-    await ensureUser(userId);
+export class SubscriptionService {
+  static async canPerformAction(userId: string, action: 'scan' | 'company' | 'card'): Promise<boolean> {
+    if (!userId) return false;
 
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('subscription_type, card_count, max_cards')
-      .eq('id', userId)
-      .single();
+    try {
+      // Get user's subscription
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
 
-    if (error) {
-      console.error('Error fetching user subscription:', error);
-      return {
-        canAddCard: true,
-        currentCount: 0,
-        maxCards: 5,
-        message: 'Error checking subscription status'
-      };
+      // Get current month's usage
+      const currentMonth = new Date().toISOString().slice(0, 7); // Format: YYYY-MM
+      const { data: usage } = await supabase
+        .from('subscription_usage')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('month', currentMonth)
+        .single();
+
+      // Get plan limits
+      const plan = subscription?.plan || 'FREE';
+      const limits = LIMITS[plan as keyof typeof LIMITS];
+
+      if (!usage) {
+        // If no usage record exists, user can perform action
+        return true;
+      }
+
+      // Check limits based on action
+      switch (action) {
+        case 'scan':
+          return usage.scans_count < limits.scan;
+        case 'company':
+          return usage.companies_tracked < limits.companies;
+        case 'card':
+          return usage.total_cards < limits.cards;
+        default:
+          return false;
+      }
+    } catch (error) {
+      console.error('Error checking subscription:', error);
+      return false;
     }
-
-    const currentCount = user.card_count || 0;
-    const maxCards = user.max_cards;
-
-    return {
-      canAddCard: maxCards === null || currentCount < maxCards,
-      currentCount,
-      maxCards,
-      message: maxCards !== null && currentCount >= maxCards
-        ? 'You have reached your card limit. Please upgrade your subscription to add more cards.'
-        : undefined
-    };
-  } catch (error) {
-    console.error('Error in checkSubscriptionLimit:', error);
-    return {
-      canAddCard: true,
-      currentCount: 0,
-      maxCards: 5,
-      message: 'Error checking subscription status'
-    };
   }
-}
 
-export async function updateSubscription(
-  userId: string,
-  planType: 'free' | 'pro',
-  stripeSubscriptionId?: string
-): Promise<void> {
-  try {
-    await ensureUser(userId);
+  static async incrementUsage(userId: string, action: 'scan' | 'company' | 'card'): Promise<void> {
+    if (!userId) return;
 
-    const { error } = await supabase
-      .from('users')
-      .update({
-        subscription_type: planType,
-        max_cards: planType === 'pro' ? null : 5,
-        stripe_subscription_id: stripeSubscriptionId
-      })
-      .eq('id', userId);
+    const currentMonth = new Date().toISOString().slice(0, 7); // Format: YYYY-MM
 
-    if (error) {
-      console.error('Error updating subscription:', error);
-      throw error;
+    try {
+      // Get or create usage record for current month
+      const { data: existingUsage } = await supabase
+        .from('subscription_usage')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('month', currentMonth)
+        .single();
+
+      if (!existingUsage) {
+        // Create new usage record
+        await supabase
+          .from('subscription_usage')
+          .insert([{
+            user_id: userId,
+            month: currentMonth,
+            scans_count: action === 'scan' ? 1 : 0,
+            companies_tracked: action === 'company' ? 1 : 0,
+            total_cards: action === 'card' ? 1 : 0
+          }]);
+      } else {
+        // Update existing usage record
+        const updates: Partial<SubscriptionUsage> = {
+          scans_count: action === 'scan' ? existingUsage.scans_count + 1 : existingUsage.scans_count,
+          companies_tracked: action === 'company' ? existingUsage.companies_tracked + 1 : existingUsage.companies_tracked,
+          total_cards: action === 'card' ? existingUsage.total_cards + 1 : existingUsage.total_cards
+        };
+
+        await supabase
+          .from('subscription_usage')
+          .update(updates)
+          .eq('id', existingUsage.id);
+      }
+    } catch (error) {
+      console.error('Error updating usage:', error);
     }
-  } catch (error) {
-    console.error('Error in updateSubscription:', error);
-    throw error;
   }
 }

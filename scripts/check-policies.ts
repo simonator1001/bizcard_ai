@@ -1,50 +1,62 @@
-const { createClient } = require('@supabase/supabase-js');
-const dotenv = require('dotenv');
-const path = require('path');
-const fs = require('fs');
+import { createClient } from '@supabase/supabase-js'
+import dotenv from 'dotenv'
+import path from 'path'
+import fs from 'fs'
 
-// Load environment variables from .env.local
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+// Load environment variables
+dotenv.config({ path: path.resolve(__dirname, '../.env.local') })
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('Missing required environment variables');
-  process.exit(1);
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing required environment variables')
+  process.exit(1)
 }
 
-// Create service client
-const serviceClient = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
+const supabase = createClient(supabaseUrl, supabaseKey)
 
-async function main() {
+async function checkPolicies() {
   try {
-    // Read SQL queries
-    const sql = fs.readFileSync(path.resolve(__dirname, 'check-policies.sql'), 'utf8');
-    const queries = sql.split(';').filter((q: string) => q.trim());
+    // Check RLS status
+    console.log('Checking RLS status...')
+    const { data: rlsStatus, error: rlsError } = await supabase.rpc('exec_sql', {
+      sql: `
+        SELECT relrowsecurity
+        FROM pg_class
+        WHERE oid = 'business_cards'::regclass;
+      `
+    })
 
-    // Execute each query
-    for (const query of queries) {
-      console.log('\nExecuting query:', query.trim());
-      const { data, error } = await serviceClient.rpc('exec_sql', {
-        sql_query: query.trim()
-      });
-
-      if (error) {
-        console.error('Error executing query:', error);
-      } else {
-        console.log('Result:', data);
-      }
+    if (rlsError) {
+      console.error('Error checking RLS status:', rlsError)
+      return
     }
 
+    console.log('RLS status:', rlsStatus)
+
+    // Check policies
+    console.log('\nChecking policies...')
+    const { data: policies, error: policiesError } = await supabase.rpc('exec_sql', {
+      sql: `
+        SELECT *
+        FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'business_cards';
+      `
+    })
+
+    if (policiesError) {
+      console.error('Error checking policies:', policiesError)
+      return
+    }
+
+    console.log('Current policies:', policies)
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error checking policies:', error)
+    process.exit(1)
   }
 }
 
-main(); 
+checkPolicies() 

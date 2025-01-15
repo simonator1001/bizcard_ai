@@ -41,7 +41,11 @@ type ViewMode = 'list' | 'grid' | 'carousel';
 type SortField = 'name' | 'company' | 'title' | 'created_at';
 type SortDirection = 'asc' | 'desc';
 
-export function ManageCardsView() {
+interface ManageCardsViewProps {
+  setActiveTab: (tab: string) => void;
+}
+
+export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
   const [cards, setCards] = useState<BusinessCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -239,8 +243,8 @@ export function ManageCardsView() {
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
         <h2 className="text-2xl font-semibold mb-4">Sign in to manage your business cards</h2>
         <p className="text-gray-600 mb-8">You need to be signed in to view and manage your business cards.</p>
-        <Button asChild>
-          <a href="/signin">Sign In</a>
+        <Button onClick={() => window.location.href = '/signin'}>
+          Sign In
         </Button>
       </div>
     );
@@ -346,8 +350,8 @@ export function ManageCardsView() {
           <p className="text-gray-500 mb-4">
             {searchTerm ? 'Try adjusting your search terms' : 'Start by scanning some business cards'}
           </p>
-          <Button asChild>
-            <a href="/scan">Scan Business Card</a>
+          <Button onClick={() => setActiveTab('scan')}>
+            Scan Business Card
           </Button>
         </div>
       ) : (
@@ -360,7 +364,7 @@ export function ManageCardsView() {
               key={card.id}
               card={card}
               viewMode={viewMode}
-              selected={selectedCards.has(card.id)}
+              isSelected={selectedCards.has(card.id)}
               onSelect={() => {
                 const newSelected = new Set(selectedCards);
                 if (newSelected.has(card.id)) {
@@ -372,6 +376,7 @@ export function ManageCardsView() {
               }}
               onDelete={() => handleDeleteCard(card.id)}
               onClick={() => setSelectedCard(card)}
+              onEdit={() => setSelectedCard(card)}
             />
           ))}
         </div>
@@ -382,9 +387,13 @@ export function ManageCardsView() {
           {selectedCard && (
             <CardDetailView
               card={selectedCard}
-              companyCards={selectedCompanyData}
               onClose={() => setSelectedCard(null)}
               onDelete={handleDeleteCard}
+              onEdit={(updatedCard) => {
+                // Update the card in the cards list
+                setCards(prevCards => prevCards.map(c => c.id === updatedCard.id ? updatedCard : c));
+                setSelectedCard(null);
+              }}
             />
           )}
         </DialogContent>
@@ -396,6 +405,7 @@ export function ManageCardsView() {
             cards={cards}
             onClose={handleDuplicateManagerClose}
             onMerge={handleMergeCard}
+            onDelete={handleDeleteCard}
           />
         </DialogContent>
       </Dialog>

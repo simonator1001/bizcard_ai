@@ -1,91 +1,76 @@
-const { createClient } = require('@supabase/supabase-js');
-const dotenv = require('dotenv');
-const path = require('path');
-const fs = require('fs');
+import { createClient } from '@supabase/supabase-js'
+import dotenv from 'dotenv'
+import path from 'path'
+import fs from 'fs'
 
-// Load environment variables from .env.local
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+// Load environment variables
+dotenv.config({ path: path.resolve(__dirname, '../.env.local') })
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('Missing required environment variables');
-  process.exit(1);
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing required environment variables')
+  process.exit(1)
 }
 
-// Create service client
-const serviceClient = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  },
-  db: {
-    schema: 'public'
-  }
-});
+const supabase = createClient(supabaseUrl, supabaseKey)
 
-async function executeMigration(filePath: string) {
-  console.log(`\nExecuting migration: ${path.basename(filePath)}`);
-  
-  // Read migration file
-  const migration = fs.readFileSync(filePath, 'utf8');
-
-  // Split migration into individual statements
-  const statements = migration
-    .split(';')
-    .map((s: string) => s.trim())
-    .filter((s: string) => s.length > 0);
-
-  // Execute each statement
-  for (const statement of statements) {
-    console.log('\nExecuting statement:', statement);
-    
-    const { error } = await serviceClient
-      .from('business_cards')
-      .select('*')
-      .limit(1)
-      .then(async () => {
-        return await serviceClient.rpc('exec_sql_statement', {
-          statement
-        });
-      });
-
-    if (error) {
-      console.error('Error executing statement:', error);
-    } else {
-      console.log('Statement executed successfully');
-    }
-  }
-}
-
-async function main() {
+async function applyRLSMigration() {
   try {
-    // Execute migrations in order
-    const migrations = [
-      path.resolve(__dirname, '../supabase/migrations/20240113_create_functions.sql'),
-      path.resolve(__dirname, '../supabase/migrations/20240113_enable_rls.sql')
-    ];
+    // Enable RLS
+    console.log('Enabling RLS...')
+    await supabase.rpc('exec_sql', {
+      sql: 'ALTER TABLE business_cards ENABLE ROW LEVEL SECURITY;'
+    })
 
-    for (const migration of migrations) {
-      await executeMigration(migration);
+    // Create policies
+    const policies = [
+      {
+        name: 'read_own_cards',
+        sql: `
+          DROP POLICY IF EXISTS read_own_cards ON business_cards;
+          CREATE POLICY read_own_cards ON business_cards
+            FOR SELECT USING (auth.uid() = user_id);
+        `
+      },
+      {
+        name: 'insert_own_cards',
+        sql: `
+          DROP POLICY IF EXISTS insert_own_cards ON business_cards;
+          CREATE POLICY insert_own_cards ON business_cards
+            FOR INSERT WITH CHECK (auth.uid() = user_id);
+        `
+      },
+      {
+        name: 'update_own_cards',
+        sql: `
+          DROP POLICY IF EXISTS update_own_cards ON business_cards;
+          CREATE POLICY update_own_cards ON business_cards
+            FOR UPDATE USING (auth.uid() = user_id);
+        `
+      },
+      {
+        name: 'delete_own_cards',
+        sql: `
+          DROP POLICY IF EXISTS delete_own_cards ON business_cards;
+          CREATE POLICY delete_own_cards ON business_cards
+            FOR DELETE USING (auth.uid() = user_id);
+        `
+      }
+    ]
+
+    for (const policy of policies) {
+      console.log(`Creating policy: ${policy.name}`)
+      await supabase.rpc('exec_sql', { sql: policy.sql })
     }
 
-    // Verify RLS is enabled
-    const { data: rlsData, error: rlsError } = await serviceClient
-      .from('business_cards')
-      .select('*')
-      .limit(1);
-
-    if (rlsError) {
-      console.log('RLS enabled successfully:', rlsError.message);
-    } else {
-      console.log('RLS status:', rlsData);
-    }
-
+    console.log('RLS migration completed successfully')
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error applying RLS migration:', error)
+    process.exit(1)
   }
 }
 
-main(); 
+applyRLSMigration() 
