@@ -80,8 +80,13 @@ export class SubscriptionService {
     const currentMonth = new Date().toISOString().slice(0, 7); // Format: YYYY-MM
 
     try {
+      if (!adminClient) {
+        console.debug('[Subscription] No admin client available, skipping usage increment');
+        return;
+      }
+
       // Get or create usage record for current month
-      const { data: existingUsage } = await supabase
+      const { data: existingUsage } = await adminClient
         .from('subscription_usage')
         .select('*')
         .eq('user_id', userId)
@@ -90,7 +95,7 @@ export class SubscriptionService {
 
       if (!existingUsage) {
         // Create new usage record
-        await supabase
+        await adminClient
           .from('subscription_usage')
           .insert([{
             user_id: userId,
@@ -107,13 +112,15 @@ export class SubscriptionService {
           total_cards: action === 'card' ? existingUsage.total_cards + 1 : existingUsage.total_cards
         };
 
-        await supabase
+        await adminClient
           .from('subscription_usage')
           .update(updates)
-          .eq('id', existingUsage.id);
+          .eq('user_id', userId)
+          .eq('month', currentMonth);
       }
     } catch (error) {
       console.error('Error updating usage:', error);
+      throw error;
     }
   }
 }

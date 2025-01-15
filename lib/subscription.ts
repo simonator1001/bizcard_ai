@@ -17,11 +17,12 @@ console.debug('[Subscription] Environment check:', {
 });
 
 // Only create admin client on server side
-const adminClient = !isClient && supabaseUrl && supabaseServiceKey ? 
+export const adminClient = !isClient && supabaseUrl && supabaseServiceKey ? 
   createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
-      persistSession: false
+      persistSession: false,
+      detectSessionInUrl: false
     }
   }) : null;
 
@@ -256,6 +257,11 @@ export class SubscriptionService {
 
   static async uploadBusinessCardImage(userId: string, base64Image: string): Promise<string> {
     try {
+      if (!adminClient) {
+        console.error('[Subscription] No admin client available for storage upload');
+        throw new Error('Service configuration error');
+      }
+
       // Convert base64 to blob for upload
       const base64Response = await fetch(base64Image);
       const blob = await base64Response.blob();
@@ -263,11 +269,8 @@ export class SubscriptionService {
       // Generate unique filename
       const fileName = `${userId}/${Date.now()}-card.jpg`;
       
-      // Use the regular supabase client for storage operations
-      const { supabase } = await import('@/lib/supabase-client');
-      
-      // Upload to Supabase storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      // Upload to Supabase storage using admin client
+      const { data: uploadData, error: uploadError } = await adminClient.storage
         .from('business-cards')
         .upload(fileName, blob, {
           contentType: 'image/jpeg',
@@ -279,14 +282,92 @@ export class SubscriptionService {
         throw uploadError;
       }
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
+      // Get public URL using admin client
+      const { data } = adminClient.storage
         .from('business-cards')
         .getPublicUrl(fileName);
+
+      // Ensure the URL is using HTTPS
+      const publicUrl = data.publicUrl.replace('http://', 'https://');
+      
+      // Log the URL for debugging
+      console.debug('[Subscription] Generated public URL:', publicUrl);
 
       return publicUrl;
     } catch (error) {
       console.error('[Subscription] Error uploading business card image:', error);
+      throw error;
+    }
+  }
+
+  // Helper function for consistent date formatting
+  private static formatMonthDate(date: Date = new Date()): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  }
+
+  static async incrementUsage(userId: string, action: 'scan' | 'company' | 'card'): Promise<void> {
+    if (!userId) return;
+
+    const currentMonth = this.formatMonthDate();
+
+    try {
+      if (!adminClient) {
+        console.error('[Subscription] No admin client available for usage increment');
+        throw new Error('Service configuration error');
+      }
+
+      // Get or create usage record for current month
+      const { data: existingUsage, error: queryError } = await adminClient
+        .from('subscription_usage')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('month', currentMonth)
+        .single();
+
+      if (queryError && queryError.code !== 'PGRST116') { // Not found error is ok
+        console.error('[Subscription] Error querying usage:', queryError);
+        throw queryError;
+      }
+
+      if (!existingUsage) {
+        // Create new usage record
+        const { error: insertError } = await adminClient
+          .from('subscription_usage')
+          .insert([{
+            user_id: userId,
+            month: currentMonth,
+            scans_count: action === 'scan' ? 1 : 0,
+            companies_tracked: action === 'company' ? 1 : 0,
+            total_cards: action === 'card' ? 1 : 0
+          }]);
+
+        if (insertError) {
+          console.error('[Subscription] Error inserting usage:', insertError);
+          throw insertError;
+        }
+      } else {
+        // Update existing usage record
+        const updates = {
+          scans_count: action === 'scan' ? (existingUsage.scans_count || 0) + 1 : (existingUsage.scans_count || 0),
+          companies_tracked: action === 'company' ? (existingUsage.companies_tracked || 0) + 1 : (existingUsage.companies_tracked || 0),
+          total_cards: action === 'card' ? (existingUsage.total_cards || 0) + 1 : (existingUsage.total_cards || 0)
+        };
+
+        const { error: updateError } = await adminClient
+          .from('subscription_usage')
+          .update(updates)
+          .eq('user_id', userId)
+          .eq('month', currentMonth);
+
+        if (updateError) {
+          console.error('[Subscription] Error updating usage:', updateError);
+          throw updateError;
+        }
+      }
+    } catch (error) {
+      console.error('[Subscription] Error in incrementUsage:', error);
       throw error;
     }
   }

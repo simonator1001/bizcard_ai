@@ -1,1 +1,6 @@
-{"/_app":"pages/_app.js","/api/analyze-org-structure":"pages/api/analyze-org-structure.js","/_error":"pages/_error.js","/api/analyze-relationships":"pages/api/analyze-relationships.js","/api/extract-info":"pages/api/extract-info.js","/api/cards/add":"pages/api/cards/add.js","/api/news":"pages/api/news.js","/auth/callback":"pages/auth/callback.html","/cards/[id]":"pages/cards/[id].html","/api/ocr":"pages/api/ocr.js","/api/scan":"pages/api/scan.js","/shared/[id]":"pages/shared/[id].html","/":"pages/index.html","/_document":"pages/_document.js","/404":"pages/404.html"}
+{
+  "/_app": "pages/_app.js",
+  "/_error": "pages/_error.js",
+  "/_document": "pages/_document.js",
+  "/": "pages/index.js"
+}

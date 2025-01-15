@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { supabase, supabaseAdmin } from '@/lib/supabase-client'
+import { SubscriptionService } from '@/lib/subscription'
 
 export const config = {
   api: {
@@ -119,6 +120,11 @@ export default async function handler(
     console.log('[SCAN] Information extraction successful')
     const extractedInfo = extractErrorData; // Already parsed above
 
+    // Upload image to storage
+    console.log('[SCAN] Uploading image to storage...')
+    const imageUrl = await SubscriptionService.uploadBusinessCardImage(user.id, image)
+    console.log('[SCAN] Image uploaded successfully:', imageUrl)
+
     // Format the data to match the table schema
     const cardData = {
       user_id: user.id, // Ensure this matches the authenticated user's ID
@@ -128,10 +134,11 @@ export default async function handler(
       company_zh: extractedInfo.company?.chinese || '',
       title: extractedInfo.title?.english || '',
       title_zh: extractedInfo.title?.chinese || '',
-      email: extractedInfo.email || '',
-      phone: extractedInfo.phone || '',
+      email: extractedInfo.contact?.email || '',
+      phone: extractedInfo.contact?.phone || extractedInfo.contact?.mobile || '',
       address: extractedInfo.address?.english || '',
       address_zh: extractedInfo.address?.chinese || '',
+      image_url: imageUrl, // Add the image URL
       raw_text: ocrResult.raw_text || ''
     }
 
