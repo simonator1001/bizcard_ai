@@ -10,7 +10,7 @@ import { recognizeBusinessCard } from '@/lib/ocr-service'
 import { supabase, testConnection } from '@/lib/supabase-client'
 import { toast } from 'sonner'
 import imageCompression from 'browser-image-compression';
-import { useSubscription } from '@/lib/hooks/useSubscription'
+import { useSubscription } from '@/hooks/useSubscription'
 import { useRouter } from 'next/navigation'
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt'
 import { useTranslation } from 'react-i18next'

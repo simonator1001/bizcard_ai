@@ -19,15 +19,10 @@ export async function getImageUrl(path: string): Promise<string | null> {
 
     console.log('[Storage] Using image path:', imagePath);
 
-    const { data: { publicUrl }, error } = await supabase
+    const { data: { publicUrl } } = supabase
       .storage
       .from(BUSINESS_CARDS_BUCKET)
       .getPublicUrl(imagePath);
-
-    if (error) {
-      console.error('[Storage] Error getting public URL:', error);
-      return null;
-    }
 
     // Add cache-busting parameter to prevent stale images
     const url = new URL(publicUrl);

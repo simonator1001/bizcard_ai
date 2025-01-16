@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/lib/hooks/useUser';
-import { useSubscription } from '@/lib/hooks/useSubscription';
+import { useTranslation } from 'react-i18next';
+import { useSubscription } from '@/hooks/useSubscription';
 
 const navigationItems = [
   {

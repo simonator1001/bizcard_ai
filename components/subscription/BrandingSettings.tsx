@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useSubscription } from '@/lib/hooks/useSubscription';
+import { useTranslation } from 'react-i18next';
+import { useSubscription } from '@/hooks/useSubscription';
 import { SubscriptionService } from '@/lib/subscription';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';

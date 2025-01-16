@@ -19,7 +19,8 @@ import { BusinessCard } from '@/types/business-card'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-client'
 import { ManageCardsView } from '@/components/cards/ManageCardsView'
-import { SubscriptionService } from '@/lib/subscription-service'
+import { SubscriptionService } from '@/lib/subscription'
+import { SettingsTab } from '@/components/shared/SettingsTab'
 import { toast } from 'sonner'
 
 interface NewsArticle {
@@ -189,6 +190,40 @@ const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: {
   )
 }
 
+function UpgradePrompt({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const router = useRouter()
+  
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Upgrade Your Plan</DialogTitle>
+          <DialogDescription>
+            You've reached your monthly scan limit. Upgrade to our Pro plan to get unlimited scans and more features.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <h3 className="font-medium">Pro Plan Features:</h3>
+            <ul className="list-disc list-inside space-y-1 text-sm">
+              <li>Unlimited card scans</li>
+              <li>Advanced OCR with multi-language support</li>
+              <li>Export to CSV/Excel</li>
+              <li>Full news feed access</li>
+              <li>Organization chart view</li>
+              <li>Priority support</li>
+            </ul>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Maybe Later</Button>
+          <Button onClick={() => router.push('/pricing')}>View Plans</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function Component() {
   const [activeTab, setActiveTab] = useState('scan')
   const [isYearly, setIsYearly] = useState(false)
@@ -254,6 +289,10 @@ export default function Component() {
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-purple-50 to-pink-50">
+      <UpgradePrompt 
+        open={showUpgradePrompt} 
+        onOpenChange={setShowUpgradePrompt} 
+      />
       <header className="bg-white shadow-sm py-6 px-8">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
@@ -328,7 +367,12 @@ export default function Component() {
                             if (file) {
                               const reader = new FileReader()
                               reader.onload = (e) => {
-                                setUploadedImage(e.target?.result as string)
+                                try {
+                                  setUploadedImage(e.target?.result as string)
+                                } catch (error: any) {
+                                  console.error('Error loading image:', error)
+                                  toast.error('Failed to load image. Please try again.')
+                                }
                               }
                               reader.readAsDataURL(file)
                             }
@@ -500,6 +544,13 @@ export default function Component() {
                             throw new Error('Not authenticated')
                           }
 
+                          // Check subscription status before processing
+                          const canScan = await SubscriptionService.canPerformAction(user?.id || '', 'scan')
+                          if (!canScan) {
+                            setShowUpgradePrompt(true)
+                            throw new Error('Monthly scan limit reached')
+                          }
+
                           const response = await fetch('/api/scan', {
                             method: 'POST',
                             headers: {
@@ -509,17 +560,37 @@ export default function Component() {
                             body: JSON.stringify({ image: uploadedImage }),
                           })
                           
-                          if (!response.ok) {
-                            const errorData = await response.json()
-                            throw new Error(errorData.message || errorData.error || 'Failed to scan card')
+                          let responseData
+                          try {
+                            responseData = await response.json()
+                          } catch (parseError) {
+                            throw new Error('Invalid response from scan service')
                           }
-                          
-                          const data = await response.json()
+
+                          if (!response.ok) {
+                            // Check for scan limit error
+                            if (responseData.error?.toLowerCase().includes('monthly scan limit') || 
+                                responseData.error?.toLowerCase().includes('scan limit reached') || 
+                                responseData.message?.toLowerCase().includes('monthly scan limit') ||
+                                responseData.message?.toLowerCase().includes('scan limit reached')) {
+                              setShowUpgradePrompt(true)
+                              throw new Error('Monthly scan limit reached. Please upgrade your plan to continue scanning.')
+                            }
+                            throw new Error(responseData.message || responseData.error || 'Failed to scan card')
+                          }
+
                           setUploadedImage(null)
                           setActiveTab('manage')
+                          toast.success('Business card scanned successfully')
                         } catch (error: any) {
                           console.error('Error scanning card:', error)
-                          alert(error.message || 'Failed to scan card. Please try again.')
+                          if (error.message.toLowerCase().includes('scan limit') || 
+                              error.message.toLowerCase().includes('monthly limit')) {
+                            setShowUpgradePrompt(true)
+                            toast.error('Monthly scan limit reached. Please upgrade your plan to continue scanning.')
+                          } else {
+                            toast.error(error.message || 'Failed to scan card. Please try again.')
+                          }
                         } finally {
                           setIsScanning(false)
                         }
@@ -678,96 +749,11 @@ export default function Component() {
             </div>
           </TabsContent>
 
-          <TabsContent value="settings" className="h-full p-8 overflow-auto">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold">Settings</h2>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Yearly</CardTitle>
-                    <Switch
-                      checked={isYearly}
-                      onCheckedChange={setIsYearly}
-                    />
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-500">
-                      {isYearly ? 'Enabled' : 'Disabled'}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">View Mode</CardTitle>
-                    <Select value={viewMode} onValueChange={(value: ViewMode) => setViewMode(value)}>
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="list">
-                          <div className="flex items-center">
-                            <LayoutList className="w-4 h-4 mr-2" />
-                            List
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="grid">
-                          <div className="flex items-center">
-                            <LayoutGrid className="w-4 h-4 mr-2" />
-                            Grid
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="carousel">
-                          <div className="flex items-center">
-                            <Star className="w-4 h-4 mr-2" />
-                            Carousel
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-500">
-                      {viewMode === 'list' ? 'List View' : viewMode === 'grid' ? 'Grid View' : viewMode === 'carousel' ? 'Carousel View' : 'Stack View'}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
+          <TabsContent value="settings" className="h-full overflow-auto">
+            <SettingsTab />
           </TabsContent>
         </Tabs>
       </main>
-
-      <Dialog open={showUpgradePrompt} onOpenChange={setShowUpgradePrompt}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Upgrade Your Plan</DialogTitle>
-            <DialogDescription>
-              You've reached your monthly scan limit. Upgrade your plan to continue scanning business cards.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Button
-              className="w-full"
-              onClick={() => {
-                router.push('/upgrade')
-                setShowUpgradePrompt(false)
-              }}
-            >
-              Upgrade Now
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => setShowUpgradePrompt(false)}
-            >
-              Maybe Later
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

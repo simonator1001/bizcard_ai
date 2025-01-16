@@ -1,4 +1,5 @@
-import { useSubscription } from '@/lib/hooks/useSubscription';
+import { useTranslation } from 'react-i18next';
+import { useSubscription } from '@/hooks/useSubscription';
 import { SUBSCRIPTION_PLANS } from '@/types/subscription';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';

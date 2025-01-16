@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useUser } from '@/lib/hooks/useUser';
-import { useSubscription } from '@/lib/hooks/useSubscription';
+import { useSubscription } from '@/hooks/useSubscription';
 import { SubscriptionService } from '@/lib/subscription';
 import { SUBSCRIPTION_PLANS, SubscriptionTier } from '@/types/subscription';
 import { Button } from '@/components/ui/button';

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { SUBSCRIPTION_PLANS } from '@/lib/plans';
+import { supabase } from '@/lib/supabase-client';
 
 // Check if we're on the client side
 const isClient = typeof window !== 'undefined';
@@ -16,15 +17,15 @@ console.debug('[Subscription] Environment check:', {
   availableKeys: Object.keys(process.env).filter(key => key.includes('SUPABASE'))
 });
 
-// Only create admin client on server side
-export const adminClient = !isClient && supabaseUrl && supabaseServiceKey ? 
+// Use regular client on client side, admin client on server side
+export const adminClient = isClient ? supabase : (supabaseUrl && supabaseServiceKey ? 
   createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
       detectSessionInUrl: false
     }
-  }) : null;
+  }) : null);
 
 // Log initialization status
 console.debug('[Subscription] Initialization:', {
@@ -60,9 +61,10 @@ export class SubscriptionService {
         return this.getDefaultSubscription(userId);
       }
 
+      console.debug('[Subscription] Fetching subscription for user:', userId);
       const { data: subscription, error } = await adminClient
         .from('subscriptions')
-        .select('id, user_id, tier, status, current_period_start, current_period_end, cancel_at_period_end, created_at, updated_at')
+        .select('*')
         .eq('user_id', userId)
         .maybeSingle();
 
@@ -76,22 +78,43 @@ export class SubscriptionService {
         return this.getDefaultSubscription(userId);
       }
 
-      // Ensure tier is one of the valid values
-      const tier = subscription.tier === 'free' || subscription.tier === 'basic' || subscription.tier === 'pro' 
-        ? subscription.tier 
+      console.debug('[Subscription] Raw subscription data from DB:', subscription);
+
+      // Ensure tier is one of the valid values and normalize to lowercase
+      const rawTier = subscription.tier;
+      const normalizedTier = rawTier?.toLowerCase();
+      
+      console.debug('[Subscription] Tier normalization:', {
+        rawTier,
+        normalizedTier,
+        isValidTier: normalizedTier === 'free' || normalizedTier === 'basic' || normalizedTier === 'pro'
+      });
+
+      const validTier = normalizedTier === 'free' || normalizedTier === 'basic' || normalizedTier === 'pro' 
+        ? normalizedTier 
         : 'free';
 
-      return {
+      const result = {
         id: subscription.id,
         userId: subscription.user_id,
-        tier,
+        tier: validTier,
         status: subscription.status || 'active',
-        currentPeriodStart: new Date(subscription.current_period_start),
+        currentPeriodStart: new Date(subscription.current_period_start || Date.now()),
         currentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end) : null,
         cancelAtPeriodEnd: subscription.cancel_at_period_end || false,
-        createdAt: new Date(subscription.created_at),
-        updatedAt: new Date(subscription.updated_at)
+        createdAt: new Date(subscription.created_at || Date.now()),
+        updatedAt: new Date(subscription.updated_at || Date.now())
       };
+
+      console.debug('[Subscription] Processed subscription data:', {
+        result,
+        originalTier: subscription.tier,
+        normalizedTier: validTier,
+        status: result.status,
+        currentPeriodEnd: result.currentPeriodEnd
+      });
+
+      return result;
     } catch (error) {
       console.error('[Subscription] Error in getCurrentSubscription:', error);
       return this.getDefaultSubscription(userId);
@@ -126,7 +149,7 @@ export class SubscriptionService {
   }
 
   private static getDefaultSubscription(userId: string): Subscription {
-    return {
+    const result = {
       id: 'free',
       userId,
       tier: 'free',
@@ -137,6 +160,8 @@ export class SubscriptionService {
       createdAt: new Date(),
       updatedAt: new Date()
     };
+    console.debug('[Subscription] Using default subscription:', result);
+    return result;
   }
 
   static async getCurrentUsage(userId: string): Promise<SubscriptionUsage> {
@@ -145,7 +170,19 @@ export class SubscriptionService {
 
       // Get subscription to determine scan limits
       const subscription = await this.getCurrentSubscription(userId);
-      const plan = SUBSCRIPTION_PLANS[subscription.tier];
+      console.debug('[Subscription] Got subscription for usage:', {
+        tier: subscription.tier,
+        status: subscription.status
+      });
+
+      // Ensure lowercase tier for plan lookup
+      const tier = subscription.tier.toLowerCase();
+      const plan = SUBSCRIPTION_PLANS[tier];
+      console.debug('[Subscription] Using plan for tier:', {
+        tier,
+        planName: plan?.name,
+        planLimits: plan?.limits
+      });
 
       if (!adminClient) {
         console.debug('[Subscription] No admin client available, returning default usage');
@@ -164,31 +201,31 @@ export class SubscriptionService {
         return this.getDefaultUsage(plan);
       }
 
-      // For testing - log the raw stats
       console.debug('[Subscription] Raw stats from DB:', stats);
 
       const monthlyLimit = plan.limits.scansPerMonth;
-      const scansCount = stats.scans_this_month || 0;
-      const totalCards = stats.cards_count || 0;
-      const uniqueCompanies = stats.unique_companies || 0;
+      const scansCount = stats?.scans_this_month || 0;
+      const totalCards = stats?.cards_count || 0;
+      const uniqueCompanies = stats?.unique_companies || 0;
 
-      // Calculate remaining scans
-      const remainingScans = Math.max(0, monthlyLimit - scansCount);
+      // For Pro plan, remaining scans should be Infinity
+      const remainingScans = monthlyLimit === Infinity ? Infinity : Math.max(0, monthlyLimit - scansCount);
 
-      // For testing - log the calculated values
-      console.debug('[Subscription] Calculated usage:', {
-        scansCount,
-        companiesTracked: uniqueCompanies,
-        totalCards,
-        remainingScans
-      });
-
-      return {
+      const result = {
         scansCount,
         companiesTracked: uniqueCompanies,
         totalCards,
         remainingScans
       };
+
+      console.debug('[Subscription] Calculated usage:', {
+        result,
+        monthlyLimit,
+        isPro: tier === 'pro',
+        planName: plan.name
+      });
+
+      return result;
     } catch (error) {
       console.error('[Subscription] Error getting usage:', error);
       return this.getDefaultUsage(SUBSCRIPTION_PLANS.free);
@@ -196,12 +233,17 @@ export class SubscriptionService {
   }
 
   private static getDefaultUsage(plan: any): SubscriptionUsage {
-    return {
+    const result = {
       scansCount: 0,
       companiesTracked: 0,
       totalCards: 0,
       remainingScans: plan.limits.scansPerMonth
     };
+    console.debug('[Subscription] Using default usage:', {
+      result,
+      planLimits: plan.limits
+    });
+    return result;
   }
 
   static async updateUsageAfterCardDeletion(userId: string): Promise<void> {
@@ -307,64 +349,52 @@ export class SubscriptionService {
     return `${year}-${month}`;
   }
 
-  static async incrementUsage(userId: string, action: 'scan' | 'company' | 'card'): Promise<void> {
-    if (!userId) return;
-
-    const currentMonth = this.formatMonthDate();
-
+  static async incrementUsage(userId: string, action: 'scan' | 'track_company'): Promise<void> {
     try {
       if (!adminClient) {
-        console.error('[Subscription] No admin client available for usage increment');
-        throw new Error('Service configuration error');
+        console.debug('[Subscription] No admin client available, skipping usage increment');
+        return;
       }
 
-      // Get or create usage record for current month
-      const { data: existingUsage, error: queryError } = await adminClient
-        .from('subscription_usage')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('month', currentMonth)
-        .single();
+      // Get current month in YYYY-MM format
+      const currentMonth = this.formatMonthDate();
 
-      if (queryError && queryError.code !== 'PGRST116') { // Not found error is ok
-        console.error('[Subscription] Error querying usage:', queryError);
-        throw queryError;
+      // Get current subscription and usage
+      const [subscription, usage] = await Promise.all([
+        this.getCurrentSubscription(userId),
+        this.getCurrentUsage(userId)
+      ]);
+
+      // Check if user can perform action
+      const canPerform = await this.canPerformAction(userId, action);
+      if (!canPerform) {
+        throw new Error(`User has reached their ${action} limit`);
       }
 
-      if (!existingUsage) {
-        // Create new usage record
-        const { error: insertError } = await adminClient
-          .from('subscription_usage')
-          .insert([{
-            user_id: userId,
-            month: currentMonth,
-            scans_count: action === 'scan' ? 1 : 0,
-            companies_tracked: action === 'company' ? 1 : 0,
-            total_cards: action === 'card' ? 1 : 0
-          }]);
+      // Prepare update data based on action type
+      let updateData: any = {
+        updated_at: new Date().toISOString()
+      };
 
-        if (insertError) {
-          console.error('[Subscription] Error inserting usage:', insertError);
-          throw insertError;
-        }
-      } else {
-        // Update existing usage record
-        const updates = {
-          scans_count: action === 'scan' ? (existingUsage.scans_count || 0) + 1 : (existingUsage.scans_count || 0),
-          companies_tracked: action === 'company' ? (existingUsage.companies_tracked || 0) + 1 : (existingUsage.companies_tracked || 0),
-          total_cards: action === 'card' ? (existingUsage.total_cards || 0) + 1 : (existingUsage.total_cards || 0)
-        };
+      if (action === 'scan') {
+        updateData.scans_this_month = (usage.scansCount || 0) + 1;
+      } else if (action === 'track_company') {
+        updateData.unique_companies = (usage.companiesTracked || 0) + 1;
+      }
 
-        const { error: updateError } = await adminClient
-          .from('subscription_usage')
-          .update(updates)
-          .eq('user_id', userId)
-          .eq('month', currentMonth);
+      // Update usage stats
+      const { error } = await adminClient
+        .from('user_usage_stats')
+        .upsert({
+          user_id: userId,
+          ...updateData
+        }, {
+          onConflict: 'user_id'
+        });
 
-        if (updateError) {
-          console.error('[Subscription] Error updating usage:', updateError);
-          throw updateError;
-        }
+      if (error) {
+        console.error('[Subscription] Error incrementing usage:', error);
+        throw error;
       }
     } catch (error) {
       console.error('[Subscription] Error in incrementUsage:', error);

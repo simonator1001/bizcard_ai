@@ -1,6 +1,7 @@
 'use client';
 
-import { useSubscription } from '@/lib/hooks/useSubscription';
+import { useTranslation } from 'react-i18next';
+import { useSubscription } from '@/hooks/useSubscription';
 import { cn } from '@/lib/utils';
 
 interface LogoProps {
