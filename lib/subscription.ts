@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { SUBSCRIPTION_PLANS } from '@/lib/plans';
 import { supabase } from '@/lib/supabase-client';
+import { CustomBranding, Subscription as SubscriptionType, SubscriptionTier } from '@/types/subscription';
 
 // Check if we're on the client side
 const isClient = typeof window !== 'undefined';
@@ -34,17 +35,8 @@ console.debug('[Subscription] Initialization:', {
   url: supabaseUrl
 });
 
-export interface Subscription {
-  id: string;
-  userId: string;
-  tier: 'free' | 'basic' | 'pro';
-  status: 'active' | 'inactive' | 'cancelled';
-  currentPeriodStart: Date;
-  currentPeriodEnd: Date | null;
-  cancelAtPeriodEnd: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+export type { CustomBranding };
+export type Subscription = SubscriptionType;
 
 export interface SubscriptionUsage {
   scansCount: number;
@@ -90,20 +82,21 @@ export class SubscriptionService {
         isValidTier: normalizedTier === 'free' || normalizedTier === 'basic' || normalizedTier === 'pro'
       });
 
-      const validTier = normalizedTier === 'free' || normalizedTier === 'basic' || normalizedTier === 'pro' 
-        ? normalizedTier 
+      const validTier: SubscriptionTier = normalizedTier === 'free' || normalizedTier === 'basic' || normalizedTier === 'pro' || normalizedTier === 'enterprise'
+        ? normalizedTier as SubscriptionTier
         : 'free';
 
-      const result = {
+      const result: Subscription = {
         id: subscription.id,
         userId: subscription.user_id,
         tier: validTier,
         status: subscription.status || 'active',
         currentPeriodStart: new Date(subscription.current_period_start || Date.now()),
-        currentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end) : null,
+        currentPeriodEnd: new Date(subscription.current_period_end || new Date().setFullYear(new Date().getFullYear() + 1)),
         cancelAtPeriodEnd: subscription.cancel_at_period_end || false,
         createdAt: new Date(subscription.created_at || Date.now()),
-        updatedAt: new Date(subscription.updated_at || Date.now())
+        updatedAt: new Date(subscription.updated_at || Date.now()),
+        customBranding: subscription.custom_branding || undefined
       };
 
       console.debug('[Subscription] Processed subscription data:', {
@@ -149,16 +142,17 @@ export class SubscriptionService {
   }
 
   private static getDefaultSubscription(userId: string): Subscription {
-    const result = {
+    const now = new Date();
+    const result: Subscription = {
       id: 'free',
       userId,
-      tier: 'free',
+      tier: 'free' as SubscriptionTier,
       status: 'active',
-      currentPeriodStart: new Date(),
-      currentPeriodEnd: null,
+      currentPeriodStart: now,
+      currentPeriodEnd: new Date(now.setFullYear(now.getFullYear() + 1)),
       cancelAtPeriodEnd: false,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: now,
+      updatedAt: now
     };
     console.debug('[Subscription] Using default subscription:', result);
     return result;

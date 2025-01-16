@@ -11,10 +11,10 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function SubscriptionStatus() {
-  const { subscription, usage, loading, error } = useSubscription();
+  const { subscription, usage, isLoading, error } = useSubscription();
   const router = useRouter();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Card className="p-6">
         <div className="flex items-center justify-center">
@@ -30,7 +30,7 @@ export function SubscriptionStatus() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {error.message || 'Failed to load subscription data'}
+            {error || 'Failed to load subscription data'}
           </AlertDescription>
         </Alert>
       </Card>

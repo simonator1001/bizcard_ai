@@ -1,19 +1,19 @@
-import { Card } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import { useSubscription } from "@/lib/hooks/useSubscription"
+import { useSubscription } from "@/hooks/useSubscription"
 import { SUBSCRIPTION_PLANS } from "@/lib/plans"
 import { useTranslation } from "react-i18next"
+import { AlertCircle } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function FreeUsageCounter() {
-  const { subscription, usage, loading } = useSubscription();
+  const { subscription, usage, isLoading } = useSubscription();
   const router = useRouter();
   const { t } = useTranslation();
 
-  if (loading || subscription?.tier !== 'free') return null;
+  if (isLoading || subscription?.tier !== 'free') return null;
 
   const freePlan = SUBSCRIPTION_PLANS['free'];
   if (!freePlan) return null;

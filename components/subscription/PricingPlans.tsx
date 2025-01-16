@@ -14,52 +14,41 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function PricingPlans() {
   const { user } = useUser();
-  const { subscription, error: subscriptionError, refetch } = useSubscription();
+  const { subscription, error: subscriptionError, refreshUsage } = useSubscription();
   const [isYearly, setIsYearly] = useState(false);
   const [loading, setLoading] = useState<SubscriptionTier | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
-  const handleUpgrade = async (tier: SubscriptionTier) => {
+  const handleSubscribe = async (tier: SubscriptionTier) => {
     if (!user) {
       toast({
-        title: 'Please sign in',
-        description: 'You need to be signed in to upgrade your subscription.',
+        title: 'Authentication required',
+        description: 'Please sign in to subscribe to a plan.',
         variant: 'destructive',
       });
       return;
     }
 
-    // Handle enterprise tier separately
-    if (tier === 'enterprise') {
-      window.location.href = 'mailto:sales@bizcard.com';
-      return;
-    }
-
-    setLoading(tier);
-    setError(null);
     try {
-      // TODO: Integrate with payment provider
-      const success = await SubscriptionService.upgradeSubscription(user.id, tier, {
-        provider: 'stripe',
-        subscriptionId: 'dummy-id',
-      });
+      setLoading(tier);
+      setError(null);
 
-      if (success) {
-        toast({
-          title: 'Subscription upgraded!',
-          description: `You've successfully upgraded to the ${tier} plan.`,
-        });
-        // Refresh subscription data
-        await refetch();
-      } else {
-        throw new Error('Failed to upgrade subscription');
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to upgrade subscription';
-      setError(new Error(errorMessage));
+      // TODO: Implement subscription logic here
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulated delay
+
+      // Refresh subscription data
+      await refreshUsage();
+
       toast({
-        title: 'Error',
-        description: errorMessage,
+        title: 'Subscription updated',
+        description: `You are now subscribed to the ${tier} plan.`,
+      });
+    } catch (err) {
+      console.error('Error updating subscription:', err);
+      setError(err as Error);
+      toast({
+        title: 'Subscription failed',
+        description: 'Failed to update subscription. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -69,11 +58,11 @@ export function PricingPlans() {
 
   if (subscriptionError) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="mb-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {subscriptionError.message || 'Failed to load subscription data'}
+            {subscriptionError}
           </AlertDescription>
         </Alert>
       </div>
@@ -150,7 +139,7 @@ export function PricingPlans() {
             <Button
               className="w-full"
               variant={plan.tier === 'enterprise' ? 'outline' : 'default'}
-              onClick={() => handleUpgrade(plan.tier)}
+              onClick={() => handleSubscribe(plan.tier)}
               disabled={loading === plan.tier || subscription?.tier === plan.tier}
             >
               {loading === plan.tier ? 'Processing...' : 

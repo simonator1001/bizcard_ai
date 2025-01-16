@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useUser } from '@/hooks/useUser';
 import { SubscriptionService, Subscription, SubscriptionUsage } from '@/lib/subscription';
 import { SUBSCRIPTION_PLANS } from '@/lib/plans';
@@ -9,6 +9,21 @@ export function useSubscription() {
   const [usage, setUsage] = useState<SubscriptionUsage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const refreshUsage = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      setIsLoading(true);
+      const usageData = await SubscriptionService.getCurrentUsage(user.id);
+      setUsage(usageData);
+    } catch (err) {
+      console.error('[useSubscription] Error refreshing usage:', err);
+      setError('Failed to refresh usage data');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     async function fetchSubscriptionData() {
@@ -108,6 +123,7 @@ export function useSubscription() {
     isActive: subscription?.status === 'active',
     canScan: !isLoading && usage ? usage.remainingScans > 0 : false,
     canTrackCompany: !isLoading && usage && plan ? usage.companiesTracked < plan.limits.companiesTracked : false,
+    refreshUsage
   };
 
   // Debug log for final return value
