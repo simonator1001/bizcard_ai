@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react';
 import { BusinessCard } from '@/types/business-card';
 import { Button } from '@/components/ui/button';
 import { Mail, Phone, MoreVertical, Pencil, Trash } from 'lucide-react';
@@ -12,6 +13,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
+import { getImageUrl } from '@/lib/supabase-storage';
 
 interface CardItemProps {
   card: BusinessCard;
@@ -32,6 +34,9 @@ export function CardItem({
   onEdit,
   onDelete,
 }: CardItemProps) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
+
   const initials = card.name
     ? card.name
         .split(' ')
@@ -39,6 +44,49 @@ export function CardItem({
         .join('')
         .toUpperCase()
     : '?';
+
+  useEffect(() => {
+    async function loadImage() {
+      if (card.image_url && !imageError) {
+        try {
+          const url = await getImageUrl(card.image_url);
+          setImageUrl(url);
+          setImageError(!url);
+        } catch (error) {
+          console.error('[CardItem] Error loading image:', error);
+          setImageError(true);
+        }
+      }
+    }
+    loadImage();
+  }, [card.image_url, imageError]);
+
+  const handleImageError = () => {
+    console.warn('[CardItem] Image failed to load:', card.image_url);
+    setImageError(true);
+  };
+
+  const renderAvatar = (size: 'sm' | 'md' | 'lg') => {
+    const sizeClasses = {
+      sm: 'h-12 w-12',
+      md: 'h-20 w-20',
+      lg: 'h-24 w-24'
+    };
+
+    return (
+      <Avatar className={sizeClasses[size]}>
+        {imageUrl && !imageError ? (
+          <AvatarImage 
+            src={imageUrl} 
+            alt={card.name || ''} 
+            onError={handleImageError}
+          />
+        ) : (
+          <AvatarFallback>{initials}</AvatarFallback>
+        )}
+      </Avatar>
+    );
+  };
 
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -62,13 +110,7 @@ export function CardItem({
           />
         </div>
         <div className="flex items-center space-x-4">
-          <Avatar className="h-12 w-12">
-            {card.image_url ? (
-              <AvatarImage src={card.image_url} alt={card.name || ''} />
-            ) : (
-              <AvatarFallback>{initials}</AvatarFallback>
-            )}
-          </Avatar>
+          {renderAvatar('sm')}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">{card.name}</p>
             <p className="text-sm text-muted-foreground">{card.title}</p>
@@ -132,13 +174,7 @@ export function CardItem({
           />
         </div>
         <div className="flex flex-col items-center text-center space-y-4">
-          <Avatar className="h-20 w-20">
-            {card.image_url ? (
-              <AvatarImage src={card.image_url} alt={card.name || ''} />
-            ) : (
-              <AvatarFallback>{initials}</AvatarFallback>
-            )}
-          </Avatar>
+          {renderAvatar('md')}
           <div className="space-y-2">
             <p className="text-lg font-medium">{card.name}</p>
             <p className="text-sm text-muted-foreground">{card.title}</p>
@@ -202,13 +238,7 @@ export function CardItem({
         />
       </div>
       <div className="flex flex-col items-center text-center space-y-4">
-        <Avatar className="h-24 w-24">
-          {card.image_url ? (
-            <AvatarImage src={card.image_url} alt={card.name || ''} />
-          ) : (
-            <AvatarFallback>{initials}</AvatarFallback>
-          )}
-        </Avatar>
+        {renderAvatar('lg')}
         <div className="space-y-2">
           <p className="text-xl font-medium">{card.name}</p>
           <p className="text-sm text-muted-foreground">{card.title}</p>

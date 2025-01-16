@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -15,9 +15,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Mail, Phone, MapPin, Trash2, Edit } from 'lucide-react'
+import { Mail, Phone, MapPin, Trash2, Edit, Download } from 'lucide-react'
 import Image from 'next/image'
 import { BusinessCard } from '@/types/business-card'
+import { getImageUrl } from '@/lib/supabase-storage'
 
 interface BusinessCardDetailsProps {
   card: BusinessCard
@@ -34,6 +35,10 @@ export function BusinessCardDetails({
 }: BusinessCardDetailsProps) {
   const { t } = useTranslation()
   const [showDeleteAlert, setShowDeleteAlert] = React.useState(false)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [imageError, setImageError] = useState(false)
+  const [isImageLoading, setIsImageLoading] = useState(false)
+
   const initials = card.name
     ? card.name
         .split(' ')
@@ -41,6 +46,32 @@ export function BusinessCardDetails({
         .join('')
         .toUpperCase()
     : '?'
+
+  useEffect(() => {
+    async function loadImage() {
+      if (card.image_url && !imageError) {
+        try {
+          setIsImageLoading(true)
+          console.log('[BusinessCardDetails] Loading image:', card.image_url)
+          const url = await getImageUrl(card.image_url)
+          console.log('[BusinessCardDetails] Image URL:', url)
+          setImageUrl(url)
+          setImageError(!url)
+        } catch (error) {
+          console.error('[BusinessCardDetails] Error loading image:', error)
+          setImageError(true)
+        } finally {
+          setIsImageLoading(false)
+        }
+      }
+    }
+    loadImage()
+  }, [card.image_url, imageError])
+
+  const handleImageError = () => {
+    console.warn('[BusinessCardDetails] Image failed to load:', card.image_url)
+    setImageError(true)
+  }
 
   const handleDelete = () => {
     setShowDeleteAlert(true)
@@ -52,27 +83,65 @@ export function BusinessCardDetails({
     onClose()
   }
 
+  const handleDownloadImage = async () => {
+    if (!imageUrl) return
+    
+    try {
+      const response = await fetch(imageUrl)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `business-card-${card.name || 'image'}.${blob.type.split('/')[1]}`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('[BusinessCardDetails] Error downloading image:', error)
+    }
+  }
+
   return (
     <>
       <Card className="w-full max-w-2xl mx-auto">
         <CardContent className="p-6">
           <div className="flex items-start gap-6">
-            <Avatar className="h-24 w-24">
-              {card.image_url ? (
-                <div className="relative w-full h-full">
-                  <Image
-                    src={card.image_url}
-                    alt={card.name || 'Business Card'}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              ) : (
-                <AvatarFallback className="bg-primary/10 text-primary text-2xl">
-                  {initials}
-                </AvatarFallback>
+            <div className="relative">
+              <Avatar className="h-24 w-24">
+                {isImageLoading ? (
+                  <AvatarFallback>
+                    <div className="animate-pulse bg-primary/10 w-full h-full rounded-full" />
+                  </AvatarFallback>
+                ) : imageUrl && !imageError ? (
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={imageUrl}
+                      alt={card.name || 'Business Card'}
+                      fill
+                      className="object-cover rounded-full"
+                      onError={handleImageError}
+                      sizes="(max-width: 96px) 100vw, 96px"
+                      priority
+                    />
+                  </div>
+                ) : (
+                  <AvatarFallback className="bg-primary/10 text-primary text-2xl">
+                    {initials}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              {imageUrl && !imageError && !isImageLoading && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-background shadow-md hover:bg-accent"
+                  onClick={handleDownloadImage}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
               )}
-            </Avatar>
+            </div>
 
             <div className="flex-1">
               <div className="flex justify-between items-start">
@@ -157,7 +226,7 @@ export function BusinessCardDetails({
               {card.notes && (
                 <div className="mt-6">
                   <h3 className="font-medium mb-2">{t('card.notes')}</h3>
-                  <p className="text-gray-600">{card.notes}</p>
+                  <p className="text-gray-600 whitespace-pre-wrap">{card.notes}</p>
                 </div>
               )}
             </div>
