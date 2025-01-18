@@ -26,6 +26,11 @@ const nextConfig = {
   publicRuntimeConfig: {
     NEXT_PUBLIC_PERPLEXITY_API_KEY: process.env.NEXT_PUBLIC_PERPLEXITY_API_KEY,
   },
+  modularizeImports: {
+    'lucide-react': {
+      transform: 'lucide-react/dist/esm/icons/{{member}}'
+    }
+  }
 };
 
 module.exports = nextConfig; 

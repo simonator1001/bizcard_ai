@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { Logo } from './logo';
-import { Button } from './button';
+import { Logo } from '@/components/ui/logo';
+import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/lib/hooks/useUser';
 import { useTranslation } from 'react-i18next';
 import { useSubscription } from '@/hooks/useSubscription';
-import { ExpandableTabs } from './expandable-tabs';
+import { ExpandableTabs } from '@/components/ui/expandable-tabs';
 import { 
   ScanLine, 
   LayoutGrid, 

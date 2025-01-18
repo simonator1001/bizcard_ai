@@ -6,7 +6,29 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { Check, ScanLine, LayoutList, Network, Newspaper, Star, Settings, Search, Camera, Upload, Trash2, Edit2, Bell, HelpCircle, LogOut, Mail, Users, LayoutGrid, X, Download } from 'lucide-react'
+import { 
+  Check, 
+  ScanLine, 
+  LayoutList, 
+  Network, 
+  Newspaper, 
+  Star, 
+  Settings, 
+  Search, 
+  Camera, 
+  Upload, 
+  Trash2, 
+  Edit2, 
+  Bell, 
+  HelpCircle, 
+  LogOut, 
+  Mail, 
+  Users, 
+  LayoutGrid, 
+  X, 
+  Download,
+  type LucideIcon
+} from 'lucide-react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -23,8 +45,19 @@ import { SubscriptionService } from '@/lib/subscription'
 import { SettingsTab } from '@/components/shared/SettingsTab'
 import { toast } from 'sonner'
 import { NewsView } from '@/components/news/NewsView'
+import { ExpandableTabs } from "@/components/ui/expandable-tabs"
+import { Footer } from "@/components/ui/code.demo"
 
 type ViewMode = 'list' | 'grid' | 'carousel' | 'stack';
+
+const navigationItems: Array<{ title: string; icon: LucideIcon; type?: "separator" }> = [
+  { title: "Scan", icon: ScanLine },
+  { title: "Manage", icon: LayoutGrid },
+  { type: "separator" },
+  { title: "Network", icon: Network },
+  { title: "News", icon: Newspaper },
+  { title: "Settings", icon: Settings },
+];
 
 const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: { 
   card: BusinessCard; 
@@ -251,62 +284,28 @@ export default function Component() {
     }
   }
 
-  return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-purple-50 to-pink-50">
-      <UpgradePrompt 
-        open={showUpgradePrompt} 
-        onOpenChange={setShowUpgradePrompt} 
-      />
-      <header className="bg-white shadow-sm py-6 px-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            Simon.AI BizCard Digital Archive
-          </h1>
-          {user ? (
-            <Button
-              variant="ghost"
-              className="text-gray-600 hover:text-gray-900"
-              onClick={signOut}
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              className="text-gray-600 hover:text-gray-900"
-              onClick={() => router.push('/signin')}
-            >
-              Sign In
-            </Button>
-          )}
-        </div>
-      </header>
+  const handleNavigationChange = (index: number | null) => {
+    if (index === null) return;
+    const item = navigationItems[index];
+    if (!item.type && item.title) {
+      setActiveTab(item.title.toLowerCase());
+    }
+  };
 
-      <main className="flex-1 overflow-hidden">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-          <TabsList className="w-full justify-start p-0 bg-transparent border-b">
-            <TabsTrigger value="scan" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">
-              <ScanLine className="w-4 h-4 mr-2" />
-              Scan
-            </TabsTrigger>
-            <TabsTrigger value="manage" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">
-              <LayoutList className="w-4 h-4 mr-2" />
-              Manage
-            </TabsTrigger>
-            <TabsTrigger value="network" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">
-              <Network className="w-4 h-4 mr-2" />
-              Network
-            </TabsTrigger>
-            <TabsTrigger value="news" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">
-              <Newspaper className="w-4 h-4 mr-2" />
-              News
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">
-              <Settings className="w-4 h-4 mr-2" />
-              Settings
-            </TabsTrigger>
-          </TabsList>
+  return (
+    <div className="min-h-screen bg-background">
+      <main className="h-screen flex flex-col">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
+          <div className="border-b sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="container flex h-16 items-center">
+              <ExpandableTabs
+                tabs={navigationItems}
+                activeColor="text-primary"
+                onChange={handleNavigationChange}
+                className="mr-4"
+              />
+            </div>
+          </div>
 
           <TabsContent value="scan" className="h-full p-8 overflow-auto">
             <Card className="mb-8 overflow-hidden">
@@ -665,6 +664,7 @@ export default function Component() {
           </TabsContent>
         </Tabs>
       </main>
+      <Footer />
     </div>
   )
 }
