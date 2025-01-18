@@ -8,13 +8,10 @@ export interface NewsArticle {
   id: string;
   title: string;
   summary: string;
-  content: string;
   url: string;
-  imageUrl?: string;
-  source: string;
   publishedDate: string;
+  source: string;
   company: string;
-  mentionedEmployees?: EmployeeMention[];
-  sentiment?: 'positive' | 'negative' | 'neutral';
-  relevanceScore?: number;
+  imageUrl?: string;
+  mentionedEmployees?: string[];
 } 

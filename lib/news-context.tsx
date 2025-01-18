@@ -1,16 +1,5 @@
 import React, { createContext, useContext, useState } from 'react'
-
-interface NewsArticle {
-  id: string
-  title: string
-  source: string
-  date: string
-  snippet: string
-  url: string
-  imageUrl: string
-  relatedCompanies?: string[]
-  relatedPeople?: string[]
-}
+import { NewsArticle } from '@/types/news-article'
 
 interface NewsContextType {
   articles: NewsArticle[]
@@ -48,7 +37,7 @@ export function NewsProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json()
-      setArticles(data)
+      setArticles(data.articles || [])
     } catch (err) {
       console.error('Error fetching news:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch news')

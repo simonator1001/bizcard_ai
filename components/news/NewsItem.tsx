@@ -1,7 +1,12 @@
-import { Building2, Image as ImageIcon } from "lucide-react"
-import { NewsArticle } from "@/lib/news-service"
-import Image from "next/image"
-import { useState } from "react"
+'use client';
+
+import React, { useState } from 'react';
+import Image from 'next/image';
+import { ExternalLink } from 'lucide-react';
+import { NewsArticle } from '@/types/news-article';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface NewsItemProps {
   article: NewsArticle;
@@ -9,66 +14,78 @@ interface NewsItemProps {
   showCompany?: boolean;
 }
 
-export const NewsItem: React.FC<NewsItemProps> = ({
-  article,
-  onClick,
-  showCompany = false
-}) => {
-  const [imageError, setImageError] = useState(false)
+export function NewsItem({ article, onClick, showCompany = true }: NewsItemProps) {
+  const [imageError, setImageError] = useState(false);
 
-  // Function to get the company logo from the article source
-  const getCompanyLogo = () => {
-    // Clean the company name if available, otherwise use the source
-    const sourceName = article.companyName || article.source;
-    const cleanSource = sourceName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    return `https://logo.clearbit.com/${cleanSource}.com`;
-  };
-
-  // Get the most appropriate image
-  const imageUrl = getCompanyLogo();
+  const formattedDate = new Date(article.publishedDate).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
 
   return (
-    <div
-      className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-      onClick={onClick}
-    >
-      <div className="flex gap-4">
-        {/* Image Container */}
-        <div 
-          className="relative min-w-[120px] h-[80px] rounded-md overflow-hidden bg-white border"
-        >
-          {!imageError ? (
-            <Image
-              src={imageUrl}
-              alt={article.title}
-              fill
-              className="object-cover"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-              <ImageIcon className="h-8 w-8 text-gray-400" />
-            </div>
-          )}
+    <Card className="group overflow-hidden hover:bg-muted/50 transition-colors">
+      <div className="flex gap-4 p-4">
+        <div className="relative h-[120px] w-[120px] flex-shrink-0 overflow-hidden rounded-md bg-muted">
+          <Image
+            src={!imageError ? article.imageUrl : `https://logo.clearbit.com/${article.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`}
+            alt={article.title}
+            fill
+            className={cn(
+              "transition-transform duration-300 group-hover:scale-105",
+              !imageError ? "object-cover" : "object-contain p-2"
+            )}
+            onError={() => setImageError(true)}
+            sizes="120px"
+          />
         </div>
-        
-        {/* Content */}
-        <div className="flex-1">
-          {showCompany && article.companyName && (
-            <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
-              <Building2 className="h-4 w-4" />
-              <span>{article.companyName}</span>
+        <div className="flex flex-col flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 space-y-2">
+              <a 
+                href={article.url} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="inline-block hover:underline"
+              >
+                <h3 className="font-semibold leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+                  {article.title}
+                </h3>
+              </a>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline" className="text-xs">
+                  {formattedDate}
+                </Badge>
+                <Badge variant="secondary" className="text-xs">
+                  {article.source}
+                </Badge>
+                {showCompany && (
+                  <Badge variant="default" className="text-xs">
+                    {article.company}
+                  </Badge>
+                )}
+                {article.mentionedEmployees?.map((employee, index) => (
+                  <Badge key={index} variant="outline" className="text-xs bg-blue-50">
+                    {employee}
+                  </Badge>
+                ))}
+              </div>
             </div>
-          )}
-          <h3 className="font-semibold mb-2">{article.title}</h3>
-          <p className="text-sm text-muted-foreground mb-2">{article.summary}</p>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>{article.source}</span>
-            <span>•</span>
-            <span>{new Date(article.publishedDate).toLocaleDateString()}</span>
+            <a
+              href={article.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
           </div>
+          <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+            {article.summary}
+          </p>
         </div>
       </div>
-    </div>
-  )
+    </Card>
+  );
 } 

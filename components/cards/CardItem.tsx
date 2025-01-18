@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getImageUrl } from '@/lib/supabase-storage';
+import Image from 'next/image';
+import { ImageIcon } from 'lucide-react';
 
 interface CardItemProps {
   card: BusinessCard;
@@ -37,21 +39,17 @@ export function CardItem({
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
 
-  const initials = card.name
-    ? card.name
-        .split(' ')
-        .map(n => n[0])
-        .join('')
-        .toUpperCase()
-    : '?';
-
   useEffect(() => {
     async function loadImage() {
       if (card.image_url && !imageError) {
         try {
           const url = await getImageUrl(card.image_url);
-          setImageUrl(url);
-          setImageError(!url);
+          if (url) {
+            setImageUrl(url);
+            setImageError(false);
+          } else {
+            setImageError(true);
+          }
         } catch (error) {
           console.error('[CardItem] Error loading image:', error);
           setImageError(true);
@@ -93,74 +91,103 @@ export function CardItem({
     onSelect();
   };
 
+  const initials = card.name
+    ? card.name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+    : '?';
+
+  // List view
   if (viewMode === 'list') {
     return (
       <div 
         className={cn(
           "relative p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors cursor-pointer",
+          "hover:shadow-md transition-all",
           isSelected && "ring-2 ring-primary"
         )}
         onClick={onClick}
       >
-        <div className="absolute right-2 top-2 z-10">
+        <div className="absolute right-2 top-2">
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => onSelect()}
             onClick={(e) => e.stopPropagation()}
           />
         </div>
-        <div className="flex items-center space-x-4">
-          {renderAvatar('sm')}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium">{card.name}</p>
-            <p className="text-sm text-muted-foreground">{card.title}</p>
-            <p className="text-sm text-muted-foreground">{card.company}</p>
+        <div className="flex items-center gap-4">
+          <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-muted">
+            {imageUrl && !imageError ? (
+              <Image
+                src={imageUrl}
+                alt={card.name || 'Business Card'}
+                fill
+                className="object-cover"
+                onError={handleImageError}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-muted">
+                <ImageIcon className="h-8 w-8 text-muted-foreground" />
+              </div>
+            )}
           </div>
-          <div className="flex items-center space-x-2">
-            {card.email && (
-              <a
-                href={`mailto:${card.email}`}
-                className="text-muted-foreground hover:text-primary"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Mail className="h-4 w-4" />
-              </a>
-            )}
-            {card.phone && (
-              <a
-                href={`tel:${card.phone}`}
-                className="text-muted-foreground hover:text-primary"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Phone className="h-4 w-4" />
-              </a>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon-sm">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                  <Pencil className="mr-2 h-4 w-4" /> Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
-                  <Trash className="mr-2 h-4 w-4" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-medium truncate">{card.name || card.name_zh}</p>
+                <p className="text-sm text-muted-foreground truncate">{card.title || card.title_zh}</p>
+                <p className="text-sm truncate">{card.company || card.company_zh}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {card.email && (
+                  <a
+                    href={`mailto:${card.email}`}
+                    className="text-muted-foreground hover:text-primary"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Mail className="h-4 w-4" />
+                  </a>
+                )}
+                {card.phone && (
+                  <a
+                    href={`tel:${card.phone}`}
+                    className="text-muted-foreground hover:text-primary"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Phone className="h-4 w-4" />
+                  </a>
+                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon-sm">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                      <Pencil className="mr-2 h-4 w-4" /> Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
+                      <Trash className="mr-2 h-4 w-4" /> Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
+  // Grid view
   if (viewMode === 'grid') {
     return (
       <div 
         className={cn(
-          "relative p-6 rounded-lg border bg-card hover:bg-accent/5 transition-colors cursor-pointer",
+          "relative p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors cursor-pointer",
           "hover:shadow-md transition-all",
           isSelected && "ring-2 ring-primary"
         )}
@@ -173,48 +200,42 @@ export function CardItem({
             onClick={(e) => e.stopPropagation()}
           />
         </div>
-        <div className="flex flex-col items-center text-center space-y-4">
-          {renderAvatar('md')}
-          <div className="space-y-2">
-            <p className="text-lg font-medium">{card.name}</p>
-            <p className="text-sm text-muted-foreground">{card.title}</p>
-            <p className="text-sm font-medium text-muted-foreground">{card.company}</p>
-          </div>
-          <div className="flex justify-center space-x-2">
-            {card.email && (
-              <a
-                href={`mailto:${card.email}`}
-                className="text-muted-foreground hover:text-primary"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Mail className="h-4 w-4" />
-              </a>
-            )}
-            {card.phone && (
-              <a
-                href={`tel:${card.phone}`}
-                className="text-muted-foreground hover:text-primary"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Phone className="h-4 w-4" />
-              </a>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon-sm">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                  <Pencil className="mr-2 h-4 w-4" /> Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
-                  <Trash className="mr-2 h-4 w-4" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+        <div className="relative w-full aspect-[3/2] rounded-lg overflow-hidden bg-muted mb-4">
+          {imageUrl && !imageError ? (
+            <Image
+              src={imageUrl}
+              alt={card.name || 'Business Card'}
+              fill
+              className="object-cover"
+              onError={handleImageError}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-muted">
+              <ImageIcon className="h-8 w-8 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+        <div className="space-y-1">
+          <p className="font-medium truncate">{card.name || card.name_zh}</p>
+          <p className="text-sm text-muted-foreground truncate">{card.title || card.title_zh}</p>
+          <p className="text-sm truncate">{card.company || card.company_zh}</p>
+        </div>
+        <div className="absolute bottom-4 right-4 flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button variant="ghost" size="icon-sm">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
+                <Trash className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     );
@@ -237,48 +258,60 @@ export function CardItem({
           onClick={(e) => e.stopPropagation()}
         />
       </div>
-      <div className="flex flex-col items-center text-center space-y-4">
-        {renderAvatar('lg')}
-        <div className="space-y-2">
-          <p className="text-xl font-medium">{card.name}</p>
-          <p className="text-sm text-muted-foreground">{card.title}</p>
-          <p className="text-sm font-medium text-muted-foreground">{card.company}</p>
-        </div>
-        <div className="flex justify-center space-x-2">
-          {card.email && (
-            <a
-              href={`mailto:${card.email}`}
-              className="text-muted-foreground hover:text-primary"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Mail className="h-4 w-4" />
-            </a>
-          )}
-          {card.phone && (
-            <a
-              href={`tel:${card.phone}`}
-              className="text-muted-foreground hover:text-primary"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Phone className="h-4 w-4" />
-            </a>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon-sm">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                <Pencil className="mr-2 h-4 w-4" /> Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
-                <Trash className="mr-2 h-4 w-4" /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+      <div className="relative w-full aspect-[3/2] rounded-lg overflow-hidden bg-muted mb-4">
+        {imageUrl && !imageError ? (
+          <Image
+            src={imageUrl}
+            alt={card.name || 'Business Card'}
+            fill
+            className="object-cover"
+            onError={handleImageError}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-muted">
+            <ImageIcon className="h-8 w-8 text-muted-foreground" />
+          </div>
+        )}
+      </div>
+      <div className="space-y-2">
+        <p className="text-xl font-medium truncate">{card.name || card.name_zh}</p>
+        <p className="text-sm text-muted-foreground truncate">{card.title || card.title_zh}</p>
+        <p className="text-sm font-medium truncate">{card.company || card.company_zh}</p>
+      </div>
+      <div className="flex justify-center space-x-2 mt-4">
+        {card.email && (
+          <a
+            href={`mailto:${card.email}`}
+            className="text-muted-foreground hover:text-primary"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Mail className="h-4 w-4" />
+          </a>
+        )}
+        {card.phone && (
+          <a
+            href={`tel:${card.phone}`}
+            className="text-muted-foreground hover:text-primary"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Phone className="h-4 w-4" />
+          </a>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="icon-sm">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+              <Pencil className="mr-2 h-4 w-4" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
+              <Trash className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

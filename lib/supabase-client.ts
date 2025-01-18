@@ -66,6 +66,17 @@ if (typeof window !== 'undefined') {
   console.log('[Supabase] Server client initialized');
 }
 
+// Add error handling for client initialization
+if (!_supabase) {
+  console.error('[Supabase] Failed to initialize client');
+  throw new Error('Failed to initialize Supabase client');
+}
+
+// Test connection and log result
+_supabase.auth.onAuthStateChange((event, session) => {
+  console.log('[Supabase] Auth state changed:', event, session ? 'Session exists' : 'No session');
+});
+
 export const supabase = _supabase;
 
 // Create service role client only on server-side and only if key is available

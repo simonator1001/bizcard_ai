@@ -1,0 +1,378 @@
+{
+  "appTitle": "數字檔案.ai",
+  "navigation": {
+    "dashboard": "儀表板",
+    "scan": "掃描",
+    "manage": "管理",
+    "news": "新聞",
+    "orgChart": "組織架構",
+    "settings": "設置",
+    "pro": "專業版"
+  },
+  "settings": {
+    "title": "設置",
+    "description": "管理您的帳戶偏好設置和訂閱",
+    "subscription": "訂閱",
+    "preferences": "偏好設置",
+    "language": "語言",
+    "languageDescription": "選擇您的首選語言",
+    "darkMode": "深色模式",
+    "darkModeDescription": "啟用深色模式以獲得更好的夜間觀看體驗",
+    "notifications": "通知",
+    "notificationsDescription": "接收關於您的聯絡人的更新",
+    "autoScan": "自動掃描",
+    "autoScanDescription": "上傳後自動處理名片"
+  },
+  "subscription": {
+    "businessCardScans": "剩餘免費掃描次數",
+    "totalCardsStored": "已存儲名片數量：{{count}}",
+    "companiesTracked": "可追蹤的公司數量",
+    "upgradeNow": "升級到專業版",
+    "subscriptionEnding": "您的訂閱將於以下日期結束",
+    "renewSubscription": "請續訂您的訂閱以保持所有功能的訪問權限",
+    "freePlan": "免費計劃",
+    "renewsOn": "計劃到期日：",
+    "manageSubscription": "管理計劃",
+    "currentPlan": "當前計劃",
+    "approachingLimit": "您即將達到免費計劃的使用限制。升級到專業版獲取無限訪問權限！",
+    "of": "共",
+    "left": "剩餘"
+  },
+  "account": {
+    "title": "帳戶",
+    "signOut": "退出登錄"
+  },
+  "pro": {
+    "title": "解鎖專業版功能以提升效率",
+    "subtitle": "升級到專業版，享受無限存儲、高級OCR和獨家功能",
+    "getStarted": "開始使用專業版",
+    "choosePlan": "選擇您的計劃",
+    "feature": "功能",
+    "freePlan": "免費版",
+    "basicPlan": "基礎版",
+    "proPlan": "專業版",
+    "bestValue": "最佳選擇",
+    "features": {
+      "cardScanning": {
+        "name": "名片掃描",
+        "free": "每月5次",
+        "basic": "每月30次",
+        "pro": "無限制"
+      },
+      "ocrSupport": {
+        "name": "OCR支持",
+        "free": "基礎",
+        "basic": "增強",
+        "pro": "高級"
+      },
+      "cardManagement": {
+        "name": "名片管理",
+        "free": "基礎",
+        "basic": "增強",
+        "pro": "高級"
+      },
+      "duplicateRemoval": {
+        "name": "重複刪除",
+        "free": false,
+        "basic": true,
+        "pro": true
+      },
+      "export": {
+        "name": "導出",
+        "free": "CSV",
+        "basic": "CSV, PDF",
+        "pro": "所有格式"
+      },
+      "companyTracking": {
+        "name": "公司追蹤",
+        "free": "3家公司",
+        "basic": "10家公司",
+        "pro": "無限制"
+      },
+      "newsUpdates": {
+        "name": "新聞更新",
+        "free": "每日",
+        "basic": "即時",
+        "pro": "即時 + 提醒"
+      },
+      "newsSources": {
+        "name": "新聞來源",
+        "free": "基礎",
+        "basic": "高級",
+        "pro": "所有來源"
+      },
+      "newsHistory": {
+        "name": "新聞歷史",
+        "free": "7天",
+        "basic": "30天",
+        "pro": "無限制"
+      },
+      "emailDigests": {
+        "name": "郵件摘要",
+        "free": false,
+        "basic": "每週",
+        "pro": "每日 + 自定義"
+      },
+      "aiFeatures": {
+        "name": "AI功能",
+        "free": "基礎",
+        "basic": "增強",
+        "pro": "高級"
+      },
+      "competitorAnalysis": {
+        "name": "競爭對手分析",
+        "free": false,
+        "basic": "基礎",
+        "pro": "高級"
+      },
+      "marketPredictions": {
+        "name": "市場預測",
+        "free": false,
+        "basic": "基礎",
+        "pro": "高級"
+      },
+      "teamSharing": {
+        "name": "團隊共享",
+        "free": false,
+        "basic": "最多3個用戶",
+        "pro": "無限制"
+      },
+      "customAnnotations": {
+        "name": "自定義註釋",
+        "free": false,
+        "basic": "基礎",
+        "pro": "高級"
+      }
+    },
+    "price": {
+      "free": "免費",
+      "basic": {
+        "monthly": "NT$699/月",
+        "yearly": "NT$6,999/年"
+      },
+      "pro": {
+        "monthly": "NT$1,399/月",
+        "yearly": "NT$13,999/年"
+      }
+    },
+    "buttons": {
+      "getBasic": "獲取基礎版",
+      "upgradePro": "升級到專業版"
+    },
+    "sections": {
+      "featureHighlights": {
+        "title": "功能亮點",
+        "storage": {
+          "title": "無限存儲",
+          "description": "存儲和管理無限數量的名片"
+        },
+        "ocr": {
+          "title": "高級OCR",
+          "description": "以高精度提取多語言名片文本"
+        },
+        "orgChart": {
+          "title": "組織架構圖",
+          "description": "可視化公司層級和關係"
+        },
+        "news": {
+          "title": "公司新聞",
+          "description": "追蹤您的聯絡人公司的最新動態"
+        }
+      },
+      "faq": {
+        "title": "常見問題",
+        "questions": {
+          "downgrade": {
+            "question": "我可以降級我的計劃嗎？",
+            "answer": "是的，您可以隨時降級您的計劃。您的專業版功能將在當前計費週期結束前保持有效。"
+          },
+          "cancel": {
+            "question": "如何取消訂閱？",
+            "answer": "您可以在設置頁面取消訂閱。您的帳戶將在當前計費週期結束時恢復為免費計劃。"
+          },
+          "trial": {
+            "question": "是否有免費試用？",
+            "answer": "是的，我們提供14天的專業版功能免費試用。無需信用卡。"
+          }
+        }
+      }
+    },
+    "footer": {
+      "cta": "準備好升級您的名片管理了嗎？",
+      "button": "升級到專業版"
+    }
+  },
+  "scan": {
+    "title": "掃描名片",
+    "description": "上傳名片圖片以提取信息",
+    "dropzone": {
+      "title": "點擊或拖放以上傳名片圖片",
+      "subtitle": "支持多個文件"
+    },
+    "preview": "名片預覽",
+    "processing": "處理中...",
+    "success": "名片處理成功",
+    "error": "名片處理失敗"
+  },
+  "orgChart": {
+    "title": "組織架構圖",
+    "description": "可視化公司層級和關係",
+    "search": {
+      "placeholder": "搜索公司...",
+      "selectCompany": "選擇公司",
+      "noCompanySelected": "選擇公司以查看其組織架構圖"
+    },
+    "loading": "正在加載組織架構圖...",
+    "errors": {
+      "noData": "該公司暫無可用數據",
+      "failed": "生成組織架構圖失敗"
+    },
+    "node": {
+      "unknown": "未知",
+      "noPosition": "無職位"
+    }
+  },
+  "dialogs": {
+    "filter": {
+      "title": "篩選名片",
+      "selectCompany": "選擇公司",
+      "selectPosition": "選擇職位",
+      "allCompanies": "所有公司",
+      "allPositions": "所有職位"
+    },
+    "sort": {
+      "title": "排序名片",
+      "field": "排序依據",
+      "direction": "排序方向",
+      "selectField": "選擇字段",
+      "selectDirection": "選擇方向",
+      "ascending": "升序",
+      "descending": "降序"
+    },
+    "merge": {
+      "title": "合併相似名片",
+      "description": "發現 {{count}} 組可以合併的名片。合併將會組合具有相同電子郵件地址的名片信息",
+      "confirm": "您確定要合併這些名片嗎？",
+      "success": "名片合併成功",
+      "error": "名片合併失敗",
+      "noMergeableCards": "未找到可合併的名片"
+    },
+    "removeDuplicates": {
+      "title": "刪除重複名片",
+      "description": "發現 {{count}} 張重複的名片。您確定要刪除它們嗎？",
+      "confirm": "您確定要刪除重複的名片嗎？",
+      "success": "已刪除 {{count}} 張重複名片",
+      "error": "刪除重複名片失敗",
+      "noDuplicates": "未找到重複名片"
+    }
+  },
+  "actions": {
+    "cancel": "取消",
+    "confirm": "確認",
+    "merge": "合併名片",
+    "remove": "刪除名片",
+    "filter": "篩選名片",
+    "sort": "排序名片",
+    "uploadCard": "上傳名片",
+    "gotIt": "知道了",
+    "tryAgain": "重試",
+    "email": "電子郵件",
+    "notes": "備註",
+    "delete": "刪除",
+    "edit": "編輯",
+    "save": "保存更改",
+    "copyLink": "複製鏈接",
+    "share": "分享",
+    "download": "下載",
+    "apply": "應用",
+    "reset": "重置"
+  },
+  "view": {
+    "grid": "網格視圖",
+    "table": "表格視圖"
+  },
+  "card": {
+    "name": "姓名",
+    "company": "公司",
+    "position": "職位",
+    "createdAt": "創建時間",
+    "contact": "聯絡方式",
+    "address": "地址",
+    "businessCardImage": "名片圖片",
+    "noImage": "暫無圖片",
+    "details": {
+      "title": "名片詳情",
+      "description": "查看和編輯名片信息",
+      "nameEnglish": "姓名（英文）",
+      "nameChinese": "姓名（中文）",
+      "companyEnglish": "公司（英文）",
+      "companyChinese": "公司（中文）",
+      "titleEnglish": "職位（英文）",
+      "titleChinese": "職位（中文）",
+      "email": "電子郵件",
+      "phone": "電話",
+      "addressEnglish": "地址（英文）",
+      "addressChinese": "地址（中文）",
+      "remarks": "備註"
+    },
+    "share": {
+      "title": "分享名片",
+      "copyLink": "複製鏈接",
+      "email": "電子郵件",
+      "whatsapp": "WhatsApp"
+    },
+    "delete": {
+      "title": "刪除名片",
+      "description": "您確定要刪除這張名片嗎？此操作無法撤消。",
+      "cancel": "取消",
+      "confirm": "刪除"
+    }
+  },
+  "tooltips": {
+    "welcome": "歡迎！使用篩選和排序選項來組織您的名片。點名片查看詳情。"
+  },
+  "manage": {
+    "title": "管理名片",
+    "description": "查看、編輯和組織您的掃描名片",
+    "loading": "正在加載您的名片...",
+    "searchPlaceholder": "搜索名片...",
+    "empty": {
+      "title": "未找到名片",
+      "description": "從上傳新名片開始"
+    },
+    "actions": {
+      "merge": "合併相似名片",
+      "removeDuplicates": "刪除重複",
+      "download": "下載CSV",
+      "share": "分享"
+    }
+  },
+  "news": {
+    "title": "公司新聞",
+    "description": "追蹤您的名片聯絡人的公司新聞",
+    "companiesSelected": "已選擇 {{count}} 家公司",
+    "articlesPerCompany": {
+      "one": "每家公司1篇文章",
+      "three": "每家公司3篇文章",
+      "five": "每家公司5篇文章",
+      "ten": "每家公司10篇文章"
+    },
+    "clearAll": "清除全部",
+    "loading": "正在加載新聞...",
+    "noCompanies": "選擇公司",
+    "selectCompanies": "選擇公司以查看其新聞",
+    "noArticles": "未找到新聞文章",
+    "error": {
+      "fetchFailed": "獲取新聞文章失敗",
+      "noArticlesFound": "未找到所選公司的任何新聞文章"
+    }
+  },
+  "errors": {
+    "chineseOnly": "此字段只能輸入中文",
+    "englishOnly": "此字段只能輸入英文",
+    "required": "此字段為必填項",
+    "invalidEmail": "請輸入有效的電子郵件地址",
+    "invalidPhone": "請輸入有效的電話號碼",
+    "generic": "發生錯誤，請重試"
+  }
+} 

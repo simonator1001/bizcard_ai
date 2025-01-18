@@ -41,6 +41,8 @@ export function useBusinessCards() {
         .from('business_cards')
         .select('*')
         .eq('user_id', user.id)
+        .not('company', 'is', null)
+        .not('company', 'eq', '')
         .order('created_at', { ascending: false });
 
       if (fetchError) {

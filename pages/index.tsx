@@ -22,43 +22,7 @@ import { ManageCardsView } from '@/components/cards/ManageCardsView'
 import { SubscriptionService } from '@/lib/subscription'
 import { SettingsTab } from '@/components/shared/SettingsTab'
 import { toast } from 'sonner'
-
-interface NewsArticle {
-  id: string
-  title: string
-  source: string
-  date: string
-  snippet: string
-  url: string
-  imageUrl: string
-  relatedCompanies: string[]
-  relatedPeople: string[]
-}
-
-const mockNewsArticles: NewsArticle[] = [
-  {
-    id: '1',
-    title: "Tech Innovations Inc. Launches Revolutionary AI Product",
-    source: "Tech News Daily",
-    date: "2023-06-01",
-    snippet: "Tech Innovations Inc. has unveiled its latest AI-powered product, set to disrupt the industry...",
-    url: "#",
-    imageUrl: "/placeholder.svg?height=200&width=400",
-    relatedCompanies: ["Tech Innovations Inc."],
-    relatedPeople: ["John Doe"]
-  },
-  {
-    id: '2',
-    title: "Design Solutions Co. Wins Award for Best UX Design",
-    source: "Design Weekly",
-    date: "2023-05-28",
-    snippet: "Design Solutions Co., under the leadership of Jane Smith, has been recognized for its outstanding UX design...",
-    url: "#",
-    imageUrl: "/placeholder.svg?height=200&width=400",
-    relatedCompanies: ["Design Solutions Co."],
-    relatedPeople: ["Jane Smith"]
-  }
-]
+import { NewsView } from '@/components/news/NewsView'
 
 type ViewMode = 'list' | 'grid' | 'carousel' | 'stack';
 
@@ -693,60 +657,7 @@ export default function Component() {
           </TabsContent>
 
           <TabsContent value="news" className="h-full p-8 overflow-auto">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold">News</h2>
-                <div className="flex items-center gap-4">
-                  <Select value={newsFilter} onValueChange={setNewsFilter}>
-                    <SelectTrigger className="w-[120px]">
-                      <SelectValue placeholder="Filter" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="related">Related</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {loading ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                </div>
-              ) : error ? (
-                <div className="text-center py-8 text-red-500">
-                  Error loading news: {error.message}
-                </div>
-              ) : mockNewsArticles.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No news articles found.
-                </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {mockNewsArticles.map((article) => (
-                    <Card key={article.id} className="h-[300px]">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-4">
-                          <Avatar className="h-12 w-12">
-                            <AvatarFallback>
-                              {article.title.split(' ').map(n => n[0]).join('').toUpperCase() || '??'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h3 className="font-medium">
-                              {article.title}
-                            </h3>
-                            <p className="text-sm text-gray-500">
-                              {article.source}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
+            <NewsView />
           </TabsContent>
 
           <TabsContent value="settings" className="h-full overflow-auto">
