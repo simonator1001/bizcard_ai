@@ -100,18 +100,22 @@ export function NewsView() {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (open && !event.target?.closest('.company-dropdown')) {
+      const target = event.target as HTMLElement;
+      if (open && !target.closest('.company-dropdown')) {
         setOpen(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [open]);
 
   // Extract unique companies from cards
   useEffect(() => {
-    const companies = Array.from(new Set(cards?.map(card => card.company) || [])).filter(Boolean);
+    const companies = Array.from(new Set(cards?.map(card => card.company)))
+      .filter((company): company is string => Boolean(company));
     setUniqueCompanies(companies);
   }, [cards]);
 
@@ -143,7 +147,7 @@ export function NewsView() {
   // Fetch news for a single company
   const fetchNewsForCompany = async (company: string) => {
     try {
-      setLoadingCompanies(prev => new Set([...prev, company]));
+      setLoadingCompanies(prev => new Set([...Array.from(prev), company]));
       setErrors(prev => {
         const next = new Map(prev);
         next.delete(company);
@@ -200,7 +204,7 @@ export function NewsView() {
       });
     } finally {
       setLoadingCompanies(prev => {
-        const next = new Set(prev);
+        const next = new Set(Array.from(prev));
         next.delete(company);
         return next;
       });

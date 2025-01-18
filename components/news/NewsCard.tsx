@@ -96,7 +96,7 @@ export function NewsCard({ article, onClick }: NewsCardProps) {
         <p className="text-sm text-gray-600 line-clamp-2">{article.summary}</p>
         
         {/* Tags Section */}
-        {(article.mentionedEmployees?.length > 0 || article.source) && (
+        {((article.mentionedEmployees && article.mentionedEmployees.length > 0) || article.source) && (
           <div className="flex flex-wrap gap-2 mt-2">
             {article.source && (
               <Badge variant="secondary" className="text-xs">

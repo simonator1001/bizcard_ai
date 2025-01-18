@@ -18,7 +18,17 @@ import {
   type LucideIcon 
 } from 'lucide-react';
 
-const navigationItems: Array<{ title: string; icon: LucideIcon; type?: "separator" }> = [
+type NavigationItem = {
+  title: string;
+  icon: LucideIcon;
+  type?: never;
+} | {
+  type: "separator";
+  title?: never;
+  icon?: never;
+};
+
+const navigationItems: NavigationItem[] = [
   { title: "Scan", icon: ScanLine },
   { title: "Manage", icon: LayoutGrid },
   { type: "separator" },

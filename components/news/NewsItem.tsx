@@ -28,15 +28,18 @@ export function NewsItem({ article, onClick, showCompany = true }: NewsItemProps
       <div className="flex gap-4 p-4">
         <div className="relative h-[120px] w-[120px] flex-shrink-0 overflow-hidden rounded-md bg-muted">
           <Image
-            src={!imageError ? article.imageUrl : `https://logo.clearbit.com/${article.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`}
+            src={!imageError ? (article.imageUrl || '/placeholder-news.jpg') : 
+              article.company ? 
+                `https://logo.clearbit.com/${article.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com` :
+                '/placeholder-news.jpg'
+            }
             alt={article.title}
             fill
             className={cn(
-              "transition-transform duration-300 group-hover:scale-105",
-              !imageError ? "object-cover" : "object-contain p-2"
+              "object-cover transition-all hover:scale-105",
+              imageError && "object-contain p-2"
             )}
             onError={() => setImageError(true)}
-            sizes="120px"
           />
         </div>
         <div className="flex flex-col flex-1 min-w-0">

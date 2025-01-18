@@ -47,10 +47,21 @@ import { toast } from 'sonner'
 import { NewsView } from '@/components/news/NewsView'
 import { ExpandableTabs } from "@/components/ui/expandable-tabs"
 import { Footer } from "@/components/ui/code.demo"
+import { NewsArticle } from '@/types/news'
 
 type ViewMode = 'list' | 'grid' | 'carousel' | 'stack';
 
-const navigationItems: Array<{ title: string; icon: LucideIcon; type?: "separator" }> = [
+type NavigationItem = {
+  title: string;
+  icon: LucideIcon;
+  type?: never;
+} | {
+  type: "separator";
+  title?: never;
+  icon?: never;
+};
+
+const navigationItems: NavigationItem[] = [
   { title: "Scan", icon: ScanLine },
   { title: "Manage", icon: LayoutGrid },
   { type: "separator" },
