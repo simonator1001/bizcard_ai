@@ -35,14 +35,14 @@ function CompanySelect({ companies, selectedCompanies, onSelect }: {
           <Search className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Select Companies</DialogTitle>
-          <div className="text-sm text-muted-foreground">
+      <DialogContent className="sm:max-w-[425px] bg-white border shadow-lg">
+        <DialogHeader className="border-b pb-4">
+          <DialogTitle className="text-gray-900">Select Companies</DialogTitle>
+          <div className="text-sm text-gray-500">
             Choose companies to view their latest news articles. You can select multiple companies.
           </div>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        <div className="py-4">
           <Input
             type="search"
             placeholder="Search companies..."
@@ -50,12 +50,12 @@ function CompanySelect({ companies, selectedCompanies, onSelect }: {
             onChange={(e) => setSearch(e.target.value)}
             className="w-full"
           />
-          <ScrollArea className="h-[300px] rounded-md border">
+          <ScrollArea className="h-[300px] mt-4 rounded-md border border-gray-200">
             <div className="p-4 space-y-2">
               {filteredCompanies.map(company => (
                 <div
                   key={company}
-                  className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer rounded-md transition-colors"
+                  className="flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer rounded-md transition-colors"
                   onClick={() => onSelect(company)}
                 >
                   <input
@@ -64,11 +64,11 @@ function CompanySelect({ companies, selectedCompanies, onSelect }: {
                     readOnly
                     className="h-4 w-4 rounded border-gray-300"
                   />
-                  <span className="text-sm">{company}</span>
+                  <span className="text-sm text-gray-900">{company}</span>
                 </div>
               ))}
               {filteredCompanies.length === 0 && (
-                <div className="text-center text-muted-foreground">
+                <div className="text-center text-gray-500">
                   No companies found
                 </div>
               )}
@@ -294,26 +294,24 @@ export function NewsView() {
               Stay updated with news about your network
             </p>
           </div>
-          
-          <div className="flex flex-wrap items-center gap-3">
-            <CompanySelect 
-              companies={uniqueCompanies}
-              selectedCompanies={selectedCompanies}
-              onSelect={handleCompanySelect}
-            />
-
-            <Button 
-              onClick={selectRandomCompanies} 
-              variant="outline"
-              className="gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Random
-            </Button>
-          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 justify-end">
+        <div className="flex flex-wrap items-center gap-3">
+          <CompanySelect 
+            companies={uniqueCompanies}
+            selectedCompanies={selectedCompanies}
+            onSelect={handleCompanySelect}
+          />
+
+          <Button 
+            onClick={selectRandomCompanies} 
+            variant="outline"
+            className="gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Random
+          </Button>
+
           <Select 
             value={articlesPerCompany.toString()} 
             onValueChange={(value) => setArticlesPerCompany(Number(value))}
@@ -412,12 +410,9 @@ export function NewsView() {
         ) : (
           <div className="rounded-lg border bg-muted p-8 text-center">
             <h3 className="text-lg font-semibold mb-2">No companies selected</h3>
-            <p className="text-muted-foreground mb-4">
+            <p className="text-muted-foreground">
               Select companies to view their latest news
             </p>
-            <Button onClick={() => setOpen(true)} variant="outline">
-              Select Companies
-            </Button>
           </div>
         )}
       </div>

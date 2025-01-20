@@ -46,7 +46,7 @@ import { SettingsTab } from '@/components/shared/SettingsTab'
 import { toast } from 'sonner'
 import { NewsView } from '@/components/news/NewsView'
 import { ExpandableTabs } from "@/components/ui/expandable-tabs"
-import { Footer } from "@/components/ui/code.demo"
+import { Footerdemo } from "@/components/ui/footer-section"
 import { NewsArticle } from '@/types/news'
 
 type ViewMode = 'list' | 'grid' | 'carousel' | 'stack';
@@ -304,9 +304,9 @@ export default function Component() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="h-screen flex flex-col">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
+    <div className="min-h-screen bg-background flex flex-col">
+      <main className="flex-1 flex flex-col">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
           <div className="border-b sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-16 items-center">
               <ExpandableTabs
@@ -318,364 +318,366 @@ export default function Component() {
             </div>
           </div>
 
-          <TabsContent value="scan" className="h-full p-8 overflow-auto">
-            <Card className="mb-8 overflow-hidden">
-              <CardContent className="p-0">
-                <div className="relative overflow-hidden rounded-lg">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 opacity-20"></div>
-                  <div className="relative z-10 p-8 space-y-6">
-                    <CardTitle className="text-3xl font-bold">Scan Business Cards</CardTitle>
-                    <CardDescription className="text-lg">
-                      Quickly capture and organize your business contacts
-                    </CardDescription>
-                    <div className="space-y-4">
-                      <Button 
-                        className="w-full py-6 text-lg font-semibold rounded-full transition-all duration-300 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                        onClick={() => {
-                          const input = document.createElement('input')
-                          input.type = 'file'
-                          input.accept = 'image/*'
-                          input.capture = 'environment'
-                          input.onchange = (e) => {
-                            const file = (e.target as HTMLInputElement).files?.[0]
-                            if (file) {
-                              const reader = new FileReader()
-                              reader.onload = (e) => {
-                                try {
-                                  setUploadedImage(e.target?.result as string)
-                                } catch (error: any) {
-                                  console.error('Error loading image:', error)
-                                  toast.error('Failed to load image. Please try again.')
-                                }
-                              }
-                              reader.readAsDataURL(file)
-                            }
-                          }
-                          input.click()
-                        }}
-                      >
-                        <Camera className="h-8 w-8 mr-3" />
-                        Take a Photo
-                      </Button>
-                      <Button 
-                        variant="outline"
-                        className="w-full py-6 text-lg font-semibold rounded-full border-2 hover:bg-gray-50"
-                        onClick={() => {
-                          const input = document.createElement('input')
-                          input.type = 'file'
-                          input.accept = 'image/*'
-                          input.multiple = true
-                          input.onchange = async (e) => {
-                            const files = (e.target as HTMLInputElement).files
-                            if (!files || files.length === 0) return
-
-                            setIsScanning(true)
-                            let successCount = 0
-                            let failedFiles: string[] = []
-                            let hitScanLimit = false
-
-                            try {
-                              const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-                              if (sessionError || !session) {
-                                throw new Error('Not authenticated')
-                              }
-
-                              // Check subscription status before processing
-                              const canScan = await SubscriptionService.canPerformAction(user?.id || '', 'scan')
-                              if (!canScan) {
-                                setShowUpgradePrompt(true)
-                                throw new Error('Monthly scan limit reached')
-                              }
-
-                              // Process all files
-                              for (let i = 0; i < files.length; i++) {
-                                if (hitScanLimit) break; // Stop processing if scan limit reached
-                                
-                                const file = files[i]
+          <div className="flex-1 overflow-y-auto pb-16">
+            <TabsContent value="scan" className="h-full p-8">
+              <Card className="mb-8 overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="relative overflow-hidden rounded-lg">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 opacity-20"></div>
+                    <div className="relative z-10 p-8 space-y-6">
+                      <CardTitle className="text-3xl font-bold">Scan Business Cards</CardTitle>
+                      <CardDescription className="text-lg">
+                        Quickly capture and organize your business contacts
+                      </CardDescription>
+                      <div className="space-y-4">
+                        <Button 
+                          className="w-full py-6 text-lg font-semibold rounded-full transition-all duration-300 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                          onClick={() => {
+                            const input = document.createElement('input')
+                            input.type = 'file'
+                            input.accept = 'image/*'
+                            input.capture = 'environment'
+                            input.onchange = (e) => {
+                              const file = (e.target as HTMLInputElement).files?.[0]
+                              if (file) {
                                 const reader = new FileReader()
-                                
-                                try {
-                                  // Process each file
-                                  await new Promise((resolve, reject) => {
-                                    reader.onload = async (e) => {
-                                      try {
-                                        const base64Image = e.target?.result as string
-                                        const response = await fetch('/api/scan', {
-                                          method: 'POST',
-                                          headers: {
-                                            'Content-Type': 'application/json',
-                                            'Authorization': `Bearer ${session.access_token}`
-                                          },
-                                          body: JSON.stringify({ image: base64Image }),
-                                        })
-                                        
-                                        let responseData
-                                        try {
-                                          responseData = await response.json()
-                                        } catch (parseError) {
-                                          throw new Error('Invalid response from OCR service')
-                                        }
+                                reader.onload = (e) => {
+                                  try {
+                                    setUploadedImage(e.target?.result as string)
+                                  } catch (error: any) {
+                                    console.error('Error loading image:', error)
+                                    toast.error('Failed to load image. Please try again.')
+                                  }
+                                }
+                                reader.readAsDataURL(file)
+                              }
+                            }
+                            input.click()
+                          }}
+                        >
+                          <Camera className="h-8 w-8 mr-3" />
+                          Take a Photo
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          className="w-full py-6 text-lg font-semibold rounded-full border-2 hover:bg-gray-50"
+                          onClick={() => {
+                            const input = document.createElement('input')
+                            input.type = 'file'
+                            input.accept = 'image/*'
+                            input.multiple = true
+                            input.onchange = async (e) => {
+                              const files = (e.target as HTMLInputElement).files
+                              if (!files || files.length === 0) return
 
-                                        if (!response.ok) {
-                                          // Check for scan limit error
-                                          if (responseData.error?.toLowerCase().includes('monthly scan limit') || 
-                                              responseData.error?.toLowerCase().includes('scan limit reached') || 
-                                              responseData.message?.toLowerCase().includes('monthly scan limit') ||
-                                              responseData.message?.toLowerCase().includes('scan limit reached')) {
+                              setIsScanning(true)
+                              let successCount = 0
+                              let failedFiles: string[] = []
+                              let hitScanLimit = false
+
+                              try {
+                                const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+                                if (sessionError || !session) {
+                                  throw new Error('Not authenticated')
+                                }
+
+                                // Check subscription status before processing
+                                const canScan = await SubscriptionService.canPerformAction(user?.id || '', 'scan')
+                                if (!canScan) {
+                                  setShowUpgradePrompt(true)
+                                  throw new Error('Monthly scan limit reached')
+                                }
+
+                                // Process all files
+                                for (let i = 0; i < files.length; i++) {
+                                  if (hitScanLimit) break; // Stop processing if scan limit reached
+                                  
+                                  const file = files[i]
+                                  const reader = new FileReader()
+                                  
+                                  try {
+                                    // Process each file
+                                    await new Promise((resolve, reject) => {
+                                      reader.onload = async (e) => {
+                                        try {
+                                          const base64Image = e.target?.result as string
+                                          const response = await fetch('/api/scan', {
+                                            method: 'POST',
+                                            headers: {
+                                              'Content-Type': 'application/json',
+                                              'Authorization': `Bearer ${session.access_token}`
+                                            },
+                                            body: JSON.stringify({ image: base64Image }),
+                                          })
+                                          
+                                          let responseData
+                                          try {
+                                            responseData = await response.json()
+                                          } catch (parseError) {
+                                            throw new Error('Invalid response from OCR service')
+                                          }
+
+                                          if (!response.ok) {
+                                            // Check for scan limit error
+                                            if (responseData.error?.toLowerCase().includes('monthly scan limit') || 
+                                                responseData.error?.toLowerCase().includes('scan limit reached') || 
+                                                responseData.message?.toLowerCase().includes('monthly scan limit') ||
+                                                responseData.message?.toLowerCase().includes('scan limit reached')) {
+                                              hitScanLimit = true
+                                              setShowUpgradePrompt(true)
+                                              throw new Error('Monthly scan limit reached')
+                                            }
+                                            throw new Error(responseData.message || responseData.error || 'Failed to scan card')
+                                          }
+                                          
+                                          successCount++
+                                          resolve(null)
+                                        } catch (error: any) {
+                                          console.error(`Error processing file ${file.name}:`, error)
+                                          if (error.message.toLowerCase().includes('scan limit')) {
                                             hitScanLimit = true
                                             setShowUpgradePrompt(true)
-                                            throw new Error('Monthly scan limit reached')
+                                            reject(error)
+                                          } else {
+                                            failedFiles.push(file.name)
+                                            reject(error)
                                           }
-                                          throw new Error(responseData.message || responseData.error || 'Failed to scan card')
-                                        }
-                                        
-                                        successCount++
-                                        resolve(null)
-                                      } catch (error: any) {
-                                        console.error(`Error processing file ${file.name}:`, error)
-                                        if (error.message.toLowerCase().includes('scan limit')) {
-                                          hitScanLimit = true
-                                          setShowUpgradePrompt(true)
-                                          reject(error)
-                                        } else {
-                                          failedFiles.push(file.name)
-                                          reject(error)
                                         }
                                       }
+                                      reader.onerror = (error) => {
+                                        console.error(`Error reading file ${file.name}:`, error)
+                                        failedFiles.push(file.name)
+                                        reject(new Error(`Failed to read file ${file.name}`))
+                                      }
+                                      reader.readAsDataURL(file)
+                                    }).catch((error) => {
+                                      if (error.message.toLowerCase().includes('scan limit')) {
+                                        throw error; // Propagate scan limit error
+                                      }
+                                      console.warn(`Continuing after error with file ${file.name}:`, error)
+                                    })
+                                  } catch (fileError: any) {
+                                    if (fileError.message.toLowerCase().includes('scan limit')) {
+                                      throw fileError; // Propagate scan limit error
                                     }
-                                    reader.onerror = (error) => {
-                                      console.error(`Error reading file ${file.name}:`, error)
-                                      failedFiles.push(file.name)
-                                      reject(new Error(`Failed to read file ${file.name}`))
-                                    }
-                                    reader.readAsDataURL(file)
-                                  }).catch((error) => {
-                                    if (error.message.toLowerCase().includes('scan limit')) {
-                                      throw error; // Propagate scan limit error
-                                    }
-                                    console.warn(`Continuing after error with file ${file.name}:`, error)
-                                  })
-                                } catch (fileError: any) {
-                                  if (fileError.message.toLowerCase().includes('scan limit')) {
-                                    throw fileError; // Propagate scan limit error
+                                    console.error(`Error processing file ${file.name}:`, fileError)
+                                    failedFiles.push(file.name)
                                   }
-                                  console.error(`Error processing file ${file.name}:`, fileError)
-                                  failedFiles.push(file.name)
                                 }
-                              }
-                              
-                              // Show appropriate success/failure message
-                              if (hitScanLimit) {
-                                if (successCount > 0) {
-                                  toast.success(`Successfully processed ${successCount} business cards`)
+                                
+                                // Show appropriate success/failure message
+                                if (hitScanLimit) {
+                                  if (successCount > 0) {
+                                    toast.success(`Successfully processed ${successCount} business cards`)
+                                  }
+                                  toast.error('Monthly scan limit reached. Please upgrade your plan to continue scanning.')
+                                } else if (successCount === files.length) {
+                                  toast.success(`Successfully processed all ${files.length} business cards`)
+                                } else if (successCount > 0) {
+                                  toast.success(`Successfully processed ${successCount} out of ${files.length} business cards`)
+                                  if (failedFiles.length > 0) {
+                                    toast.error(`Failed to process: ${failedFiles.join(', ')}`)
+                                  }
+                                } else {
+                                  throw new Error(`Failed to process any cards. Please try again.`)
                                 }
-                                toast.error('Monthly scan limit reached. Please upgrade your plan to continue scanning.')
-                              } else if (successCount === files.length) {
-                                toast.success(`Successfully processed all ${files.length} business cards`)
-                              } else if (successCount > 0) {
-                                toast.success(`Successfully processed ${successCount} out of ${files.length} business cards`)
-                                if (failedFiles.length > 0) {
-                                  toast.error(`Failed to process: ${failedFiles.join(', ')}`)
-                                }
-                              } else {
-                                throw new Error(`Failed to process any cards. Please try again.`)
-                              }
 
-                              if (successCount > 0) {
-                                setActiveTab('manage')
+                                if (successCount > 0) {
+                                  setActiveTab('manage')
+                                }
+                              } catch (error: any) {
+                                console.error('Error scanning cards:', error)
+                                const errorMessage = error.message.toLowerCase()
+                                if (errorMessage.includes('scan limit') || errorMessage.includes('monthly limit')) {
+                                  setShowUpgradePrompt(true)
+                                  toast.error('Monthly scan limit reached. Please upgrade your plan to continue scanning.')
+                                } else {
+                                  toast.error(error.message || 'Failed to scan cards. Please try again.')
+                                }
+                              } finally {
+                                setIsScanning(false)
                               }
-                            } catch (error: any) {
-                              console.error('Error scanning cards:', error)
-                              const errorMessage = error.message.toLowerCase()
-                              if (errorMessage.includes('scan limit') || errorMessage.includes('monthly limit')) {
-                                setShowUpgradePrompt(true)
-                                toast.error('Monthly scan limit reached. Please upgrade your plan to continue scanning.')
-                              } else {
-                                toast.error(error.message || 'Failed to scan cards. Please try again.')
-                              }
-                            } finally {
-                              setIsScanning(false)
                             }
-                          }
-                          input.click()
-                        }}
-                      >
-                        <Upload className="h-8 w-8 mr-3" />
-                        {isScanning ? 'Processing...' : 'Upload Images'}
-                      </Button>
+                            input.click()
+                          }}
+                        >
+                          <Upload className="h-8 w-8 mr-3" />
+                          {isScanning ? 'Processing...' : 'Upload Images'}
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-                {uploadedImage && (
-                  <div className="p-8">
-                    <img src={uploadedImage} alt="Uploaded business card" className="w-full h-auto rounded-lg shadow-lg" />
-                    <Button 
-                      onClick={async () => {
-                        setIsScanning(true)
-                        try {
-                          const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-                          if (sessionError || !session) {
-                            throw new Error('Not authenticated')
-                          }
-
-                          // Check subscription status before processing
-                          const canScan = await SubscriptionService.canPerformAction(user?.id || '', 'scan')
-                          if (!canScan) {
-                            setShowUpgradePrompt(true)
-                            throw new Error('Monthly scan limit reached')
-                          }
-
-                          const response = await fetch('/api/scan', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'Authorization': `Bearer ${session.access_token}`
-                            },
-                            body: JSON.stringify({ image: uploadedImage }),
-                          })
-                          
-                          let responseData
+                  {uploadedImage && (
+                    <div className="p-8">
+                      <img src={uploadedImage} alt="Uploaded business card" className="w-full h-auto rounded-lg shadow-lg" />
+                      <Button 
+                        onClick={async () => {
+                          setIsScanning(true)
                           try {
-                            responseData = await response.json()
-                          } catch (parseError) {
-                            throw new Error('Invalid response from scan service')
-                          }
-
-                          if (!response.ok) {
-                            // Check for scan limit error
-                            if (responseData.error?.toLowerCase().includes('monthly scan limit') || 
-                                responseData.error?.toLowerCase().includes('scan limit reached') || 
-                                responseData.message?.toLowerCase().includes('monthly scan limit') ||
-                                responseData.message?.toLowerCase().includes('scan limit reached')) {
-                              setShowUpgradePrompt(true)
-                              throw new Error('Monthly scan limit reached. Please upgrade your plan to continue scanning.')
+                            const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+                            if (sessionError || !session) {
+                              throw new Error('Not authenticated')
                             }
-                            throw new Error(responseData.message || responseData.error || 'Failed to scan card')
+
+                            // Check subscription status before processing
+                            const canScan = await SubscriptionService.canPerformAction(user?.id || '', 'scan')
+                            if (!canScan) {
+                              setShowUpgradePrompt(true)
+                              throw new Error('Monthly scan limit reached')
+                            }
+
+                            const response = await fetch('/api/scan', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${session.access_token}`
+                              },
+                              body: JSON.stringify({ image: uploadedImage }),
+                            })
+                            
+                            let responseData
+                            try {
+                              responseData = await response.json()
+                            } catch (parseError) {
+                              throw new Error('Invalid response from scan service')
+                            }
+
+                            if (!response.ok) {
+                              // Check for scan limit error
+                              if (responseData.error?.toLowerCase().includes('monthly scan limit') || 
+                                  responseData.error?.toLowerCase().includes('scan limit reached') || 
+                                  responseData.message?.toLowerCase().includes('monthly scan limit') ||
+                                  responseData.message?.toLowerCase().includes('scan limit reached')) {
+                                setShowUpgradePrompt(true)
+                                throw new Error('Monthly scan limit reached. Please upgrade your plan to continue scanning.')
+                              }
+                              throw new Error(responseData.message || responseData.error || 'Failed to scan card')
+                            }
+
+                            setUploadedImage(null)
+                            setActiveTab('manage')
+                            toast.success('Business card scanned successfully')
+                          } catch (error: any) {
+                            console.error('Error scanning card:', error)
+                            if (error.message.toLowerCase().includes('scan limit') || 
+                                error.message.toLowerCase().includes('monthly limit')) {
+                              setShowUpgradePrompt(true)
+                              toast.error('Monthly scan limit reached. Please upgrade your plan to continue scanning.')
+                            } else {
+                              toast.error(error.message || 'Failed to scan card. Please try again.')
+                            }
+                          } finally {
+                            setIsScanning(false)
                           }
+                        }} 
+                        className="mt-6 w-full py-6 text-lg font-semibold rounded-full transition-all duration-300 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                        disabled={isScanning}
+                      >
+                        <ScanLine className="mr-3 h-6 w-6" />
+                        {isScanning ? 'Scanning...' : 'Scan Card'}
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-                          setUploadedImage(null)
-                          setActiveTab('manage')
-                          toast.success('Business card scanned successfully')
-                        } catch (error: any) {
-                          console.error('Error scanning card:', error)
-                          if (error.message.toLowerCase().includes('scan limit') || 
-                              error.message.toLowerCase().includes('monthly limit')) {
-                            setShowUpgradePrompt(true)
-                            toast.error('Monthly scan limit reached. Please upgrade your plan to continue scanning.')
-                          } else {
-                            toast.error(error.message || 'Failed to scan card. Please try again.')
-                          }
-                        } finally {
-                          setIsScanning(false)
-                        }
-                      }} 
-                      className="mt-6 w-full py-6 text-lg font-semibold rounded-full transition-all duration-300 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                      disabled={isScanning}
-                    >
-                      <ScanLine className="mr-3 h-6 w-6" />
-                      {isScanning ? 'Scanning...' : 'Scan Card'}
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+            <TabsContent value="manage" className="h-full p-8">
+              <ManageCardsView setActiveTab={setActiveTab} />
+            </TabsContent>
 
-          <TabsContent value="manage" className="h-full p-8 overflow-auto">
-            <ManageCardsView setActiveTab={setActiveTab} />
-          </TabsContent>
-
-          <TabsContent value="network" className="h-full p-8 overflow-auto">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold">Organization Chart</h2>
-                <div className="flex items-center gap-4">
-                  <Select value={selectedCompany} onValueChange={setSelectedCompany}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Select company" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {companies.map((company) => (
-                        <SelectItem key={company.id} value={company.id}>
-                          {company.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Contacts</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{totalContacts}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Companies</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{companies.length}</div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {selectedCompanyData && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{selectedCompanyData.name}</CardTitle>
-                    <CardDescription>{selectedCompanyData.contacts.length} contacts</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ScrollArea className="h-[400px]">
-                      <div className="space-y-4">
-                        {selectedCompanyData.contacts.map((contact) => (
-                          <Card key={contact.id}>
-                            <CardContent className="p-4">
-                              <div className="flex items-center gap-4">
-                                <Avatar>
-                                  <AvatarFallback>
-                                    {contact.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '??'}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <h3 className="font-medium">
-                                    {contact.name || contact.name_zh}
-                                    {contact.name && contact.name_zh && ` (${contact.name_zh})`}
-                                  </h3>
-                                  <p className="text-sm text-gray-500">
-                                    {contact.title || contact.title_zh}
-                                    {contact.title && contact.title_zh && ` (${contact.title_zh})`}
-                                  </p>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
+            <TabsContent value="network" className="h-full p-8">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-3xl font-bold">Organization Chart</h2>
+                  <div className="flex items-center gap-4">
+                    <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Select company" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {companies.map((company) => (
+                          <SelectItem key={company.id} value={company.id}>
+                            {company.name}
+                          </SelectItem>
                         ))}
-                      </div>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </TabsContent>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-          <TabsContent value="news" className="h-full p-8 overflow-auto">
-            <NewsView />
-          </TabsContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Contacts</CardTitle>
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{totalContacts}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Companies</CardTitle>
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{companies.length}</div>
+                    </CardContent>
+                  </Card>
+                </div>
 
-          <TabsContent value="settings" className="h-full overflow-auto">
-            <SettingsTab />
-          </TabsContent>
+                {selectedCompanyData && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{selectedCompanyData.name}</CardTitle>
+                      <CardDescription>{selectedCompanyData.contacts.length} contacts</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-[400px]">
+                        <div className="space-y-4">
+                          {selectedCompanyData.contacts.map((contact) => (
+                            <Card key={contact.id}>
+                              <CardContent className="p-4">
+                                <div className="flex items-center gap-4">
+                                  <Avatar>
+                                    <AvatarFallback>
+                                      {contact.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '??'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <h3 className="font-medium">
+                                      {contact.name || contact.name_zh}
+                                      {contact.name && contact.name_zh && ` (${contact.name_zh})`}
+                                    </h3>
+                                    <p className="text-sm text-gray-500">
+                                      {contact.title || contact.title_zh}
+                                      {contact.title && contact.title_zh && ` (${contact.title_zh})`}
+                                    </p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="news" className="h-full p-8">
+              <NewsView />
+            </TabsContent>
+
+            <TabsContent value="settings" className="h-full p-8">
+              <SettingsTab />
+            </TabsContent>
+          </div>
         </Tabs>
       </main>
-      <Footer />
+      <Footerdemo />
     </div>
   )
 }
