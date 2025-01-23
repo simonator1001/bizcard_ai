@@ -247,7 +247,7 @@ export default function Component() {
   // Update URL when tab changes
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
-    router.push(`/?tab=${tab}`, undefined, { shallow: true });
+    router.push(`/?tab=${tab}`);
   };
 
   const handleNavigationChange = (index: number | null) => {

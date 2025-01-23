@@ -52,6 +52,7 @@ export function Navigation() {
     if (tabFromQuery) return tabFromQuery;
     
     // If no query parameter, try to get from pathname
+    if (!pathname) return 'scan';
     const path = pathname.split('/')[1];
     return path || 'scan';
   };

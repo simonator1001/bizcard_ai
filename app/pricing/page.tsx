@@ -12,6 +12,8 @@ export default function PricingPage() {
   // Handle back navigation
   useEffect(() => {
     const handleBackNavigation = (e: PopStateEvent) => {
+      if (!searchParams) return;
+      
       const returnUrl = searchParams.get('return');
       if (returnUrl) {
         router.push(decodeURIComponent(returnUrl));
