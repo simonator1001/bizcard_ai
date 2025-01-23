@@ -183,90 +183,122 @@ function getFallbackImageUrl(company: string) {
   return url;
 }
 
-function cleanJsonString(str: string): string {
+async function cleanJsonString(content: string): Promise<string> {
   try {
-    // Remove code blocks and backticks
-    let cleaned = str.replace(/```(?:json)?\n?/g, '').replace(/`/g, '');
-    
-    // Remove any leading/trailing whitespace
-    cleaned = cleaned.trim();
-    
-    // Find the first [ and last ]
-    const startIdx = cleaned.indexOf('[');
-    const endIdx = cleaned.lastIndexOf(']');
-    
-    if (startIdx === -1 || endIdx === -1) {
-      throw new Error('Invalid JSON format: No array found');
+    // Extract JSON array from the response
+    const jsonMatch = content.match(/```json\s*(\[[\s\S]*?\])\s*```/);
+    if (!jsonMatch) {
+      console.error('[DEBUG] No JSON array found in content');
+      throw new Error('No JSON array found in content');
     }
     
-    // Extract just the array portion
-    cleaned = cleaned.slice(startIdx, endIdx + 1);
+    let cleaned = jsonMatch[1];
     
-    // Fix common JSON issues
-    cleaned = cleaned
-      // Replace newlines and special characters
-      .replace(/[\n\r\t]/g, ' ')
-      // Remove comments
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*/g, '')
-      // Fix string issues
-      .replace(/([{,]\s*)(\w+)(?=\s*:)/g, '$1"$2"') // Quote unquoted keys
-      .replace(/:\s*'([^']*)'/g, ':"$1"') // Replace single quotes with double quotes
-      .replace(/"\s+"/g, '" "') // Fix spaces between quotes
-      .replace(/\\"/g, '"') // Fix escaped quotes
-      // Fix structural issues
-      .replace(/,\s*([}\]])/g, '$1') // Remove trailing commas
-      .replace(/,\s*,/g, ',') // Fix multiple commas
-      .replace(/\[\s*,/g, '[') // Fix leading commas
-      .replace(/,\s*\]/g, ']') // Fix trailing array commas
-      // Fix value issues
-      .replace(/:\s*"?\s*"(?=\s*[,}])/g, ':null') // Replace empty strings with null
-      .replace(/:\s*(?=\s*[,}])/g, ':null') // Add null for missing values
-      // Clean up whitespace
-      .replace(/\s+/g, ' ')
-      .trim();
+    // Handle special characters in URLs and text
+    cleaned = cleaned.replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/&/g, 'and')
+      .replace(/\n/g, ' ')
+      .replace(/\s+/g, ' ');
+    
+    // Escape special characters in URLs
+    cleaned = cleaned.replace(/(https?:\/\/[^\s"]+)/g, (url) => {
+      return url.replace(/[&]/g, '%26');
+    });
 
+    console.log('[DEBUG] Cleaned JSON:', cleaned);
+    return cleaned;
+  } catch (e) {
+    console.error('[DEBUG] Error in cleanJsonString:', e);
+    throw e;
+  }
+}
+
+async function parse(content: string, company: string): Promise<any[]> {
+  try {
+    const cleaned = await cleanJsonString(content);
+    
     // Validate JSON structure
     const parsed = JSON.parse(cleaned);
     if (!Array.isArray(parsed)) {
+      console.error('[DEBUG] Parsed result is not an array:', parsed);
       throw new Error('Parsed result is not an array');
     }
-    
-    // Return the stringified version to ensure proper formatting
-    return JSON.stringify(parsed);
-  } catch (e) {
-    console.error('JSON cleaning error:', e);
-    throw new Error('Invalid JSON structure after cleaning');
-  }
-}
 
-function parse(content: string): any[] {
-  try {
-    // Clean the content first
-    const cleanContent = cleanJsonString(content);
-    console.log('Cleaned content for parsing:', cleanContent);
-    
-    try {
-      // First attempt: direct parse
-      const result = JSON.parse(cleanContent);
-      if (!Array.isArray(result)) {
-        throw new Error('Parsed result is not an array');
+    // Validate each article
+    const validArticles = parsed.filter(article => {
+      if (!article || typeof article !== 'object') {
+        console.warn('[DEBUG] Invalid article object:', article);
+        return false;
       }
-      return result;
-    } catch (e) {
-      console.error('JSON parsing failed:', e);
-      throw new Error('Failed to parse news articles: Invalid JSON format');
+
+      // Check required fields
+      const requiredFields = ['title', 'summary', 'url', 'publishedDate', 'sourceName'];
+      const missingFields = requiredFields.filter(field => !article[field]);
+      if (missingFields.length > 0) {
+        console.warn('[DEBUG] Article missing required fields:', {
+          article,
+          missingFields
+        });
+        return false;
+      }
+
+      // Validate URL format and accessibility
+      try {
+        const url = new URL(article.url);
+        if (!url.protocol.startsWith('http')) {
+          console.warn('[DEBUG] Invalid URL protocol:', url.protocol);
+          return false;
+        }
+        // Reject generic search URLs
+        if (url.pathname.includes('search') || url.pathname === '/') {
+          console.warn('[DEBUG] Generic search or root URL detected:', url.toString());
+          return false;
+        }
+      } catch (e) {
+        console.warn('[DEBUG] Invalid URL:', article.url);
+        return false;
+      }
+
+      // Validate title isn't a generic format
+      if (article.title.startsWith('Latest Updates:') || 
+          article.title.includes('News and Developments')) {
+        console.warn('[DEBUG] Generic title detected:', article.title);
+        return false;
+      }
+
+      // Validate summary isn't generic
+      if (article.summary.includes('Stay informed about the latest news')) {
+        console.warn('[DEBUG] Generic summary detected');
+        return false;
+      }
+
+      return true;
+    }).map(article => ({
+      ...article,
+      id: `${company}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      company,
+      source: article.sourceName,
+      imageUrl: article.imageUrl || getFallbackImageUrl(company)
+    }));
+
+    if (validArticles.length === 0) {
+      console.error('[DEBUG] No valid articles found after parsing');
+      throw new Error('No valid articles found');
     }
-  } catch (error) {
-    console.error('Error in parse function:', error);
-    throw error;
+
+    console.log('[DEBUG] Successfully parsed articles:', validArticles.length);
+    return validArticles;
+  } catch (e) {
+    console.error('[DEBUG] JSON parsing error:', e);
+    throw new Error('Failed to parse response');
   }
 }
 
-async function fetchWithRetry(url: string, options: any, retries = 3): Promise<Response> {
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+async function fetchWithRetry(url: string, options: any, maxRetries = 3): Promise<Response> {
+  let lastError;
   
-  for (let i = 0; i < retries; i++) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -275,84 +307,56 @@ async function fetchWithRetry(url: string, options: any, retries = 3): Promise<R
         ...options,
         signal: controller.signal,
         headers: {
-          ...options.headers,
-          'Accept': 'application/json',
-          'Accept-Encoding': 'gzip, deflate',
-          'Connection': 'keep-alive',
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+          ...options.headers
         }
       });
       
       clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`HTTP error! status: ${response.status}, body:`, errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
       return response;
     } catch (error) {
-      console.error(`Attempt ${i + 1} failed:`, error);
+      console.error(`Attempt ${attempt} failed:`, error);
+      lastError = error;
       
-      const shouldRetry = error instanceof Error && (
-        error.message.includes('socket') ||
-        error.message.includes('ECONNRESET') ||
-        error.message.includes('timeout') ||
-        error.message.includes('SSL') ||
-        error.message.includes('certificate')
-      );
-      
-      if (!shouldRetry || i === retries - 1) {
-        throw error;
+      if (attempt < maxRetries) {
+        // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
       }
-      
-      const backoff = Math.min(1000 * Math.pow(2, i), 10000);
-      const jitter = Math.random() * 1000;
-      console.log(`Retrying in ${(backoff + jitter) / 1000} seconds...`);
-      await delay(backoff + jitter);
     }
   }
-  throw new Error('All retry attempts failed');
+  
+  throw lastError;
 }
 
 async function fetchNewsFromPerplexity(company: string, count: number) {
+  console.log(`[DEBUG] Fetching news for ${company} from Perplexity API...`);
+  
   if (!PERPLEXITY_API_KEY) {
-    console.error('NEXT_PUBLIC_PERPLEXITY_API_KEY is not configured');
+    console.error('[DEBUG] PERPLEXITY_API_KEY is not configured');
     return createFallbackArticles(company, count);
   }
 
-  const prompt = `Find ${count} recent news articles about the company "${company}" from reliable sources. For each article, provide: title (string), summary (2-3 sentences), url (string, must be a real news URL), publishedDate (YYYY-MM-DD format), and source (name of the news outlet). Return ONLY a JSON array with these exact fields, no additional text or formatting. Each article must be about real, recent news from verifiable sources.`;
-
   try {
-    console.log(`[DEBUG] Fetching news for ${company} from Perplexity API...`);
+    const prompt = `Provide ${count} recent news articles about ${company}. Include title, summary (max 200 words), URL, published date (YYYY-MM-DD), and source name. Format as JSON array.`;
+    
     const response = await fetchWithRetry('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`
-      },
       body: JSON.stringify({
         model: 'sonar',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a news search assistant that returns only real, factual news articles in clean JSON format. Only return verifiable news from reputable sources. Format dates as YYYY-MM-DD.'
-          },
-          { 
-            role: 'user', 
-            content: prompt 
-          }
-        ],
-        temperature: 0.0,
-        max_tokens: 2000,
-        top_p: 0.9
+        messages: [{ role: 'user', content: prompt }]
       })
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[DEBUG] Perplexity API error:', response.status, errorText);
+      return createFallbackArticles(company, count);
+    }
+
     const data = await response.json();
-    console.log('[DEBUG] Raw API response:', JSON.stringify(data, null, 2));
-    
+    console.log('[DEBUG] Raw API response:', data);
+
     if (!data.choices?.[0]?.message?.content) {
       console.error('[DEBUG] Invalid response format from Perplexity API');
       return createFallbackArticles(company, count);
@@ -362,58 +366,10 @@ async function fetchNewsFromPerplexity(company: string, count: number) {
       const content = data.choices[0].message.content;
       console.log('[DEBUG] Parsing content:', content);
       
-      const articles = parse(content);
+      const articles = await parse(content, company); // Pass company to parse function
       
-      if (!Array.isArray(articles) || articles.length === 0) {
-        console.error('[DEBUG] No valid articles found in response');
-        return createFallbackArticles(company, count);
-      }
-
-      // Validate and clean each article
-      const validatedArticles = articles
-        .map((article, index) => {
-          try {
-            if (!article.title || !article.summary || !article.url || !article.source) {
-              console.warn('[DEBUG] Invalid article:', article);
-              return null;
-            }
-            
-            // Ensure URL is valid
-            try {
-              new URL(article.url);
-            } catch {
-              console.warn('[DEBUG] Invalid URL in article:', article.url);
-              return null;
-            }
-
-            // Ensure date is valid
-            const date = article.publishedDate ? new Date(article.publishedDate) : new Date();
-            const formattedDate = date.toISOString().split('T')[0];
-
-            return {
-              id: `${company}-${Date.now()}-${index}`,
-              title: article.title.trim(),
-              summary: article.summary.trim(),
-              url: article.url,
-              publishedDate: formattedDate,
-              source: article.source.trim(),
-              imageUrl: article.imageUrl || getFallbackImageUrl(company),
-              company
-            };
-          } catch (error) {
-            console.error('[DEBUG] Error validating article:', error);
-            return null;
-          }
-        })
-        .filter((article): article is NewsArticle => article !== null);
-
-      if (validatedArticles.length === 0) {
-        console.warn('[DEBUG] No valid articles after validation');
-        return createFallbackArticles(company, count);
-      }
-
-      console.log('[DEBUG] Successfully processed articles:', validatedArticles.length);
-      return validatedArticles;
+      console.log('[DEBUG] Successfully processed articles:', articles.length);
+      return articles;
     } catch (error) {
       console.error('[DEBUG] Error parsing Perplexity response:', error);
       return createFallbackArticles(company, count);
@@ -476,27 +432,24 @@ async function fetchNewsFromLlama(company: string, count: number) {
 function createFallbackArticles(company: string, count: number): NewsArticle[] {
   console.log(`[DEBUG] Creating ${count} fallback articles for ${company}`);
   
-  const baseUrl = company.toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  
   const domains = [
-    'reuters.com',
-    'bloomberg.com',
-    'ft.com',
-    'wsj.com',
-    'cnbc.com'
+    'reuters.com/companies',
+    'bloomberg.com/companies',
+    'ft.com/companies',
+    'wsj.com/news/business',
+    'cnbc.com/business'
   ];
   
   return Array.from({ length: count }, (_, i) => ({
     id: `${company}-fallback-${Date.now()}-${i}`,
-    title: `Latest Updates: ${company} News and Developments`,
-    summary: `Stay informed about the latest news, updates, and developments from ${company}. Follow our coverage for real-time information about company announcements, market updates, and industry insights.`,
-    url: `https://www.${domains[i % domains.length]}/search?q=${encodeURIComponent(company)}`,
+    title: `No Recent News Available for ${company}`,
+    summary: `We are currently unable to fetch recent news articles for ${company}. Please try again later or visit the company's official website for the latest updates.`,
+    url: `https://www.${domains[i % domains.length]}`,
     publishedDate: new Date().toISOString().split('T')[0],
     source: domains[i % domains.length].split('.')[0].toUpperCase(),
     imageUrl: getFallbackImageUrl(company),
-    company
+    company,
+    isFallback: true
   }));
 }
 
@@ -551,7 +504,7 @@ export default async function handler(
 
         // Try each company variation for news
         let articles: any[] = [];
-        for (const companyName of companyVariations) {
+        for (const companyName of Array.from(companyVariations)) {
           if (!companyName) continue;
           console.log(`[DEBUG] Fetching news for company variation: "${companyName}"`);
           

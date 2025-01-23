@@ -11,7 +11,9 @@ export interface NewsArticle {
   url: string;
   publishedDate: string;
   source: string;
+  sourceName?: string;
   company: string;
   imageUrl?: string;
   mentionedEmployees?: string[];
+  isFallback?: boolean;
 } 

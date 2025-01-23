@@ -202,7 +202,7 @@ export function NewsView() {
 
   // Fetch news for a single company
   const fetchNewsForCompany = async (company: string) => {
-    if (!session) {
+    if (!session?.access_token) {
       console.error('[DEBUG] No active session');
       toast({
         title: 'Authentication Required',
@@ -221,7 +221,6 @@ export function NewsView() {
         return next;
       });
 
-      console.log('[DEBUG] Making API request with session token...');
       const response = await fetch('/api/news', {
         method: 'POST',
         headers: { 
@@ -231,59 +230,101 @@ export function NewsView() {
         body: JSON.stringify({ companies: [company], count: articlesPerCompany })
       });
 
-      console.log('[DEBUG] API response status:', response.status);
       const data = await response.json();
-      console.log('[DEBUG] API response data:', data);
+      console.log('[DEBUG] API response:', { status: response.status, data });
 
       if (!response.ok) {
         let errorMessage = 'Failed to fetch news';
         if (data.error) {
           errorMessage = data.error;
-          if (data.details) {
-            const cleanDetails = data.details
-              .replace(/Perplexity API request failed: /g, '')
-              .replace(/{"error":{"message":/g, '')
-              .replace(/,"type":"bad_request","code":400}}/g, '')
-              .replace(/\[|\]|"/g, '')
-              .split(',')[0];
-            errorMessage = cleanDetails || data.error;
-          }
         }
-        console.error('[DEBUG] API error:', errorMessage);
         throw new Error(errorMessage);
       }
 
-      // Check for articles in the response
-      if (!data.articles) {
-        console.error('[DEBUG] Missing articles in response:', data);
-        throw new Error('Invalid response format: missing articles');
+      if (!data.articles || !Array.isArray(data.articles)) {
+        console.error('[DEBUG] Invalid response format:', data);
+        throw new Error('Invalid response format from server');
       }
 
-      // Filter articles for this company
-      const companyArticles = data.articles.filter((article: any) => article.company === company);
-      if (!companyArticles || companyArticles.length === 0) {
-        console.error('[DEBUG] No articles found for company:', company);
-        throw new Error('No articles found for company');
+      const companyArticles = data.articles.filter((article: any) => {
+        if (!article || typeof article !== 'object') {
+          console.warn('[DEBUG] Invalid article object:', article);
+          return false;
+        }
+        
+        if (article.company !== company) {
+          console.warn('[DEBUG] Article company mismatch:', { 
+            expected: company, 
+            got: article.company 
+          });
+          return false;
+        }
+
+        // Validate required fields - only check essential fields
+        const requiredFields = ['title', 'summary', 'url'];
+        const missingFields = requiredFields.filter(field => !article[field]);
+        if (missingFields.length > 0) {
+          console.warn('[DEBUG] Article missing required fields:', {
+            article,
+            missingFields
+          });
+          return false;
+        }
+
+        // Ensure URL is valid
+        try {
+          new URL(article.url);
+        } catch (error) {
+          console.warn('[DEBUG] Invalid URL:', article.url);
+          return false;
+        }
+
+        // Handle optional fields with defaults
+        if (!article.publishedDate) {
+          article.publishedDate = new Date().toISOString().split('T')[0];
+        }
+
+        if (!article.source && article.sourceName) {
+          article.source = article.sourceName;
+        }
+
+        if (!article.source) {
+          article.source = 'News Source';
+        }
+
+        return true;
+      });
+
+      if (companyArticles.length === 0) {
+        console.warn('[DEBUG] No valid articles found for company:', company);
+        throw new Error('No articles found');
       }
 
-      console.log('[DEBUG] Found articles for company:', {
+      console.log('[DEBUG] Found articles:', {
         company,
-        articleCount: companyArticles.length,
+        count: companyArticles.length,
         articles: companyArticles
       });
 
       setArticles(prev => {
         // Remove old articles for this company
         const filtered = prev.filter(article => article.company !== company);
-        // Add new articles
-        return [...filtered, ...companyArticles];
+        // Add new articles with normalized fields
+        const newArticles = companyArticles.map((article: NewsArticle) => ({
+          ...article,
+          source: article.source || (article.sourceName as string) || 'News Source',
+          publishedDate: article.publishedDate || new Date().toISOString().split('T')[0],
+          imageUrl: article.imageUrl || `https://logo.clearbit.com/${company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`
+        }));
+        return [...filtered, ...newArticles];
       });
 
-      console.log('[DEBUG] Successfully updated articles');
     } catch (error) {
-      console.error('[DEBUG] Error in fetchNewsForCompany:', error);
+      console.error('[DEBUG] Error fetching news:', error);
       const message = error instanceof Error ? error.message : 'Failed to fetch news';
+      
       setErrors(prev => new Map(prev).set(company, message));
+      
       toast({
         title: 'Error',
         description: `Failed to fetch news for ${company}: ${message}`,
