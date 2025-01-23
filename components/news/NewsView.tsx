@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { supabase } from '@/lib/supabase-client';
 
 function CompanySelect({ companies, selectedCompanies, onSelect }: { 
   companies: string[], 
@@ -88,7 +89,7 @@ export function NewsView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [articlesPerCompany, setArticlesPerCompany] = useState(3);
   const [articles, setArticles] = useState<NewsArticle[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [loadingCompanies, setLoadingCompanies] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Map<string, string>>(new Map());
   const hasInitialized = useRef(false);
@@ -96,6 +97,10 @@ export function NewsView() {
   const [sortBy, setSortBy] = useState<'date' | 'company'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [open, setOpen] = useState(false);
+
+  // Add session state
+  const [session, setSession] = useState<any>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -144,9 +149,71 @@ export function NewsView() {
     }
   }, [uniqueCompanies, selectedCompanies.length, selectRandomCompanies]);
 
+  // Initialize session
+  useEffect(() => {
+    const initSession = async () => {
+      try {
+        console.log('[DEBUG] Initializing session...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('[DEBUG] Session error:', error);
+          toast({
+            title: 'Authentication Error',
+            description: 'Please sign in to view news.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        if (!session) {
+          console.log('[DEBUG] No session found');
+          toast({
+            title: 'Authentication Required',
+            description: 'Please sign in to view news.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        console.log('[DEBUG] Session initialized:', session.user.id);
+        setSession(session);
+      } catch (error) {
+        console.error('[DEBUG] Session initialization error:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to initialize session.',
+          variant: 'destructive',
+        });
+      } finally {
+        setSessionLoading(false);
+      }
+    };
+
+    initSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('[DEBUG] Auth state changed:', _event);
+      setSession(session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [toast]);
+
   // Fetch news for a single company
   const fetchNewsForCompany = async (company: string) => {
+    if (!session) {
+      console.error('[DEBUG] No active session');
+      toast({
+        title: 'Authentication Required',
+        description: 'Please sign in to view news.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
+      console.log('[DEBUG] Starting news fetch for company:', company);
       setLoadingCompanies(prev => new Set([...Array.from(prev), company]));
       setErrors(prev => {
         const next = new Map(prev);
@@ -154,47 +221,67 @@ export function NewsView() {
         return next;
       });
 
+      console.log('[DEBUG] Making API request with session token...');
       const response = await fetch('/api/news', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({ companies: [company], count: articlesPerCompany })
       });
 
+      console.log('[DEBUG] API response status:', response.status);
       const data = await response.json();
+      console.log('[DEBUG] API response data:', data);
 
       if (!response.ok) {
         let errorMessage = 'Failed to fetch news';
         if (data.error) {
           errorMessage = data.error;
           if (data.details) {
-            // Clean up the error message
             const cleanDetails = data.details
               .replace(/Perplexity API request failed: /g, '')
               .replace(/{"error":{"message":/g, '')
               .replace(/,"type":"bad_request","code":400}}/g, '')
               .replace(/\[|\]|"/g, '')
-              .split(',')[0]; // Take only the first error
+              .split(',')[0];
             errorMessage = cleanDetails || data.error;
           }
         }
+        console.error('[DEBUG] API error:', errorMessage);
         throw new Error(errorMessage);
       }
 
-      if (!data.articles || !Array.isArray(data.articles)) {
-        throw new Error('Invalid response format');
+      // Check for articles in the response
+      if (!data.articles) {
+        console.error('[DEBUG] Missing articles in response:', data);
+        throw new Error('Invalid response format: missing articles');
       }
 
-      if (data.articles.length === 0) {
-        throw new Error('No news found');
+      // Filter articles for this company
+      const companyArticles = data.articles.filter((article: any) => article.company === company);
+      if (!companyArticles || companyArticles.length === 0) {
+        console.error('[DEBUG] No articles found for company:', company);
+        throw new Error('No articles found for company');
       }
+
+      console.log('[DEBUG] Found articles for company:', {
+        company,
+        articleCount: companyArticles.length,
+        articles: companyArticles
+      });
 
       setArticles(prev => {
         // Remove old articles for this company
         const filtered = prev.filter(article => article.company !== company);
         // Add new articles
-        return [...filtered, ...data.articles];
+        return [...filtered, ...companyArticles];
       });
+
+      console.log('[DEBUG] Successfully updated articles');
     } catch (error) {
+      console.error('[DEBUG] Error in fetchNewsForCompany:', error);
       const message = error instanceof Error ? error.message : 'Failed to fetch news';
       setErrors(prev => new Map(prev).set(company, message));
       toast({
@@ -283,6 +370,31 @@ export function NewsView() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Show loading state while session is initializing
+  if (sessionLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-sm text-gray-600">Initializing...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if no session
+  if (!session) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="text-center">
+          <div className="text-red-500 mb-2">⚠️</div>
+          <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
+          <p className="text-sm text-gray-600">Please sign in to view news and employee information.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
