@@ -27,7 +27,8 @@ export async function middleware(request: NextRequest) {
     // Apply subscription middleware for protected routes
     if (request.nextUrl.pathname.startsWith('/api/') || 
         request.nextUrl.pathname.startsWith('/dashboard') ||
-        request.nextUrl.pathname.startsWith('/manage')) {
+        request.nextUrl.pathname.startsWith('/manage') ||
+        request.nextUrl.pathname === '/pricing') {
       return subscriptionMiddleware(request)
     }
 

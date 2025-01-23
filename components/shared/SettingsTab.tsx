@@ -177,7 +177,11 @@ export function SettingsTab() {
                 </div>
                 <Button
                   variant={subscriptionStatus === 'active' ? 'outline' : 'default'}
-                  onClick={() => router.push('/pricing')}
+                  onClick={() => {
+                    // After viewing pricing, ensure we return to the settings tab
+                    const returnUrl = encodeURIComponent('/?tab=settings');
+                    router.push(`/pricing?return=${returnUrl}`);
+                  }}
                 >
                   {subscriptionStatus === 'active' ? t('subscription.manageSubscription') : t('subscription.upgradeNow')}
                 </Button>

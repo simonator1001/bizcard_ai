@@ -233,7 +233,31 @@ function UpgradePrompt({ open, onOpenChange }: { open: boolean; onOpenChange: (o
 }
 
 export default function Component() {
-  const [activeTab, setActiveTab] = useState('scan')
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState('scan');
+  
+  // Get the tab from URL parameters
+  React.useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, []);
+
+  // Update URL when tab changes
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    router.push(`/?tab=${tab}`, undefined, { shallow: true });
+  };
+
+  const handleNavigationChange = (index: number | null) => {
+    if (index === null) return;
+    const item = navigationItems[index];
+    if (!item.type && item.title) {
+      handleTabChange(item.title.toLowerCase());
+    }
+  };
+
   const [isYearly, setIsYearly] = useState(false)
   const [newsFilter, setNewsFilter] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
@@ -247,7 +271,6 @@ export default function Component() {
   const { cards, loading, error, addCard, updateCard, deleteCard } = useBusinessCards()
   const { user, signOut } = useAuth()
   const [currentCardIndex, setCurrentCardIndex] = useState(0)
-  const router = useRouter()
 
   // Filter cards based on search term
   const filteredCards = cards.filter(card => 
@@ -294,14 +317,6 @@ export default function Component() {
       setCurrentCardIndex((prevIndex) => (prevIndex - 1 + filteredCards.length) % filteredCards.length)
     }
   }
-
-  const handleNavigationChange = (index: number | null) => {
-    if (index === null) return;
-    const item = navigationItems[index];
-    if (!item.type && item.title) {
-      setActiveTab(item.title.toLowerCase());
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

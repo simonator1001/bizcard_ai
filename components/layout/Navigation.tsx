@@ -14,7 +14,8 @@ import {
   LayoutGrid, 
   Network, 
   Newspaper, 
-  Settings, 
+  Settings,
+  DollarSign,
   type LucideIcon 
 } from 'lucide-react';
 
@@ -42,13 +43,32 @@ export function Navigation() {
   const pathname = usePathname();
   const { user } = useUser();
   const { subscription } = useSubscription();
+  const { t } = useTranslation();
+
+  // Get the current tab from URL or pathname
+  const getCurrentTab = () => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const tabFromQuery = searchParams.get('tab');
+    if (tabFromQuery) return tabFromQuery;
+    
+    // If no query parameter, try to get from pathname
+    const path = pathname.split('/')[1];
+    return path || 'scan';
+  };
 
   const handleNavigationChange = (index: number | null) => {
     if (index === null) return;
     const item = navigationItems[index];
     if (!item.type && item.title) {
-      router.push(`/${item.title.toLowerCase()}`);
+      const tab = item.title.toLowerCase();
+      router.push(`/?tab=${tab}`);
     }
+  };
+
+  const handleUpgradeClick = () => {
+    const currentTab = getCurrentTab();
+    const returnUrl = encodeURIComponent(`/?tab=${currentTab}`);
+    router.push(`/pricing?return=${returnUrl}`);
   };
 
   return (
@@ -70,27 +90,33 @@ export function Navigation() {
             {user ? (
               <>
                 {subscription?.tier !== 'enterprise' && (
-                  <Link href="/pricing">
-                    <Button variant="outline" size="sm">
-                      Upgrade
-                    </Button>
-                  </Link>
-                )}
-                <Link href="/settings">
-                  <Button variant="ghost" size="sm">
-                    Settings
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center gap-2"
+                    onClick={handleUpgradeClick}
+                  >
+                    <DollarSign className="w-4 h-4" />
+                    {t('subscription.upgradeNow')}
                   </Button>
-                </Link>
+                )}
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => router.push('/?tab=settings')}
+                >
+                  {t('navigation.settings')}
+                </Button>
               </>
             ) : (
               <>
                 <Link href="/signin">
                   <Button variant="ghost" size="sm">
-                    Sign In
+                    {t('auth.signIn')}
                   </Button>
                 </Link>
                 <Link href="/signup">
-                  <Button size="sm">Sign Up</Button>
+                  <Button size="sm">{t('auth.signUp')}</Button>
                 </Link>
               </>
             )}

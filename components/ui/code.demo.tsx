@@ -1,4 +1,6 @@
 import { Footerdemo } from "@/components/ui/footer-section";
+import { PricingCreative } from "@/components/ui/pricing-creative"
+import { Button } from "@/components/ui/button"
 
 function Footer() {
   return (
@@ -8,4 +10,8 @@ function Footer() {
   );
 }
 
-export { Footer }; 
+function PricingCreativeDemo() {
+    return <PricingCreative />
+}
+
+export { Footer, PricingCreativeDemo } 
