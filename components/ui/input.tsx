@@ -8,6 +8,9 @@ export interface InputProps
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, ...props }, ref) => {
+    // Add autocomplete attribute for password fields
+    const autocompleteValue = type === 'password' ? 'current-password' : props.autoComplete;
+
     return (
       <input
         type={type}
@@ -16,6 +19,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           className
         )}
         ref={ref}
+        autoComplete={autocompleteValue}
         {...props}
       />
     )

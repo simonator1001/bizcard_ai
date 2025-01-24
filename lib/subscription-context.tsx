@@ -2,14 +2,19 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { useAuth } from './auth-context'
 import { SubscriptionService } from './subscription'
 import { supabase } from './supabase-client'
+import { SUBSCRIPTION_PLANS } from '@/lib/plans'
 
 interface SubscriptionState {
   canScan: boolean
   canAddCompany: boolean
   canAddCard: boolean
   loading: boolean
+  error: Error | null
+  subscription: any
+  usage: any
   checkAction: (action: 'scan' | 'track_company') => Promise<boolean>
   incrementUsage: (action: 'scan' | 'track_company') => Promise<void>
+  refreshSubscription: () => Promise<void>
 }
 
 const SubscriptionContext = createContext<SubscriptionState>({
@@ -17,69 +22,94 @@ const SubscriptionContext = createContext<SubscriptionState>({
   canAddCompany: false,
   canAddCard: false,
   loading: true,
+  error: null,
+  subscription: null,
+  usage: null,
   checkAction: async () => false,
   incrementUsage: async () => {},
+  refreshSubscription: async () => {}
 })
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
-  const [canScan, setCanScan] = useState(false)
-  const [canAddCompany, setCanAddCompany] = useState(false)
-  const [canAddCard, setCanAddCard] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+  const [subscription, setSubscription] = useState<any>(null)
+  const [usage, setUsage] = useState<any>(null)
 
-  const checkPermissions = useCallback(async () => {
+  const fetchSubscriptionData = useCallback(async () => {
     if (!user?.id) {
-      setCanScan(false)
-      setCanAddCompany(false)
-      setCanAddCard(false)
+      setSubscription(null)
+      setUsage(null)
       setLoading(false)
       return
     }
 
     try {
-      const [canScanResult, canTrackCompanyResult] = await Promise.all([
-        SubscriptionService.canPerformAction(user.id, 'scan'),
-        SubscriptionService.canPerformAction(user.id, 'track_company')
+      setLoading(true)
+      setError(null)
+      const [newSubscription, newUsage] = await Promise.all([
+        SubscriptionService.getCurrentSubscription(user.id),
+        SubscriptionService.getCurrentUsage(user.id)
       ])
-
-      setCanScan(canScanResult)
-      setCanAddCompany(canTrackCompanyResult)
-      setCanAddCard(true) // Cards are always allowed
-      setLoading(false)
-    } catch (error) {
-      console.error('Error checking permissions:', error)
-      setCanScan(false)
-      setCanAddCompany(false)
-      setCanAddCard(false)
+      setSubscription(newSubscription)
+      setUsage(newUsage)
+    } catch (err) {
+      console.error('[SubscriptionContext] Error fetching subscription data:', err)
+      setError(err instanceof Error ? err : new Error('Failed to fetch subscription data'))
+      // Set default values on error
+      setSubscription(SubscriptionService.getDefaultSubscription(user.id))
+      setUsage(SubscriptionService.getDefaultUsage(SUBSCRIPTION_PLANS.free))
+    } finally {
       setLoading(false)
     }
   }, [user?.id])
 
   useEffect(() => {
-    checkPermissions()
-  }, [checkPermissions])
+    fetchSubscriptionData()
+  }, [fetchSubscriptionData])
 
   const checkAction = useCallback(async (action: 'scan' | 'track_company') => {
     if (!user?.id) return false
-    return SubscriptionService.canPerformAction(user.id, action)
+    try {
+      return await SubscriptionService.canPerformAction(user.id, action)
+    } catch (err) {
+      console.error('[SubscriptionContext] Error checking action:', err)
+      return false
+    }
   }, [user?.id])
 
   const incrementUsage = useCallback(async (action: 'scan' | 'track_company') => {
     if (!user?.id) return
-    await SubscriptionService.incrementUsage(user.id, action)
-    await checkPermissions()
-  }, [user?.id, checkPermissions])
+    try {
+      await SubscriptionService.incrementUsage(user.id, action)
+      // Refresh subscription data after incrementing usage
+      await fetchSubscriptionData()
+    } catch (err) {
+      console.error('[SubscriptionContext] Error incrementing usage:', err)
+      throw err
+    }
+  }, [user?.id, fetchSubscriptionData])
+
+  const canScan = !loading && usage?.remainingScans > 0
+  const canAddCompany = !loading && usage?.companiesTracked < (subscription?.limits?.companiesTracked ?? 0)
+  const canAddCard = !loading && subscription?.status === 'active'
 
   return (
-    <SubscriptionContext.Provider value={{
-      canScan,
-      canAddCompany,
-      canAddCard,
-      loading,
-      checkAction,
-      incrementUsage
-    }}>
+    <SubscriptionContext.Provider
+      value={{
+        canScan,
+        canAddCompany,
+        canAddCard,
+        loading,
+        error,
+        subscription,
+        usage,
+        checkAction,
+        incrementUsage,
+        refreshSubscription: fetchSubscriptionData
+      }}
+    >
       {children}
     </SubscriptionContext.Provider>
   )

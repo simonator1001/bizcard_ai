@@ -19,7 +19,7 @@ console.debug('[Subscription] Environment check:', {
 });
 
 // Use regular client on client side, admin client on server side
-export const adminClient = isClient ? supabase : (supabaseUrl && supabaseServiceKey ? 
+export const adminClient = isClient ? null : (supabaseUrl && supabaseServiceKey ? 
   createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
@@ -48,13 +48,16 @@ export interface SubscriptionUsage {
 export class SubscriptionService {
   static async getCurrentSubscription(userId: string): Promise<Subscription> {
     try {
-      if (!adminClient) {
-        console.debug('[Subscription] No admin client available, returning default subscription');
+      // Always use the regular client on the client side
+      const client = isClient ? supabase : adminClient;
+      
+      if (!client) {
+        console.debug('[Subscription] No client available, returning default subscription');
         return this.getDefaultSubscription(userId);
       }
 
       console.debug('[Subscription] Fetching subscription for user:', userId);
-      const { data: subscription, error } = await adminClient
+      const { data: subscription, error } = await client
         .from('subscriptions')
         .select('*')
         .eq('user_id', userId)
@@ -78,8 +81,7 @@ export class SubscriptionService {
       
       console.debug('[Subscription] Tier normalization:', {
         rawTier,
-        normalizedTier,
-        isValidTier: normalizedTier === 'free' || normalizedTier === 'basic' || normalizedTier === 'pro'
+        normalizedTier
       });
 
       const validTier: SubscriptionTier = normalizedTier === 'free' || normalizedTier === 'basic' || normalizedTier === 'pro' || normalizedTier === 'enterprise'
@@ -141,23 +143,6 @@ export class SubscriptionService {
     }
   }
 
-  private static getDefaultSubscription(userId: string): Subscription {
-    const now = new Date();
-    const result: Subscription = {
-      id: 'free',
-      userId,
-      tier: 'free' as SubscriptionTier,
-      status: 'active',
-      currentPeriodStart: now,
-      currentPeriodEnd: new Date(now.setFullYear(now.getFullYear() + 1)),
-      cancelAtPeriodEnd: false,
-      createdAt: now,
-      updatedAt: now
-    };
-    console.debug('[Subscription] Using default subscription:', result);
-    return result;
-  }
-
   static async getCurrentUsage(userId: string): Promise<SubscriptionUsage> {
     try {
       console.debug('[Subscription] Getting usage for user:', userId);
@@ -178,13 +163,16 @@ export class SubscriptionService {
         planLimits: plan?.limits
       });
 
-      if (!adminClient) {
-        console.debug('[Subscription] No admin client available, returning default usage');
+      // Always use the regular client on the client side
+      const client = isClient ? supabase : adminClient;
+      
+      if (!client) {
+        console.debug('[Subscription] No client available, returning default usage');
         return this.getDefaultUsage(plan);
       }
 
       // Get current stats from user_usage_stats table
-      const { data: stats, error: statsError } = await adminClient
+      const { data: stats, error: statsError } = await client
         .from('user_usage_stats')
         .select('scans_this_month, unique_companies, cards_count')
         .eq('user_id', userId)
@@ -221,12 +209,29 @@ export class SubscriptionService {
 
       return result;
     } catch (error) {
-      console.error('[Subscription] Error getting usage:', error);
+      console.error('[Subscription] Error in getCurrentUsage:', error);
       return this.getDefaultUsage(SUBSCRIPTION_PLANS.free);
     }
   }
 
-  private static getDefaultUsage(plan: any): SubscriptionUsage {
+  static getDefaultSubscription(userId: string): Subscription {
+    const now = new Date();
+    const result: Subscription = {
+      id: 'free',
+      userId,
+      tier: 'free' as SubscriptionTier,
+      status: 'active',
+      currentPeriodStart: now,
+      currentPeriodEnd: new Date(now.setFullYear(now.getFullYear() + 1)),
+      cancelAtPeriodEnd: false,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    return result;
+  }
+
+  static getDefaultUsage(plan: any): SubscriptionUsage {
     const result = {
       scansCount: 0,
       companiesTracked: 0,
@@ -269,7 +274,7 @@ export class SubscriptionService {
   static async canPerformAction(userId: string, action: 'scan' | 'track_company'): Promise<boolean> {
     try {
       const [plan, usage] = await Promise.all([
-        this.getUserPlan(userId),
+        this.getCurrentSubscription(userId),
         this.getCurrentUsage(userId),
       ]);
 
@@ -286,7 +291,7 @@ export class SubscriptionService {
 
       return false;
     } catch (error) {
-      console.error('[Subscription] Error checking action permission:', error);
+      console.error('[Subscription] Error in canPerformAction:', error);
       return false;
     }
   }
@@ -345,8 +350,11 @@ export class SubscriptionService {
 
   static async incrementUsage(userId: string, action: 'scan' | 'track_company'): Promise<void> {
     try {
-      if (!adminClient) {
-        console.debug('[Subscription] No admin client available, skipping usage increment');
+      // Always use the regular client on the client side
+      const client = isClient ? supabase : adminClient;
+      
+      if (!client) {
+        console.debug('[Subscription] No client available, skipping usage increment');
         return;
       }
 
@@ -377,7 +385,7 @@ export class SubscriptionService {
       }
 
       // Update usage stats
-      const { error } = await adminClient
+      const { error } = await client
         .from('user_usage_stats')
         .upsert({
           user_id: userId,

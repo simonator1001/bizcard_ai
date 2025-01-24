@@ -73,6 +73,7 @@ export default function SignUpPage() {
                 type="email" 
                 placeholder="m@example.com" 
                 required 
+                autoComplete="username"
                 className="w-full h-12 px-4 bg-[#0A0A0F] text-white rounded-lg"
               />
             </div>
@@ -83,6 +84,7 @@ export default function SignUpPage() {
                 name="password" 
                 type="password" 
                 required 
+                autoComplete="new-password"
                 className="w-full h-12 px-4 bg-[#0A0A0F] text-white rounded-lg"
               />
             </div>
@@ -93,6 +95,7 @@ export default function SignUpPage() {
                 name="confirmPassword" 
                 type="password" 
                 required 
+                autoComplete="new-password"
                 className="w-full h-12 px-4 bg-[#0A0A0F] text-white rounded-lg"
               />
             </div>

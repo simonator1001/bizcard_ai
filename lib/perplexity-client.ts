@@ -154,4 +154,64 @@ Format as:
       return 'Failed to generate summary';
     }
   }
+}
+
+import { getSystemPrompt } from './prompts';
+
+interface Message {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+interface ChatCompletionResponse {
+  id: string;
+  model: string;
+  choices: {
+    index: number;
+    message: Message;
+    finish_reason: string;
+  }[];
+}
+
+export async function chatWithPerplexity(messages: Message[]): Promise<string> {
+  const apiKey = process.env.NEXT_PUBLIC_PERPLEXITY_API_KEY;
+  if (!apiKey) {
+    throw new Error('Perplexity API key not found');
+  }
+
+  try {
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'sonar',
+        messages: [
+          {
+            role: 'system',
+            content: getSystemPrompt()
+          },
+          ...messages
+        ],
+        max_tokens: 1024,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(
+        `Perplexity API error: ${response.statusText}${
+          errorData ? ` - ${JSON.stringify(errorData)}` : ''
+        }`
+      );
+    }
+
+    const data: ChatCompletionResponse = await response.json();
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('Error calling Perplexity API:', error);
+    throw error;
+  }
 } 

@@ -52,53 +52,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!mounted) return
 
-    console.log('[AuthContext] Initializing auth state')
+    let ignore = false
+    console.debug('[AuthContext] Initializing auth state')
     
-    let subscription: { unsubscribe: () => void } | undefined;
-
-    // Get initial session
-    const initializeAuth = async () => {
+    async function initializeAuth() {
       try {
+        // Get initial session
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error) {
-          console.error('[AuthContext] Session error:', error)
+          console.error('[AuthContext] Error getting initial session:', error)
+          if (!ignore) {
+            setLoading(false)
+            setInitialized(true)
+          }
           return
         }
-        
-        console.log('[AuthContext] Initial session:', session ? {
-          id: session.user.id,
-          email: session.user.email,
-          role: session.user.role
-        } : 'None')
 
-        if (mounted) {
-          setUser(session?.user ?? null)
+        if (session) {
+          console.debug('[AuthContext] Initial session:', {
+            id: session.user.id,
+            email: session.user.email,
+            role: session.user.role,
+            expiresAt: new Date(session.expires_at! * 1000).toISOString()
+          })
+          
+          if (!ignore) {
+            setUser(session.user)
+          }
+        } else {
+          console.debug('[AuthContext] No initial session')
+          if (!ignore) {
+            setUser(null)
+          }
+        }
+
+        if (!ignore) {
           setLoading(false)
           setInitialized(true)
         }
-
-        // Listen for auth changes
-        const {
-          data: { subscription: authSubscription },
-        } = supabase.auth.onAuthStateChange(async (_event, session) => {
-          console.log('[AuthContext] Auth state changed:', _event)
-          console.log('[AuthContext] New session:', session ? {
-            id: session.user.id,
-            email: session.user.email,
-            role: session.user.role
-          } : 'None')
-          
-          if (mounted) {
-            setUser(session?.user ?? null)
-            setLoading(false)
-          }
-        })
-
-        subscription = authSubscription
-      } catch (error) {
-        console.error('[AuthContext] Initialization error:', error)
-        if (mounted) {
+      } catch (err) {
+        console.error('[AuthContext] Error initializing auth:', err)
+        if (!ignore) {
           setLoading(false)
           setInitialized(true)
         }
@@ -107,11 +102,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeAuth()
 
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.debug('[AuthContext] Auth state changed:', event, session ? {
+        id: session.user.id,
+        email: session.user.email,
+        role: session.user.role,
+        expiresAt: new Date(session.expires_at! * 1000).toISOString()
+      } : 'No session')
+
+      if (ignore) return
+
+      if (session) {
+        setUser(session.user)
+        // Only redirect on sign in events
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          const returnUrl = window.localStorage.getItem('returnUrl') || '/'
+          window.localStorage.removeItem('returnUrl')
+          router.push(returnUrl)
+        }
+      } else {
+        setUser(null)
+        // Only redirect on sign out events
+        if (event === 'SIGNED_OUT') {
+          // Store the current URL before redirecting
+          if (window.location.pathname !== '/signin') {
+            window.localStorage.setItem('returnUrl', window.location.pathname)
+          }
+          router.push('/signin')
+        }
+      }
+    })
+
     return () => {
-      console.log('[AuthContext] Cleaning up auth subscription')
-      subscription?.unsubscribe()
+      ignore = true
+      subscription.unsubscribe()
     }
-  }, [mounted])
+  }, [mounted, router])
 
   // Don't render children until we've initialized auth
   if (!initialized) {
@@ -131,49 +158,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         loading,
         signIn: async (email, password) => {
-          console.log('[AuthContext] Signing in with email:', email)
-          const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          })
-          if (error) throw error
-        },
-        signUp: async (email, password, name) => {
-          console.log('[AuthContext] Signing up with email:', email)
-          const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: { name },
-              emailRedirectTo: `${window.location.origin}/auth/callback`
-            },
-          })
-          if (error) throw error
-
-          // Automatically sign in after signup
-          if (data?.user) {
-            const { error: signInError } = await supabase.auth.signInWithPassword({
+          try {
+            console.debug('[AuthContext] Signing in with email:', email)
+            const { error } = await supabase.auth.signInWithPassword({
               email,
               password,
             })
-            if (signInError) throw signInError
+            if (error) throw error
+          } catch (error) {
+            console.error('[AuthContext] Sign in error:', error)
+            throw error
+          }
+        },
+        signUp: async (email, password, name) => {
+          try {
+            console.debug('[AuthContext] Signing up with email:', email)
+            const { error } = await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                data: { name },
+                emailRedirectTo: `${window.location.origin}/auth/callback`
+              },
+            })
+            if (error) throw error
+          } catch (error) {
+            console.error('[AuthContext] Sign up error:', error)
+            throw error
           }
         },
         signOut: async () => {
-          console.log('[AuthContext] Signing out')
-          const { error } = await supabase.auth.signOut()
-          if (error) throw error
-          router.push('/signin')
+          try {
+            console.debug('[AuthContext] Signing out')
+            const { error } = await supabase.auth.signOut()
+            if (error) throw error
+          } catch (error) {
+            console.error('[AuthContext] Sign out error:', error)
+            throw error
+          }
         },
         signInWithProvider: async (provider) => {
-          console.log('[AuthContext] Signing in with provider:', provider)
-          const { error } = await supabase.auth.signInWithOAuth({
-            provider,
-            options: {
-              redirectTo: `${window.location.origin}/auth/callback`,
-            },
-          })
-          if (error) throw error
+          try {
+            const origin = typeof window !== 'undefined' ? window.location.origin : ''
+            const redirectUrl = `${origin}/auth/callback`
+            
+            console.debug('[AuthContext] Signing in with provider:', provider)
+            console.debug('[AuthContext] Redirect URL:', redirectUrl)
+            
+            const { data, error } = await supabase.auth.signInWithOAuth({
+              provider,
+              options: {
+                redirectTo: redirectUrl,
+                queryParams: {
+                  access_type: 'offline',
+                  prompt: 'consent'
+                },
+                skipBrowserRedirect: false
+              }
+            })
+            
+            if (error) {
+              console.error('[AuthContext] Provider sign in error:', error)
+              throw error
+            }
+            
+            return data
+          } catch (error) {
+            console.error('[AuthContext] Provider sign in error:', error)
+            throw error
+          }
         },
       }}
     >

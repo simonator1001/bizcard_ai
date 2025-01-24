@@ -1,4 +1,16 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient, Session, AuthChangeEvent } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
+import { type CookieOptions } from '@supabase/ssr'
+
+interface BusinessCard {
+  id: string;
+  name: string;
+  title: string;
+  company: string;
+  email: string;
+  phone: string;
+  [key: string]: any;
+}
 
 // Debug environment variables in detail
 console.log('[Supabase] Environment debug:', {
@@ -29,81 +41,154 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
   throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is required');
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// Create a single instance of the Supabase client for client-side use
-let _supabase = null;
+// Create a single instance of the Supabase client
+let _supabase: SupabaseClient | null = null;
+let _supabaseAdmin: SupabaseClient | null = null;
 
-// Initialize client with proper configuration
-if (typeof window !== 'undefined') {
-  _supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      flowType: 'pkce',
-      storage: window.localStorage,
-      storageKey: 'supabase.auth.token',
-      debug: true
-    },
-    db: {
-      schema: 'public'
-    }
+export function getSupabaseClient() {
+  if (_supabase) {
+    console.debug('[Supabase] Returning existing client instance');
+    return _supabase;
+  }
+
+  console.debug('[Supabase] Environment debug:', {
+    context: typeof window === 'undefined' ? 'server' : 'client',
+    NODE_ENV: process.env.NODE_ENV,
+    env_keys: Object.keys(process.env).filter(key => key.includes('SUPABASE')),
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 8) + '...',
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '(exists)' : undefined
   });
-  console.log('[Supabase] Client initialized with PKCE flow');
-} else {
-  _supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      flowType: 'pkce'
-    },
-    db: {
-      schema: 'public'
-    }
+
+  const isClient = typeof window !== 'undefined';
+  const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const hasAnonKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  console.debug('[Supabase] Environment check:', {
+    hasUrl,
+    hasAnonKey,
+    hasServiceKey,
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    isServer: !isClient
   });
-  console.log('[Supabase] Server client initialized');
+
+  if (!hasUrl || !hasAnonKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+
+  console.debug('[Supabase] Creating new client instance');
+
+  if (isClient) {
+    _supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            const cookies = document.cookie.split(';')
+              .map(cookie => cookie.trim())
+              .reduce((acc, cookie) => {
+                const [name, value] = cookie.split('=')
+                acc[name] = value
+                return acc
+              }, {} as Record<string, string>)
+            return cookies[name]
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            const cookieStr = [
+              `${name}=${value}`,
+              `path=${options.path || '/'}`,
+              `max-age=${options.maxAge || 31536000}`,
+              'SameSite=Lax',
+              'Secure'
+            ].join('; ')
+            document.cookie = cookieStr
+          },
+          remove(name: string, options: CookieOptions) {
+            const cookieStr = [
+              `${name}=`,
+              `path=${options.path || '/'}`,
+              'expires=Thu, 01 Jan 1970 00:00:00 GMT',
+              'SameSite=Lax',
+              'Secure'
+            ].join('; ')
+            document.cookie = cookieStr
+          }
+        },
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true,
+          flowType: 'pkce'
+        }
+      }
+    );
+    console.debug('[Supabase] Client initialized with PKCE flow');
+  } else {
+    _supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
+    console.debug('[Supabase] Server client initialized');
+  }
+
+  return _supabase;
 }
 
-// Add error handling for client initialization
-if (!_supabase) {
-  console.error('[Supabase] Failed to initialize client');
-  throw new Error('Failed to initialize Supabase client');
-}
-
-// Test connection and log result
-_supabase.auth.onAuthStateChange((event, session) => {
-  console.log('[Supabase] Auth state changed:', event, session ? 'Session exists' : 'No session');
-});
-
-export const supabase = _supabase;
+// Export initialized client
+export const supabase = getSupabaseClient();
 
 // Create service role client only on server-side and only if key is available
-let _supabaseAdmin = null;
-
-// Only initialize admin client on server-side
-if (typeof window === 'undefined') {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.error('[Supabase] Service role key missing in server environment');
-  } else {
-    _supabaseAdmin = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      },
-      db: {
-        schema: 'public'
-      }
-    });
-    console.log('[Supabase] Service role client initialized successfully');
+export function getSupabaseAdmin() {
+  if (_supabaseAdmin) {
+    console.debug('[Supabase] Returning existing admin client instance');
+    return _supabaseAdmin;
   }
-} else {
-  console.log('[Supabase] Skipping admin client initialization on client-side');
+
+  const isClient = typeof window !== 'undefined';
+  if (isClient) {
+    console.debug('[Supabase] Skipping admin client initialization on client-side');
+    return null;
+  }
+
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Missing Supabase service role key');
+  }
+
+  console.debug('[Supabase] Creating new admin client instance');
+
+  _supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      }
+    }
+  );
+
+  console.debug('[Supabase] Service role client initialized successfully');
+  return _supabaseAdmin;
 }
 
 // Export admin client for server-side use
-export const supabaseAdmin = _supabaseAdmin;
+export const supabaseAdmin = getSupabaseAdmin();
+
+// Test connection and log result
+supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
+  console.debug('[Supabase] Auth state changed:', event, session ? 'Session exists' : 'No session');
+});
 
 // Add logging to help debug
 export const testConnection = async () => {
@@ -145,5 +230,94 @@ export const testConnection = async () => {
   } catch (error) {
     console.error('[Supabase] Connection test error:', error);
     return false;
+  }
+};
+
+export async function getBusinessCards() {
+  // Get current user session
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    console.error('No authenticated session');
+    return [];
+  }
+
+  const { data: cards, error } = await supabase
+    .from('business_cards')
+    .select('*')
+    .eq('user_id', session.user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching business cards:', error);
+    throw error;
+  }
+
+  return cards;
+}
+
+export async function searchBusinessCards(query: string): Promise<BusinessCard[]> {
+  try {
+    // Get current user session
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      console.error('No authenticated session');
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('business_cards')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .or(`name.ilike.%${query}%,company.ilike.%${query}%,title.ilike.%${query}%,email.ilike.%${query}%`)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error searching business cards:', error);
+      throw error;
+    }
+
+    return (data || []) as BusinessCard[];
+  } catch (error) {
+    console.error('Error searching business cards:', error);
+    throw error;
+  }
+}
+
+// Add debug function
+export const debugAuth = async () => {
+  try {
+    console.debug('[Supabase] Debug auth state:');
+    
+    // Check storage
+    if (typeof window !== 'undefined') {
+      console.debug('[Supabase] Local storage:', {
+        keys: Object.keys(window.localStorage),
+        hasToken: !!window.localStorage.getItem('sb-auth-token'),
+        hasRefreshToken: !!window.localStorage.getItem('sb-auth-token-refresh'),
+        cookies: document.cookie.split(';')
+          .map(c => c.trim())
+          .filter(c => c.startsWith('sb-'))
+          .map(c => ({ name: c.split('=')[0], value: c.split('=')[1].substring(0, 20) + '...' }))
+      });
+    }
+    
+    // Check session
+    const { data: { session }, error } = await supabase.auth.getSession();
+    console.debug('[Supabase] Current session:', session ? {
+      id: session.user.id,
+      email: session.user.email,
+      expires: new Date(session.expires_at! * 1000).toISOString()
+    } : 'None');
+    
+    if (error) {
+      console.error('[Supabase] Session error:', error);
+    }
+    
+    return { session, error };
+  } catch (error) {
+    console.error('[Supabase] Debug error:', error);
+    return { error };
   }
 }; 
