@@ -214,15 +214,22 @@ async function cleanJsonString(content: string): Promise<string> {
   }
 }
 
-async function parse(content: string, company: string): Promise<any[]> {
+async function parse(content: string, company: string): Promise<NewsArticle[]> {
   try {
     const cleaned = await cleanJsonString(content);
     
+    // Extract JSON array from response if needed
+    const jsonMatch = cleaned.match(/\[.*\]/s);
+    if (!jsonMatch) {
+      console.error('[DEBUG] No JSON array found in content');
+      return [];
+    }
+    
     // Validate JSON structure
-    const parsed = JSON.parse(cleaned);
+    const parsed = JSON.parse(jsonMatch[0]);
     if (!Array.isArray(parsed)) {
       console.error('[DEBUG] Parsed result is not an array:', parsed);
-      throw new Error('Parsed result is not an array');
+      return [];
     }
 
     // Validate each article
@@ -233,7 +240,7 @@ async function parse(content: string, company: string): Promise<any[]> {
       }
 
       // Check required fields
-      const requiredFields = ['title', 'summary', 'url', 'publishedDate', 'sourceName'];
+      const requiredFields = ['title', 'summary', 'url'];
       const missingFields = requiredFields.filter(field => !article[field]);
       if (missingFields.length > 0) {
         console.warn('[DEBUG] Article missing required fields:', {
@@ -262,36 +269,38 @@ async function parse(content: string, company: string): Promise<any[]> {
 
       // Validate title isn't a generic format
       if (article.title.startsWith('Latest Updates:') || 
-          article.title.includes('News and Developments')) {
+          article.title.includes('News and Developments') ||
+          article.title.toLowerCase().includes('no recent news')) {
         console.warn('[DEBUG] Generic title detected:', article.title);
         return false;
       }
 
       // Validate summary isn't generic
-      if (article.summary.includes('Stay informed about the latest news')) {
+      if (article.summary.includes('Stay informed about the latest news') ||
+          article.summary.toLowerCase().includes('unable to fetch')) {
         console.warn('[DEBUG] Generic summary detected');
         return false;
       }
 
       return true;
     }).map(article => ({
-      ...article,
       id: `${company}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title: article.title.trim(),
+      summary: article.summary.trim(),
+      url: article.url,
+      publishedDate: article.publishedDate || new Date().toISOString().split('T')[0],
+      source: article.sourceName || article.source || 'News Source',
+      sourceName: article.sourceName || article.source || 'News Source',
       company,
-      source: article.sourceName,
-      imageUrl: article.imageUrl || getFallbackImageUrl(company)
+      imageUrl: article.imageUrl || getFallbackImageUrl(company),
+      isFallback: false
     }));
-
-    if (validArticles.length === 0) {
-      console.error('[DEBUG] No valid articles found after parsing');
-      throw new Error('No valid articles found');
-    }
 
     console.log('[DEBUG] Successfully parsed articles:', validArticles.length);
     return validArticles;
   } catch (e) {
     console.error('[DEBUG] JSON parsing error:', e);
-    throw new Error('Failed to parse response');
+    return [];
   }
 }
 
@@ -301,31 +310,65 @@ async function fetchWithRetry(url: string, options: any, maxRetries = 3): Promis
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
       
+      // Create custom agent for SSL/TLS configuration
+      const https = require('https');
+      const agent = new https.Agent({
+        rejectUnauthorized: true,
+        secureProtocol: 'TLS_method',
+        minVersion: 'TLSv1.2',
+        maxVersion: 'TLSv1.3',
+        keepAlive: true,
+        keepAliveMsecs: 1000,
+        maxSockets: 10
+      });
+
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
+        agent,
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
           ...options.headers
         }
       });
       
       clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[DEBUG] API error on attempt ${attempt}:`, {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        throw new Error(`API error: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+      
       return response;
     } catch (error) {
-      console.error(`Attempt ${attempt} failed:`, error);
+      console.error(`[DEBUG] Attempt ${attempt} failed:`, {
+        error: error.message,
+        cause: error.cause,
+        stack: error.stack
+      });
+      
       lastError = error;
       
       if (attempt < maxRetries) {
-        // Exponential backoff
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+        const baseDelay = Math.pow(2, attempt) * 1000;
+        const jitter = Math.random() * 1000;
+        const delay = baseDelay + jitter;
+        
+        console.log(`[DEBUG] Retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }
-  
+
+  console.error('[DEBUG] All retry attempts failed:', lastError);
   throw lastError;
 }
 
@@ -334,123 +377,101 @@ async function fetchNewsFromPerplexity(company: string, count: number) {
   
   if (!PERPLEXITY_API_KEY) {
     console.error('[DEBUG] PERPLEXITY_API_KEY is not configured');
-    return createFallbackArticles(company, count);
+    throw new Error('Perplexity API key not configured');
   }
 
   try {
-    const prompt = `Provide ${count} recent news articles about ${company}. Include title, summary (max 200 words), URL, published date (YYYY-MM-DD), and source name. Format as JSON array.`;
-    
     const response = await fetchWithRetry('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`
+      },
       body: JSON.stringify({
         model: 'sonar',
-        messages: [{ role: 'user', content: prompt }]
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a precise news search assistant that returns only real, verifiable news articles in exact JSON format. Each article must include title, summary (50-200 words), url, publishedDate (YYYY-MM-DD), and source fields.'
+          },
+          { 
+            role: 'user', 
+            content: `Search for ${count} recent, factual news articles about the company "${company}" or its industry from the past 6 months. Format as JSON array.` 
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 2000
       })
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[DEBUG] Perplexity API error:', response.status, errorText);
-      return createFallbackArticles(company, count);
-    }
+    const responseText = await response.text();
+    console.log('[DEBUG] Raw response text:', responseText);
 
-    const data = await response.json();
-    console.log('[DEBUG] Raw API response:', data);
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (error) {
+      console.error('[DEBUG] Failed to parse response as JSON:', error);
+      throw new Error('Invalid JSON response from API');
+    }
 
     if (!data.choices?.[0]?.message?.content) {
-      console.error('[DEBUG] Invalid response format from Perplexity API');
-      return createFallbackArticles(company, count);
+      console.error('[DEBUG] Invalid response format:', data);
+      throw new Error('Invalid response format from API');
     }
 
-    try {
-      const content = data.choices[0].message.content;
-      console.log('[DEBUG] Parsing content:', content);
-      
-      const articles = await parse(content, company); // Pass company to parse function
-      
-      console.log('[DEBUG] Successfully processed articles:', articles.length);
-      return articles;
-    } catch (error) {
-      console.error('[DEBUG] Error parsing Perplexity response:', error);
-      return createFallbackArticles(company, count);
+    const content = data.choices[0].message.content;
+    console.log('[DEBUG] Content to parse:', content);
+    
+    const articles = await parse(content, company);
+    
+    if (articles.length === 0) {
+      console.log('[DEBUG] No valid articles found for', company);
+      throw new Error('No articles found');
     }
+    
+    const validArticles = articles.filter(article => {
+      try {
+        const url = new URL(article.url);
+        if (!url.hostname.includes('.')) {
+          console.warn('[DEBUG] Invalid article URL hostname:', url.hostname);
+          return false;
+        }
+      } catch {
+        console.warn('[DEBUG] Invalid article URL format');
+        return false;
+      }
+
+      const isRelevant = 
+        article.title.toLowerCase().includes(company.toLowerCase()) ||
+        article.summary.toLowerCase().includes(company.toLowerCase()) ||
+        article.summary.toLowerCase().includes('industry') ||
+        article.summary.toLowerCase().includes('market') ||
+        article.summary.toLowerCase().includes('sector') ||
+        article.summary.toLowerCase().includes('business');
+
+      if (!isRelevant) {
+        console.warn('[DEBUG] Article not relevant to company or industry:', article.title);
+        return false;
+      }
+
+      if (article.summary.length < 30) {
+        console.warn('[DEBUG] Article summary too short:', article.summary);
+        return false;
+      }
+
+      return true;
+    });
+
+    if (validArticles.length === 0) {
+      throw new Error('No relevant articles found');
+    }
+    
+    console.log('[DEBUG] Successfully processed articles:', validArticles.length);
+    return validArticles;
   } catch (error) {
     console.error('[DEBUG] Error in fetchNewsFromPerplexity:', error);
-    return createFallbackArticles(company, count);
-  }
-}
-
-async function fetchNewsFromLlama(company: string, count: number) {
-  console.log('Fetching news from Llama for:', company, 'count:', count);
-  
-  if (!LLAMA_API_KEY) {
-    throw new Error('LLAMA_API_KEY is not configured');
-  }
-
-  const prompt = `Provide the ${count} most recent news articles related to ${company} from credible news sources. For each article, include: title, summary (max 200 words), published date (YYYY-MM-DD format), source name, and URL. Format as JSON array.`;
-
-  const response = await fetch('https://api.llama-api.com/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${LLAMA_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: 'llama-3.1-sonar-large-128k-online',
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Llama API error:', response.status, errorText);
-    throw new Error(`Llama API request failed: ${errorText}`);
-  }
-
-  const data = await response.json();
-  console.log('Llama API response:', data);
-
-  if (!data.choices?.[0]?.message?.content) {
-    throw new Error('Invalid response format from Llama API');
-  }
-
-  try {
-    const content = data.choices[0].message.content;
-    const articles = JSON.parse(content);
-    
-    if (!Array.isArray(articles)) {
-      throw new Error('Response is not an array');
-    }
-
-    return articles;
-  } catch (error) {
-    console.error('Error parsing Llama response:', error);
     throw error;
   }
-}
-
-function createFallbackArticles(company: string, count: number): NewsArticle[] {
-  console.log(`[DEBUG] Creating ${count} fallback articles for ${company}`);
-  
-  const domains = [
-    'reuters.com/companies',
-    'bloomberg.com/companies',
-    'ft.com/companies',
-    'wsj.com/news/business',
-    'cnbc.com/business'
-  ];
-  
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${company}-fallback-${Date.now()}-${i}`,
-    title: `No Recent News Available for ${company}`,
-    summary: `We are currently unable to fetch recent news articles for ${company}. Please try again later or visit the company's official website for the latest updates.`,
-    url: `https://www.${domains[i % domains.length]}`,
-    publishedDate: new Date().toISOString().split('T')[0],
-    source: domains[i % domains.length].split('.')[0].toUpperCase(),
-    imageUrl: getFallbackImageUrl(company),
-    company,
-    isFallback: true
-  }));
 }
 
 export default async function handler(
