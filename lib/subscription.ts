@@ -73,17 +73,10 @@ export class SubscriptionService {
         return this.getDefaultSubscription(userId);
       }
 
-      console.debug('[Subscription] Raw subscription data from DB:', subscription);
-
       // Ensure tier is one of the valid values and normalize to lowercase
       const rawTier = subscription.tier;
       const normalizedTier = rawTier?.toLowerCase();
       
-      console.debug('[Subscription] Tier normalization:', {
-        rawTier,
-        normalizedTier
-      });
-
       const validTier: SubscriptionTier = normalizedTier === 'free' || normalizedTier === 'basic' || normalizedTier === 'pro' || normalizedTier === 'enterprise'
         ? normalizedTier as SubscriptionTier
         : 'free';
@@ -100,14 +93,6 @@ export class SubscriptionService {
         updatedAt: new Date(subscription.updated_at || Date.now()),
         customBranding: subscription.custom_branding || undefined
       };
-
-      console.debug('[Subscription] Processed subscription data:', {
-        result,
-        originalTier: subscription.tier,
-        normalizedTier: validTier,
-        status: result.status,
-        currentPeriodEnd: result.currentPeriodEnd
-      });
 
       return result;
     } catch (error) {
@@ -145,23 +130,10 @@ export class SubscriptionService {
 
   static async getCurrentUsage(userId: string): Promise<SubscriptionUsage> {
     try {
-      console.debug('[Subscription] Getting usage for user:', userId);
-
       // Get subscription to determine scan limits
       const subscription = await this.getCurrentSubscription(userId);
-      console.debug('[Subscription] Got subscription for usage:', {
-        tier: subscription.tier,
-        status: subscription.status
-      });
-
-      // Ensure lowercase tier for plan lookup
       const tier = subscription.tier.toLowerCase();
-      const plan = SUBSCRIPTION_PLANS[tier];
-      console.debug('[Subscription] Using plan for tier:', {
-        tier,
-        planName: plan?.name,
-        planLimits: plan?.limits
-      });
+      const plan = SUBSCRIPTION_PLANS[tier] || SUBSCRIPTION_PLANS.free;
 
       // Always use the regular client on the client side
       const client = isClient ? supabase : adminClient;
@@ -183,8 +155,6 @@ export class SubscriptionService {
         return this.getDefaultUsage(plan);
       }
 
-      console.debug('[Subscription] Raw stats from DB:', stats);
-
       const monthlyLimit = plan.limits.scansPerMonth;
       const scansCount = stats?.scans_this_month || 0;
       const totalCards = stats?.cards_count || 0;
@@ -193,21 +163,12 @@ export class SubscriptionService {
       // For Pro plan, remaining scans should be Infinity
       const remainingScans = monthlyLimit === Infinity ? Infinity : Math.max(0, monthlyLimit - scansCount);
 
-      const result = {
+      return {
         scansCount,
         companiesTracked: uniqueCompanies,
         totalCards,
         remainingScans
       };
-
-      console.debug('[Subscription] Calculated usage:', {
-        result,
-        monthlyLimit,
-        isPro: tier === 'pro',
-        planName: plan.name
-      });
-
-      return result;
     } catch (error) {
       console.error('[Subscription] Error in getCurrentUsage:', error);
       return this.getDefaultUsage(SUBSCRIPTION_PLANS.free);

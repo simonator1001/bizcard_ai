@@ -1,64 +1,22 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { AIInputWithSearch } from '@/components/ui/ai-input-with-search';
+import { useState } from 'react';
+import { Message } from '@/types/chat';
+import { AIInputWithSearch } from './AIInputWithSearch';
 import { toast } from 'sonner';
-import { getBusinessCards, searchBusinessCards } from '@/lib/supabase-client';
-import { BusinessCard } from '@/types/business-card';
-
-interface Message {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
-function getSystemPrompt() {
-  return `You are a helpful assistant that helps users understand and analyze their business card collection. 
-You can help users find specific business cards, count cards, analyze trends, and answer questions about their contacts.
-Always be concise and to the point. If no relevant cards are found, suggest ways to refine the search.`;
-}
+import { getSystemPrompt } from '@/lib/prompts';
 
 export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [businessCards, setBusinessCards] = useState<BusinessCard[]>([]);
 
-  useEffect(() => {
-    // Load business cards on component mount
-    const loadBusinessCards = async () => {
-      try {
-        const cards = await getBusinessCards();
-        setBusinessCards(cards);
-      } catch (error) {
-        console.error('Error loading business cards:', error);
-        toast.error('Failed to load business cards');
-      }
-    };
-
-    loadBusinessCards();
-  }, []);
-
-  const handleSubmit = async (userInput: string) => {
-    if (!userInput.trim()) return;
+  const handleSubmit = async (content: string) => {
+    if (!content.trim()) return;
 
     try {
       setIsLoading(true);
-      const userMessage: Message = { role: 'user' as const, content: userInput };
+      const userMessage: Message = { role: 'user', content };
       setMessages(prev => [...prev, userMessage]);
-
-      // Get business card data based on query
-      let relevantCards: BusinessCard[] = [];
-      if (userInput.toLowerCase().includes('how many') || userInput.toLowerCase().includes('count')) {
-        relevantCards = await getBusinessCards();
-      } else {
-        relevantCards = await searchBusinessCards(userInput);
-      }
-
-      // Prepare context with business card data
-      const context = `Based on the business card database:
-${relevantCards.length > 0 ? `Found ${relevantCards.length} relevant business cards.
-${relevantCards.map(card => `- ${card.name || 'Unnamed'} | ${card.title || 'No title'} at ${card.company || 'No company'}`).join('\n')}` : 'No relevant business cards found.'}
-
-User question: ${userInput}`;
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -68,7 +26,8 @@ User question: ${userInput}`;
         body: JSON.stringify({
           messages: [
             { role: 'system', content: getSystemPrompt() },
-            { role: 'user', content: context }
+            ...messages,
+            userMessage
           ]
         }),
       });
@@ -79,7 +38,7 @@ User question: ${userInput}`;
       }
 
       const data = await response.json();
-      const assistantMessage: Message = { role: 'assistant' as const, content: data.content };
+      const assistantMessage: Message = { role: 'assistant', content: data.content };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error in chat:', error);

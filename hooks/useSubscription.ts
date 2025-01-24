@@ -22,13 +22,18 @@ export function useSubscription() {
           return;
         }
 
-        // Skip if no user ID
+        // If no user, set default subscription
         if (!user?.id) {
-          console.debug('[useSubscription] No user ID, skipping fetch');
-          setSubscription(null);
-          setUsage(null);
-          setLoading(false);
-          setInitialized(true);
+          console.debug('[useSubscription] No user ID, setting default subscription');
+          const defaultSubscription = SubscriptionService.getDefaultSubscription('anonymous');
+          const defaultUsage = SubscriptionService.getDefaultUsage(SUBSCRIPTION_PLANS.free);
+          
+          if (isMounted) {
+            setSubscription(defaultSubscription);
+            setUsage(defaultUsage);
+            setLoading(false);
+            setInitialized(true);
+          }
           return;
         }
 
@@ -51,18 +56,19 @@ export function useSubscription() {
           setSubscription(newSubscription);
           setUsage(newUsage);
           setInitialized(true);
+          setLoading(false);
         }
       } catch (err) {
         console.error('[useSubscription] Error fetching subscription data:', err);
         if (isMounted) {
           setError(err instanceof Error ? err : new Error('Failed to fetch subscription data'));
           // Set default values on error
-          setSubscription(SubscriptionService.getDefaultSubscription(user?.id || 'anonymous'));
-          setUsage(SubscriptionService.getDefaultUsage(SUBSCRIPTION_PLANS.free));
-        }
-      } finally {
-        if (isMounted) {
+          const defaultSubscription = SubscriptionService.getDefaultSubscription(user?.id || 'anonymous');
+          const defaultUsage = SubscriptionService.getDefaultUsage(SUBSCRIPTION_PLANS.free);
+          setSubscription(defaultSubscription);
+          setUsage(defaultUsage);
           setLoading(false);
+          setInitialized(true);
         }
       }
     }
@@ -166,21 +172,26 @@ export function useSubscription() {
     planName: plan.name
   });
 
+  const isFree = normalizedTier === 'free';
+  const isBasic = normalizedTier === 'basic';
+  const isActive = subscription?.status === 'active';
+
   const subscriptionData = {
     subscription,
     usage,
     plan,
     loading: loading || userLoading,
     error,
-    isFree: normalizedTier === 'free',
+    isFree,
     isPro,
-    isBasic: normalizedTier === 'basic',
-    isActive: subscription?.status === 'active',
+    isBasic,
+    isActive,
     canScan: !loading && usage ? usage.remainingScans > 0 : false,
     canTrackCompany: !loading && usage && plan ? usage.companiesTracked < plan.limits.companiesTracked : false,
     canPerformAction,
     incrementUsage,
-    refreshUsage
+    refreshUsage,
+    initialized
   };
 
   // Debug log for final return value

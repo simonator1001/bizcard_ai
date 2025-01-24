@@ -15,6 +15,7 @@ interface SubscriptionState {
   checkAction: (action: 'scan' | 'track_company') => Promise<boolean>
   incrementUsage: (action: 'scan' | 'track_company') => Promise<void>
   refreshSubscription: () => Promise<void>
+  initialized: boolean
 }
 
 const SubscriptionContext = createContext<SubscriptionState>({
@@ -27,7 +28,8 @@ const SubscriptionContext = createContext<SubscriptionState>({
   usage: null,
   checkAction: async () => false,
   incrementUsage: async () => {},
-  refreshSubscription: async () => {}
+  refreshSubscription: async () => {},
+  initialized: false
 })
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
@@ -36,12 +38,16 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [error, setError] = useState<Error | null>(null)
   const [subscription, setSubscription] = useState<any>(null)
   const [usage, setUsage] = useState<any>(null)
+  const [initialized, setInitialized] = useState(false)
 
   const fetchSubscriptionData = useCallback(async () => {
     if (!user?.id) {
-      setSubscription(null)
-      setUsage(null)
+      const defaultSubscription = SubscriptionService.getDefaultSubscription('anonymous')
+      const defaultUsage = SubscriptionService.getDefaultUsage(SUBSCRIPTION_PLANS.free)
+      setSubscription(defaultSubscription)
+      setUsage(defaultUsage)
       setLoading(false)
+      setInitialized(true)
       return
     }
 
@@ -54,12 +60,15 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       ])
       setSubscription(newSubscription)
       setUsage(newUsage)
+      setInitialized(true)
     } catch (err) {
       console.error('[SubscriptionContext] Error fetching subscription data:', err)
       setError(err instanceof Error ? err : new Error('Failed to fetch subscription data'))
       // Set default values on error
-      setSubscription(SubscriptionService.getDefaultSubscription(user.id))
-      setUsage(SubscriptionService.getDefaultUsage(SUBSCRIPTION_PLANS.free))
+      const defaultSubscription = SubscriptionService.getDefaultSubscription(user.id)
+      const defaultUsage = SubscriptionService.getDefaultUsage(SUBSCRIPTION_PLANS.free)
+      setSubscription(defaultSubscription)
+      setUsage(defaultUsage)
     } finally {
       setLoading(false)
     }
@@ -91,8 +100,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [user?.id, fetchSubscriptionData])
 
+  const plan = subscription?.tier ? SUBSCRIPTION_PLANS[subscription.tier.toLowerCase()] || SUBSCRIPTION_PLANS.free : SUBSCRIPTION_PLANS.free
   const canScan = !loading && usage?.remainingScans > 0
-  const canAddCompany = !loading && usage?.companiesTracked < (subscription?.limits?.companiesTracked ?? 0)
+  const canAddCompany = !loading && usage?.companiesTracked < plan.limits.companiesTracked
   const canAddCard = !loading && subscription?.status === 'active'
 
   return (
@@ -107,7 +117,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         usage,
         checkAction,
         incrementUsage,
-        refreshSubscription: fetchSubscriptionData
+        refreshSubscription: fetchSubscriptionData,
+        initialized
       }}
     >
       {children}
