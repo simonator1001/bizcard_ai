@@ -60,6 +60,7 @@
     "date-fns": "^2.30.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^10.18.0",
+    "gsap": "^3.12.7",
     "http": "^0.0.1-security",
     "https": "^1.0.0",
     "i18next": "^24.1.2",

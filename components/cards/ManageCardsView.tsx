@@ -13,7 +13,8 @@ import {
   List,
   Grid,
   Image as ImageIcon,
-  ChevronDown
+  ChevronDown,
+  Layout
 } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -36,8 +37,9 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { downloadCSV } from '@/lib/csv-utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { GridMotion } from '@/components/ui/grid-motion';
 
-type ViewMode = 'list' | 'grid' | 'carousel';
+type ViewMode = 'list' | 'grid' | 'grid-motion';
 type SortField = 'name' | 'company' | 'title' | 'created_at';
 type SortDirection = 'asc' | 'desc';
 
@@ -316,12 +318,22 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
               variant="ghost"
               size="icon"
               className={cn(
-                "rounded-l-none",
                 viewMode === 'grid' && "bg-muted"
               )}
               onClick={() => setViewMode('grid')}
             >
               <Grid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "rounded-l-none",
+                viewMode === 'grid-motion' && "bg-muted"
+              )}
+              onClick={() => setViewMode('grid-motion')}
+            >
+              <Layout className="h-4 w-4" />
             </Button>
           </div>
 
@@ -355,31 +367,63 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
           </Button>
         </div>
       ) : (
-        <div className={cn(
-          "grid gap-4",
-          viewMode === 'grid' ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
-        )}>
-          {filteredCards.map((card) => (
-            <CardItem
-              key={card.id}
-              card={card}
-              viewMode={viewMode}
-              isSelected={selectedCards.has(card.id)}
-              onSelect={() => {
-                const newSelected = new Set(selectedCards);
-                if (newSelected.has(card.id)) {
-                  newSelected.delete(card.id);
-                } else {
-                  newSelected.add(card.id);
-                }
-                setSelectedCards(newSelected);
-              }}
-              onDelete={() => handleDeleteCard(card.id)}
-              onClick={() => setSelectedCard(card)}
-              onEdit={() => setSelectedCard(card)}
-            />
-          ))}
-        </div>
+        <>
+          {viewMode === 'grid-motion' ? (
+            <div className="h-[600px]">
+              <GridMotion
+                items={filteredCards.map(card => (
+                  <div key={card.id} className="p-4 space-y-2 cursor-pointer" onClick={() => setSelectedCard(card)}>
+                    <div className="relative w-full aspect-[3/2] rounded-lg overflow-hidden bg-muted">
+                      {card.image_url ? (
+                        <Image
+                          src={card.image_url}
+                          alt={card.name || 'Business Card'}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                          <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="font-medium truncate">{card.name || card.name_zh}</p>
+                    <p className="text-sm text-muted-foreground truncate">{card.title || card.title_zh}</p>
+                    <p className="text-sm truncate">{card.company || card.company_zh}</p>
+                  </div>
+                ))}
+                gradientColor="hsl(var(--background))"
+                className="backdrop-blur-sm"
+              />
+            </div>
+          ) : (
+            <div className={cn(
+              "grid gap-4",
+              viewMode === 'grid' ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
+            )}>
+              {filteredCards.map((card) => (
+                <CardItem
+                  key={card.id}
+                  card={card}
+                  viewMode={viewMode}
+                  isSelected={selectedCards.has(card.id)}
+                  onSelect={() => {
+                    const newSelected = new Set(selectedCards);
+                    if (newSelected.has(card.id)) {
+                      newSelected.delete(card.id);
+                    } else {
+                      newSelected.add(card.id);
+                    }
+                    setSelectedCards(newSelected);
+                  }}
+                  onDelete={() => handleDeleteCard(card.id)}
+                  onClick={() => setSelectedCard(card)}
+                  onEdit={() => setSelectedCard(card)}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       <Dialog open={!!selectedCard} onOpenChange={(open) => !open && setSelectedCard(null)}>
