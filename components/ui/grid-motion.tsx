@@ -30,6 +30,10 @@ export function GridMotion({
   const defaultItems = Array.from({ length: totalItems }, (_, index) => `Item ${index + 1}`)
   const combinedItems = items.length > 0 ? items.slice(0, totalItems) : defaultItems
 
+  const setRowRef = (index: number) => (el: HTMLDivElement | null) => {
+    rowRefs.current[index] = el
+  }
+
   useEffect(() => {
     gsap.ticker.lagSmoothing(0)
 
@@ -79,7 +83,7 @@ export function GridMotion({
             <div
               key={rowIndex}
               className="grid gap-4 grid-cols-[repeat(7,1fr)] will-change-transform will-change-filter"
-              ref={(el) => (rowRefs.current[rowIndex] = el)}
+              ref={setRowRef(rowIndex)}
             >
               {[...Array(7)].map((_, itemIndex) => {
                 const content = combinedItems[rowIndex * 7 + itemIndex]
