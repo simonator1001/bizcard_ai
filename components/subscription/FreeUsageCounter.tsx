@@ -9,11 +9,11 @@ import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function FreeUsageCounter() {
-  const { subscription, usage, isLoading } = useSubscription();
+  const { subscription, usage, loading } = useSubscription();
   const router = useRouter();
   const { t } = useTranslation();
 
-  if (isLoading || subscription?.tier !== 'free') return null;
+  if (loading || subscription?.tier !== 'free') return null;
 
   const freePlan = SUBSCRIPTION_PLANS['free'];
   if (!freePlan) return null;

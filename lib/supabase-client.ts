@@ -1,16 +1,7 @@
 import { createClient, SupabaseClient, Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { createBrowserClient } from '@supabase/ssr'
 import { type CookieOptions } from '@supabase/ssr'
-
-interface BusinessCard {
-  id: string;
-  name: string;
-  title: string;
-  company: string;
-  email: string;
-  phone: string;
-  [key: string]: any;
-}
+import { BusinessCard } from '@/types/business-card'
 
 // Debug environment variables in detail
 console.log('[Supabase] Environment debug:', {

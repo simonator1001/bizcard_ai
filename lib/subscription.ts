@@ -273,13 +273,19 @@ export class SubscriptionService {
 
   static async canPerformAction(userId: string, action: 'scan' | 'track_company'): Promise<boolean> {
     try {
-      const [plan, usage] = await Promise.all([
+      const [subscription, usage] = await Promise.all([
         this.getCurrentSubscription(userId),
         this.getCurrentUsage(userId),
       ]);
 
-      if (!plan || !usage) {
-        console.debug('[Subscription] No plan or usage data available');
+      if (!subscription || !usage) {
+        console.debug('[Subscription] No subscription or usage data available');
+        return false;
+      }
+
+      const plan = SUBSCRIPTION_PLANS[subscription.tier];
+      if (!plan) {
+        console.debug('[Subscription] Invalid subscription tier:', subscription.tier);
         return false;
       }
 

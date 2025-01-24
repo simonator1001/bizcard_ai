@@ -22,15 +22,17 @@ const Icons = {
 interface AuthContextType {
   user: User | null
   loading: boolean
+  initialized: boolean
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, name: string) => Promise<void>
   signOut: () => Promise<void>
-  signInWithProvider: (provider: 'google') => Promise<void>
+  signInWithProvider: (provider: 'google') => Promise<{ provider: string; url: string } | void>
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  initialized: false,
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
@@ -157,6 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         loading,
+        initialized,
         signIn: async (email, password) => {
           try {
             console.debug('[AuthContext] Signing in with email:', email)

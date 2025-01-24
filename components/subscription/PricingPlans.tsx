@@ -62,7 +62,7 @@ export function PricingPlans() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {subscriptionError}
+            {subscriptionError.message || 'An error occurred while loading subscription data'}
           </AlertDescription>
         </Alert>
       </div>

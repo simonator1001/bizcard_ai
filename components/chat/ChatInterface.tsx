@@ -11,6 +11,12 @@ interface Message {
   content: string;
 }
 
+function getSystemPrompt() {
+  return `You are a helpful assistant that helps users understand and analyze their business card collection. 
+You can help users find specific business cards, count cards, analyze trends, and answer questions about their contacts.
+Always be concise and to the point. If no relevant cards are found, suggest ways to refine the search.`;
+}
+
 export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +42,7 @@ export function ChatInterface() {
 
     try {
       setIsLoading(true);
-      const userMessage = { role: 'user', content: userInput };
+      const userMessage: Message = { role: 'user' as const, content: userInput };
       setMessages(prev => [...prev, userMessage]);
 
       // Get business card data based on query
@@ -73,7 +79,7 @@ User question: ${userInput}`;
       }
 
       const data = await response.json();
-      const assistantMessage = { role: 'assistant', content: data.content };
+      const assistantMessage: Message = { role: 'assistant' as const, content: data.content };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error in chat:', error);

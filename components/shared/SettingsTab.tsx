@@ -15,7 +15,7 @@ import { useAuth } from '@/lib/auth-context'
 import { Skeleton } from "@/components/ui/skeleton"
 
 export function SettingsTab() {
-  const { subscription, usage, plan, isLoading: loading, error, isPro } = useSubscription();
+  const { subscription, usage, plan, loading, error, isPro } = useSubscription();
   const router = useRouter();
   const { t } = useTranslation();
   const { signOut } = useAuth();
@@ -101,7 +101,7 @@ export function SettingsTab() {
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                {error}
+                {error.message || 'An error occurred while loading subscription data'}
               </AlertDescription>
             </Alert>
           </div>

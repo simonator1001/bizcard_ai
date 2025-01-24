@@ -161,7 +161,7 @@ export function CardItem({
                 )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon-sm">
+                    <Button variant="ghost" size="sm">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -223,7 +223,7 @@ export function CardItem({
         <div className="absolute bottom-4 right-4 flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon-sm">
+              <Button variant="ghost" size="sm">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -299,7 +299,7 @@ export function CardItem({
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-            <Button variant="ghost" size="icon-sm">
+            <Button variant="ghost" size="sm">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>

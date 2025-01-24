@@ -107,6 +107,22 @@ export function useSubscription() {
     }
   };
 
+  // Add refreshUsage function
+  const refreshUsage = async () => {
+    if (!user?.id) {
+      console.debug('[useSubscription] No user ID, cannot refresh usage');
+      return;
+    }
+
+    try {
+      const newUsage = await SubscriptionService.getCurrentUsage(user.id);
+      setUsage(newUsage);
+    } catch (err) {
+      console.error('[useSubscription] Error refreshing usage:', err);
+      throw err;
+    }
+  };
+
   // Debug log for subscription tier
   console.debug('[useSubscription] Current subscription state:', {
     tier: subscription?.tier,
@@ -163,7 +179,8 @@ export function useSubscription() {
     canScan: !loading && usage ? usage.remainingScans > 0 : false,
     canTrackCompany: !loading && usage && plan ? usage.companiesTracked < plan.limits.companiesTracked : false,
     canPerformAction,
-    incrementUsage
+    incrementUsage,
+    refreshUsage
   };
 
   // Debug log for final return value

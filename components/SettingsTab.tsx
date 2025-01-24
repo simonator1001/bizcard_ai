@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function SettingsTab() {
-  const { subscription, usage, plan, isLoading, error } = useSubscription();
+  const { subscription, usage, plan, loading, error } = useSubscription();
 
   if (error) {
     return (
@@ -21,7 +21,7 @@ export function SettingsTab() {
         <div className="space-y-4">
           <div>
             <h3 className="text-lg font-semibold mb-2">Subscription Details</h3>
-            {isLoading ? (
+            {loading ? (
               <div className="space-y-2">
                 <Skeleton className="h-4 w-[200px]" />
                 <Skeleton className="h-4 w-[150px]" />
@@ -44,7 +44,7 @@ export function SettingsTab() {
 
           <div>
             <h3 className="text-lg font-semibold mb-2">Usage Statistics</h3>
-            {isLoading ? (
+            {loading ? (
               <div className="space-y-2">
                 <Skeleton className="h-4 w-[180px]" />
                 <Skeleton className="h-4 w-[160px]" />
