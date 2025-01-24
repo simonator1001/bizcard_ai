@@ -348,11 +348,11 @@ async function fetchWithRetry(url: string, options: any, maxRetries = 3): Promis
       }
       
       return response;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[DEBUG] Attempt ${attempt} failed:`, {
-        error: error.message,
-        cause: error.cause,
-        stack: error.stack
+        error: error instanceof Error ? error.message : String(error),
+        cause: error instanceof Error ? error.cause : undefined,
+        stack: error instanceof Error ? error.stack : undefined
       });
       
       lastError = error;

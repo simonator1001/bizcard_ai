@@ -10,15 +10,30 @@
       "page": "/",
       "matchers": [
         {
-          "regexp": "^/.*$",
-          "originalSource": "/:path*"
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/api(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/api/:path*"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/dashboard(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/dashboard/:path*"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/manage(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/manage/:path*"
+        },
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/pricing(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/pricing"
         }
       ],
       "wasm": [],
       "assets": [],
       "env": {
-        "__NEXT_BUILD_ID": "development",
-        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "q8+3CIRzpINU2TKlFpm5TaLcxczgJNpguhL3awDNDX8="
+        "__NEXT_BUILD_ID": "Q-qussze9dB3A_STBUJ6F",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "tELwgj+aYyFUluzaxs8mFXYFS25fPwMx1b6tFS0eU4U=",
+        "__NEXT_PREVIEW_MODE_ID": "ca325413ac8b672d4e0e7315280896c5",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "6e760a0bd6d92cbb42a0786dd2cc3d4ea1ff32128f46c471c055e3072aa75334",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "01a828fd72fdc9b6097dd4d60bfdb46c550f3b21bd2f1c4ea683ba733d2ce5a6"
       }
     }
   },
