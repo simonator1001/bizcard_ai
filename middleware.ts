@@ -12,7 +12,7 @@ const PUBLIC_ROUTES = [
 ]
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
+  const res = NextResponse.next({
     request: {
       headers: request.headers,
     },
@@ -27,36 +27,15 @@ export async function middleware(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
+          res.cookies.set({
             name,
             value,
             ...options,
           })
         },
         remove(name: string, options: CookieOptions) {
-          request.cookies.set({
+          res.cookies.delete({
             name,
-            value: '',
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
             ...options,
           })
         },
@@ -64,53 +43,36 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Bypass SSL verification for development
-  if (process.env.NODE_ENV === 'development') {
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-  }
+  try {
+    // Refresh session if expired
+    await supabase.auth.getSession()
 
-  // Debug request info
-  console.debug('[Middleware] Request:', {
-    url: request.url,
-    pathname: request.nextUrl.pathname,
-    cookies: request.cookies.getAll()
-      .filter(cookie => cookie.name.startsWith('sb-'))
-      .map(cookie => ({ name: cookie.name, value: cookie.value.substring(0, 20) + '...' })),
-    isPublicRoute: PUBLIC_ROUTES.some(route => request.nextUrl.pathname.startsWith(route))
-  })
+    // Check if the route is public
+    const requestPath = new URL(request.url).pathname
+    const isPublicRoute = PUBLIC_ROUTES.some(route => requestPath.startsWith(route))
 
-  // Check session
-  const { data: { session }, error } = await supabase.auth.getSession()
+    if (!isPublicRoute) {
+      // Get user session
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
 
-  // Debug session info
-  console.debug('[Middleware] Session:', {
-    exists: !!session,
-    error: error?.message,
-    userId: session?.user?.id,
-    expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : null
-  })
+      // If no session and not a public route, redirect to signin
+      if (!session) {
+        const redirectUrl = new URL('/signin', request.url)
+        redirectUrl.searchParams.set('redirectedFrom', requestPath)
+        return NextResponse.redirect(redirectUrl)
+      }
 
-  // Handle public routes
-  const isPublicRoute = PUBLIC_ROUTES.some(route => request.nextUrl.pathname.startsWith(route))
-  if (isPublicRoute) {
-    // If user is already logged in and trying to access auth pages, redirect to home
-    if (session && ['/signin', '/signup'].some(route => request.nextUrl.pathname.startsWith(route))) {
-      return NextResponse.redirect(new URL('/', request.url))
+      // Apply subscription middleware
+      return subscriptionMiddleware(request)
     }
-    return response
-  }
 
-  // Require authentication for all other routes
-  if (!session) {
-    // Store the current URL before redirecting
-    const returnUrl = request.nextUrl.pathname
-    const redirectUrl = new URL('/signin', request.url)
-    redirectUrl.searchParams.set('returnUrl', returnUrl)
-    return NextResponse.redirect(redirectUrl)
+    return res
+  } catch (error) {
+    console.error('Middleware error:', error)
+    return res
   }
-
-  // Apply subscription middleware for authenticated routes
-  return subscriptionMiddleware(request)
 }
 
 // Specify which routes should trigger this middleware

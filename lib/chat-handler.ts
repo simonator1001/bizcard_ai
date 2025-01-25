@@ -57,7 +57,7 @@ export async function handleChatRequest(messages: Message[]): Promise<string> {
     return response.content;
 
   } catch (error) {
-    console.error('Error in chat service:', error);
+    console.error('Error in chat handler:', error);
     throw error;
   }
-} 
+}
