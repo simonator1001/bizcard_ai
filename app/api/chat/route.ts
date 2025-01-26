@@ -10,8 +10,7 @@ function isValidMessage(message: any): message is Message {
     'role' in message && 
     'content' in message &&
     typeof message.role === 'string' &&
-    typeof message.content === 'string' &&
-    ['system', 'user', 'assistant'].includes(message.role);
+    typeof message.content === 'string';
 }
 
 export async function POST(request: Request) {
@@ -23,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid messages format' }, { status: 400 });
     }
 
-    // Create Supabase client
+    // Create Supabase client using the helper function
     const supabase = await createClient();
 
     // Get authenticated user
@@ -87,20 +86,11 @@ export async function POST(request: Request) {
     messages = messages.filter(msg => msg.role !== 'system');
     messages.unshift(systemMessage);
 
-    // Format messages for Perplexity API
-    const formattedMessages = [
-      systemMessage,
-      ...messages.filter(msg => msg.role !== 'system').map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'assistant',
-        content: msg.content
-      }))
-    ];
-
     console.log('Sending messages to Perplexity with business card data');
 
     try {
-      // Call Perplexity API with formatted messages
-      const response = await chatWithPerplexity(formattedMessages);
+      // Call Perplexity API with the new implementation
+      const response = await chatWithPerplexity(messages);
       return NextResponse.json({ content: response });
     } catch (error) {
       console.error('Error calling Perplexity API:', error);

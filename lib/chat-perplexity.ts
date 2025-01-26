@@ -5,7 +5,6 @@ import { Message } from '@/types/chat';
 // Configure HTTPS agent to handle TLS record overflow
 const agent = new https.Agent({
   rejectUnauthorized: process.env.NODE_ENV === 'development' ? false : true,
-  maxHeaderSize: 32768,
   minVersion: 'TLSv1.2'
 });
 
@@ -55,8 +54,8 @@ export async function chatWithPerplexity(messages: Message[]): Promise<string> {
   } catch (error) {
     console.error('Error calling Perplexity API:', {
       error,
-      message: error.message,
-      stack: error.stack
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
     });
     throw error;
   }
