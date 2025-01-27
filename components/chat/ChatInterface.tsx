@@ -25,7 +25,6 @@ export function ChatInterface() {
         },
         body: JSON.stringify({
           messages: [
-            { role: 'system', content: getSystemPrompt() },
             ...messages,
             userMessage
           ]
