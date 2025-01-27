@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
-import i18n from '../../src/i18n/config';
+import { i18n } from '@/components/i18n-provider';
 
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English' },

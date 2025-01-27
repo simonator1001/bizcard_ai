@@ -1,7 +1,8 @@
-import '@/styles/globals.css'
+import './globals.css'
 import { Inter } from 'next/font/google'
-import { Toaster } from '@/components/ui/toaster'
-import { ClientProviders } from '@/components/providers/client-providers'
+import { AuthProvider } from '@/lib/auth-context'
+import { I18nProvider } from '@/components/i18n-provider'
+import { Toaster } from 'sonner'
 import { Navigation } from "@/components/layout/Navigation";
 
 const inter = Inter({ subsets: ['latin'] })
@@ -19,15 +20,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <div className="min-h-screen flex flex-col">
-          <Navigation />
-          <main className="flex-1">
-            <ClientProviders>
-              {children}
-              <Toaster />
-            </ClientProviders>
-          </main>
-        </div>
+        <AuthProvider>
+          <I18nProvider>
+            <div className="min-h-screen flex flex-col">
+              <Navigation />
+              <main className="flex-1">
+                {children}
+                <Toaster />
+              </main>
+            </div>
+          </I18nProvider>
+        </AuthProvider>
       </body>
     </html>
   )
