@@ -8,7 +8,33 @@ const agent = new https.Agent({
   minVersion: 'TLSv1.2'      // Use modern TLS version
 });
 
+function validateMessages(messages: Message[]): boolean {
+  // Skip system messages at the start
+  let i = 0;
+  while (i < messages.length && messages[i].role === 'system') {
+    i++;
+  }
+  
+  // Check alternating user/assistant messages
+  let expectedRole = 'user';
+  while (i < messages.length) {
+    if (messages[i].role !== expectedRole) {
+      return false;
+    }
+    expectedRole = expectedRole === 'user' ? 'assistant' : 'user';
+    i++;
+  }
+  
+  return true;
+}
+
 export async function chatWithPerplexity(messages: Message[]): Promise<string> {
+  // Validate message format before making the request
+  if (!validateMessages(messages)) {
+    console.error('Invalid message sequence:', messages);
+    throw new Error('Messages must alternate between user and assistant roles after any system messages');
+  }
+
   console.log('Making request to Perplexity API with SSL configuration:', {
     isDev: process.env.NODE_ENV === 'development',
     hasAgent: true,
@@ -30,6 +56,7 @@ export async function chatWithPerplexity(messages: Message[]): Promise<string> {
         model: 'sonar',
         messages: messages,
         temperature: 0.7,
+        max_tokens: 1024,
         top_p: 0.95,
         stream: false
       })
