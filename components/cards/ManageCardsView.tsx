@@ -14,7 +14,10 @@ import {
   Grid,
   Image as ImageIcon,
   ChevronDown,
-  Layout
+  Layout,
+  Search,
+  FileDown,
+  Copy
 } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -38,6 +41,7 @@ import { downloadCSV } from '@/lib/csv-utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { GridMotion } from '@/components/ui/grid-motion';
+import { Dock, DockIcon, DockItem, DockLabel } from '@/components/ui/dock';
 
 type ViewMode = 'list' | 'grid' | 'grid-motion';
 type SortField = 'name' | 'company' | 'title' | 'created_at';
@@ -75,6 +79,15 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
       });
       setLoading(true);
       
+      // Add connection check
+      const { error: connectionError } = await supabase.from('business_cards').select('count', { count: 'exact', head: true });
+      if (connectionError) {
+        console.error('Database connection error:', connectionError);
+        toast.error('Unable to connect to database. Please try again later.');
+        setLoading(false);
+        return;
+      }
+
       // First, try to get the total count of cards
       const { count, error: countError } = await supabase
         .from('business_cards')
@@ -83,7 +96,9 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
 
       if (countError) {
         console.error('Error getting card count:', countError);
-        throw countError;
+        toast.error('Error loading cards. Please try refreshing the page.');
+        setLoading(false);
+        return;
       }
 
       console.log('Total cards in database:', count, 'for user:', user.id);
@@ -114,11 +129,10 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
 
       if (error) {
         console.error('Error fetching cards:', error);
-        throw error;
+        toast.error('Error loading cards. Please try refreshing the page.');
+        setLoading(false);
+        return;
       }
-
-      // Log the raw response
-      console.log('Raw Supabase response:', data);
 
       // Transform the data to include images array with image_url
       const cardsWithImages = data?.map(card => ({
@@ -130,11 +144,29 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
       setCards(cardsWithImages);
     } catch (err) {
       console.error('Error in fetchCards:', err);
-      toast.error('Failed to load business cards');
+      toast.error('Failed to load business cards. Please check your connection.');
     } finally {
       setLoading(false);
     }
   }, [user, sortField, sortDirection]);
+
+  // Add connection status check
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const { error } = await supabase.from('business_cards').select('count', { count: 'exact', head: true });
+        if (error) {
+          console.error('Database connection error:', error);
+          toast.error('Unable to connect to database. Please check your connection.');
+        }
+      } catch (err) {
+        console.error('Connection check error:', err);
+        toast.error('Connection error. Please check your network.');
+      }
+    };
+    
+    checkConnection();
+  }, []);
 
   useEffect(() => {
     fetchCards();
@@ -264,92 +296,132 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex-1 w-full sm:w-auto">
-          <Input
-            placeholder="Search cards..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full"
-          />
-        </div>
-        
-        <div className="flex flex-wrap gap-2 items-center">
-          <Select
-            value={sortField}
-            onValueChange={(value) => setSortField(value as SortField)}
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="created_at">Date Added</SelectItem>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="company">Company</SelectItem>
-              <SelectItem value="title">Title</SelectItem>
-            </SelectContent>
-          </Select>
+    <div className="space-y-4 min-h-screen pb-8">
+      <div className="flex justify-center w-full sticky top-0 z-10 bg-background/80 backdrop-blur-sm py-4">
+        <div className="flex items-center w-[80%] max-w-[1200px]">
+          <div className="flex items-center gap-2 w-full bg-white/50 backdrop-blur-sm rounded-full px-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="Search cards..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full h-9 pl-9 text-sm border border-gray-200/50 focus:ring-0 bg-transparent rounded-full"
+              />
+            </div>
+            
+            <Dock 
+              className="bg-neutral-900/90 backdrop-blur-sm border-0 rounded-full py-1.5 px-2" 
+              magnification={40}
+              distance={40}
+              panelHeight={40}
+            >
+              <DockItem className="group">
+                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  Date Added
+                </DockLabel>
+                <DockIcon>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-[28px] h-[28px] text-white hover:text-white hover:bg-white/10"
+                  >
+                    <span className="text-xs">Date</span>
+                  </Button>
+                </DockIcon>
+              </DockItem>
 
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-          >
-            <ChevronDown className={cn(
-              "h-4 w-4 transition-transform",
-              sortDirection === 'asc' && "rotate-180"
-            )} />
-          </Button>
+              <DockItem className="group">
+                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  List View
+                </DockLabel>
+                <DockIcon>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "w-[28px] h-[28px] text-white hover:text-white",
+                      viewMode === 'list' ? "bg-white/20" : "hover:bg-white/10"
+                    )}
+                    onClick={() => setViewMode('list')}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </DockIcon>
+              </DockItem>
 
-          <div className="flex items-center rounded-md border">
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "rounded-r-none",
-                viewMode === 'list' && "bg-muted"
-              )}
-              onClick={() => setViewMode('list')}
-            >
-              <List className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                viewMode === 'grid' && "bg-muted"
-              )}
-              onClick={() => setViewMode('grid')}
-            >
-              <Grid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "rounded-l-none",
-                viewMode === 'grid-motion' && "bg-muted"
-              )}
-              onClick={() => setViewMode('grid-motion')}
-            >
-              <Layout className="h-4 w-4" />
-            </Button>
+              <DockItem className="group">
+                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  Grid View
+                </DockLabel>
+                <DockIcon>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "w-[28px] h-[28px] text-white hover:text-white",
+                      viewMode === 'grid' ? "bg-white/20" : "hover:bg-white/10"
+                    )}
+                    onClick={() => setViewMode('grid')}
+                  >
+                    <Grid className="h-4 w-4" />
+                  </Button>
+                </DockIcon>
+              </DockItem>
+
+              <DockItem className="group">
+                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  Motion View
+                </DockLabel>
+                <DockIcon>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "w-[28px] h-[28px] text-white hover:text-white",
+                      viewMode === 'grid-motion' ? "bg-white/20" : "hover:bg-white/10"
+                    )}
+                    onClick={() => setViewMode('grid-motion')}
+                  >
+                    <Layout className="h-4 w-4" />
+                  </Button>
+                </DockIcon>
+              </DockItem>
+
+              <DockItem className="group">
+                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  Manage Duplicates
+                </DockLabel>
+                <DockIcon>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-[28px] h-[28px] text-white hover:text-white hover:bg-white/10"
+                    onClick={handleDuplicateManagerOpen}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </DockIcon>
+              </DockItem>
+
+              <DockItem className="group">
+                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  Export CSV
+                </DockLabel>
+                <DockIcon>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-[28px] h-[28px] text-white hover:text-white hover:bg-white/10"
+                    onClick={handleExportCSV}
+                  >
+                    <FileDown className="h-4 w-4" />
+                  </Button>
+                </DockIcon>
+              </DockItem>
+            </Dock>
           </div>
-
-          <Button
-            variant="outline"
-            onClick={handleDuplicateManagerOpen}
-          >
-            Manage Duplicates
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={handleExportCSV}
-          >
-            Export CSV
-          </Button>
         </div>
       </div>
 
@@ -369,7 +441,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
       ) : (
         <>
           {viewMode === 'grid-motion' ? (
-            <div className="h-[600px]">
+            <div className="h-[calc(100vh-120px)] overflow-auto">
               <GridMotion
                 items={filteredCards.map(card => (
                   <div key={card.id} className="p-4 space-y-2 cursor-pointer" onClick={() => setSelectedCard(card)}>
@@ -398,7 +470,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
             </div>
           ) : (
             <div className={cn(
-              "grid gap-4",
+              "grid gap-4 px-4",
               viewMode === 'grid' ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
             )}>
               {filteredCards.map((card) => (
@@ -444,7 +516,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
       </Dialog>
 
       <Dialog open={showDuplicateManager} onOpenChange={handleDuplicateManagerChange}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl max-h-[80vh] bg-white/95 backdrop-blur-md border border-gray-200 overflow-hidden flex flex-col">
           <DuplicateManager
             cards={cards}
             onClose={handleDuplicateManagerClose}

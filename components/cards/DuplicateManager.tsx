@@ -80,8 +80,8 @@ export function DuplicateManager({ cards, onMerge, onDelete, onClose }: Duplicat
   }, []);
 
   return (
-    <div className="flex flex-col h-full">
-      <DialogHeader className="px-6 py-4 border-b shrink-0 bg-white">
+    <div className="flex flex-col h-[calc(100vh-200px)]">
+      <DialogHeader className="px-6 py-4 border-b shrink-0">
         <DialogTitle className="text-xl">Manage Duplicate Cards</DialogTitle>
         <DialogDescription>
           Review and manage duplicate business cards in your collection
@@ -97,7 +97,7 @@ export function DuplicateManager({ cards, onMerge, onDelete, onClose }: Duplicat
         </div>
       </DialogHeader>
       
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 overflow-y-auto">
         <ScrollArea className="h-full">
           <div className="px-6 py-6">
             {filteredGroups.length === 0 ? (
