@@ -43,6 +43,14 @@ export function CardItem({
     async function loadImage() {
       if (card.image_url && !imageError) {
         try {
+          // If the URL is already a full URL from our domain, use it directly
+          if (card.image_url.startsWith(process.env.NEXT_PUBLIC_SUPABASE_URL || '')) {
+            setImageUrl(card.image_url);
+            setImageError(false);
+            return;
+          }
+
+          // Otherwise, get the URL through our storage utility
           const url = await getImageUrl(card.image_url);
           if (url) {
             setImageUrl(url);

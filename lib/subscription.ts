@@ -290,13 +290,15 @@ export class SubscriptionService {
         throw uploadError;
       }
 
-      // Get public URL using admin client
-      const { data } = adminClient.storage
-        .from('business-cards')
-        .getPublicUrl(fileName);
+      // Get the base URL from environment
+      const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      if (!baseUrl) {
+        console.error('[Subscription] Missing SUPABASE_URL environment variable');
+        throw new Error('Missing SUPABASE_URL environment variable');
+      }
 
-      // Ensure the URL is using HTTPS
-      const publicUrl = data.publicUrl.replace('http://', 'https://');
+      // Construct the storage URL manually for self-hosted instance
+      const publicUrl = `${baseUrl}/storage/v1/object/public/business-cards/${fileName}`;
       
       // Log the URL for debugging
       console.debug('[Subscription] Generated public URL:', publicUrl);

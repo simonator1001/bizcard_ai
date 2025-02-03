@@ -1,7 +1,30 @@
 import { NextResponse } from 'next/server';
+import axios from 'axios';
 
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 const NEXT_PUBLIC_PERPLEXITY_API_KEY = process.env.NEXT_PUBLIC_PERPLEXITY_API_KEY;
+
+// Define request body type
+interface TestRequestBody {
+  model: string;
+  messages: Array<{
+    role: string;
+    content: string;
+  }>;
+  temperature: number;
+  max_tokens: number;
+}
+
+// Define request body outside try block so it's accessible in catch block
+const requestBody: TestRequestBody = {
+  model: "llama-3.1-sonar-small-128k-online",
+  messages: [{
+    role: "user",
+    content: "Say 'Connection successful' if you can read this."
+  }],
+  temperature: 0.1,
+  max_tokens: 10
+};
 
 export async function GET() {
   console.log('API Key check:', {
@@ -24,16 +47,6 @@ export async function GET() {
   try {
     console.log('Testing Perplexity API connection...');
     
-    const requestBody = {
-      model: "llama-3.1-sonar-small-128k-online",
-      messages: [{
-        role: "user",
-        content: "Say 'Connection successful' if you can read this."
-      }],
-      temperature: 0.1,
-      max_tokens: 10
-    };
-    
     console.log('Request details:', {
       url: 'https://api.perplexity.ai/chat/completions',
       method: 'POST',
@@ -44,30 +57,37 @@ export async function GET() {
       body: requestBody
     });
 
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
-    });
+    const response = await axios.post('https://api.perplexity.ai/chat/completions', 
+      requestBody,
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 30000,
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity
+      }
+    );
 
     console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+    console.log('Response headers:', response.headers);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Perplexity API error:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        error: errorText
-      });
+    const data = response.data;
+    console.log('API Response:', data);
+
+    return NextResponse.json({ 
+      success: true, 
+      message: data.choices[0].message.content 
+    });
+  } catch (error) {
+    console.error('API Test error:', error);
+    if (axios.isAxiosError(error)) {
       return NextResponse.json({ 
         error: 'API request failed', 
-        status: response.status,
-        details: errorText,
+        status: error.response?.status,
+        details: error.response?.data,
         requestInfo: {
           url: 'https://api.perplexity.ai/chat/completions',
           method: 'POST',
@@ -77,23 +97,11 @@ export async function GET() {
           },
           body: requestBody
         }
-      }, { status: response.status });
+      }, { status: error.response?.status || 500 });
     }
-
-    const data = await response.json();
-    console.log('API Response:', data);
-
     return NextResponse.json({ 
-      success: true, 
-      message: data.choices?.[0]?.message?.content || 'No content in response'
-    });
-
-  } catch (error) {
-    console.error('Error testing Perplexity API:', error);
-    return NextResponse.json({ 
-      error: 'Connection failed', 
-      details: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
+      error: 'API test failed', 
+      details: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 } 

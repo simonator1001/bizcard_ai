@@ -7,6 +7,18 @@ export async function getImageUrl(path: string): Promise<string | null> {
     // Debug the input path
     console.log('[Storage] Getting URL for path:', path);
 
+    // If it's already a full URL from our domain, return it
+    const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!baseUrl) {
+      console.error('[Storage] Missing SUPABASE_URL environment variable');
+      return null;
+    }
+
+    if (path.startsWith(baseUrl)) {
+      console.log('[Storage] URL is already a full path:', path);
+      return path;
+    }
+
     // Handle both full URLs and relative paths
     const imagePath = path.includes('storage/v1/object') 
       ? path.split('storage/v1/object/public/business-cards/').pop()
@@ -19,13 +31,11 @@ export async function getImageUrl(path: string): Promise<string | null> {
 
     console.log('[Storage] Using image path:', imagePath);
 
-    const { data: { publicUrl } } = supabase
-      .storage
-      .from(BUSINESS_CARDS_BUCKET)
-      .getPublicUrl(imagePath);
-
+    // Construct the storage URL manually for self-hosted instance
+    const storageUrl = `${baseUrl}/storage/v1/object/public/${BUSINESS_CARDS_BUCKET}/${imagePath}`;
+    
     // Add cache-busting parameter to prevent stale images
-    const url = new URL(publicUrl);
+    const url = new URL(storageUrl);
     url.searchParams.set('t', Date.now().toString());
     
     console.log('[Storage] Generated URL:', url.toString());
