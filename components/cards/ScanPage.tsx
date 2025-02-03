@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Upload, X, Loader2 } from 'lucide-react'
+import { Upload, X, Loader2, Camera } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { recognizeBusinessCard } from '@/lib/ocr-service'
 import { supabase, testConnection } from '@/lib/supabase-client'
@@ -177,6 +177,168 @@ const PremiumButton: React.FC<PremiumButtonProps> = ({
   );
 };
 
+const FileUpload = ({ 
+  onFileSelect, 
+  isProcessing, 
+  preview, 
+  onClear,
+  processingStage,
+  uploadProgress,
+  totalFiles,
+  processedFiles,
+  t
+}: { 
+  onFileSelect: (files: FileList) => void;
+  isProcessing: boolean;
+  preview: string | null;
+  onClear: () => void;
+  processingStage: string;
+  uploadProgress: number;
+  totalFiles: number;
+  processedFiles: number;
+  t: any;
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    console.log('[UPLOAD-DEBUG] FileUpload component mounted');
+    console.log('[UPLOAD-DEBUG] fileInputRef exists:', !!fileInputRef.current);
+  }, []);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('[UPLOAD-DEBUG] Upload area clicked');
+    console.log('[UPLOAD-DEBUG] isProcessing:', isProcessing);
+    console.log('[UPLOAD-DEBUG] fileInputRef exists:', !!fileInputRef.current);
+    
+    if (!isProcessing && fileInputRef.current) {
+      console.log('[UPLOAD-DEBUG] Attempting to trigger file input click');
+      try {
+        fileInputRef.current.click();
+        console.log('[UPLOAD-DEBUG] File input click triggered');
+      } catch (error) {
+        console.error('[UPLOAD-DEBUG] Error triggering file input:', error);
+      }
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    console.log('[UPLOAD-DEBUG] File dropped');
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const files = e.dataTransfer.files;
+    console.log('[UPLOAD-DEBUG] Dropped files count:', files?.length);
+    if (files && files.length > 0) {
+      console.log('[UPLOAD-DEBUG] Calling onFileSelect with dropped files');
+      onFileSelect(files);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    console.log('[UPLOAD-DEBUG] Drag over event');
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('[UPLOAD-DEBUG] File input change event triggered');
+    console.log('[UPLOAD-DEBUG] Files present:', !!event.target.files);
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      console.log('[UPLOAD-DEBUG] Number of files selected:', files.length);
+      console.log('[UPLOAD-DEBUG] Calling onFileSelect with selected files');
+      onFileSelect(files);
+    }
+  };
+
+  return (
+    <div
+      className={`relative block border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-primary transition-all duration-300 bg-gray-50 ${isProcessing ? 'pointer-events-none opacity-50' : ''}`}
+      style={{ 
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+        transition: 'all 0.3s ease'
+      }}
+      onClick={handleClick}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragEnter={(e) => {
+        console.log('[UPLOAD-DEBUG] Drag enter event');
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleChange}
+        onClick={(e) => {
+          console.log('[UPLOAD-DEBUG] File input clicked directly');
+          // Reset the value to ensure onChange fires even if selecting the same file
+          e.currentTarget.value = '';
+        }}
+        disabled={isProcessing}
+      />
+      {preview ? (
+        <div className="relative">
+          <img src={preview} alt={t('scan.preview')} className="max-w-full h-auto mx-auto rounded-md" />
+          {!isProcessing && (
+            <PremiumButton
+              icon={X}
+              label={t('actions.clear')}
+              variant="destructive"
+              className="absolute top-2 right-2 !p-2"
+              onClick={(e) => {
+                console.log('[UPLOAD-DEBUG] Clear button clicked');
+                e.stopPropagation();
+                onClear();
+              }}
+            />
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center gap-4">
+          {isProcessing ? (
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="w-12 h-12 animate-spin text-primary" />
+              <div className="text-lg font-medium text-gray-700">{processingStage}</div>
+              {totalFiles > 0 && (
+                <div className="w-full max-w-xs">
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <div className="text-sm text-gray-600 mt-2">
+                    {processedFiles} of {totalFiles} cards processed
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <Upload className="w-12 h-12 text-gray-400" />
+              <div>
+                <p className="text-lg font-medium text-gray-700">
+                  {t('scan.dropzone.title')}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {t('scan.dropzone.description')}
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export function ScanPage({ onAddCard }: ScanPageProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -189,13 +351,10 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
   const [processingStatus, setProcessingStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [processingStage, setProcessingStage] = useState<string>('')
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const { t } = useTranslation()
-
-  // Add state for bulk upload progress
   const [uploadProgress, setUploadProgress] = useState<number>(0)
   const [totalFiles, setTotalFiles] = useState<number>(0)
   const [processedFiles, setProcessedFiles] = useState<number>(0)
+  const { t } = useTranslation()
 
   const compressImage = async (file: File): Promise<string> => {
     console.log('[Compression] Original file size:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
@@ -225,19 +384,25 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     }
   };
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
+  const handleFileSelect = async (files: FileList) => {
+    console.log('[UPLOAD-DEBUG] handleFileSelect called with files:', files.length);
+    
+    if (!files || files.length === 0) {
+      console.log('[UPLOAD-DEBUG] No files selected');
+      return;
+    }
 
     try {
       // Check if user can perform scan action
       if (!user) {
+        console.log('[UPLOAD-DEBUG] No user found');
         toast.error('Please sign in to scan business cards');
         return;
       }
 
       const canScan = await SubscriptionService.canPerformAction(user.id, 'scan');
       if (!canScan) {
+        console.log('[UPLOAD-DEBUG] User cannot scan - subscription limit');
         setShowUpgradePrompt(true);
         return;
       }
@@ -246,12 +411,11 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       setProcessedFiles(0);
       setIsProcessing(true);
       
-      // Convert FileList to Array
-      const fileArray = Array.from(files);
-      
       // Process files sequentially
-      for (let i = 0; i < fileArray.length; i++) {
-        const file = fileArray[i];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        console.log('[UPLOAD-DEBUG] Processing file:', file.name);
+        
         setFile(file);
         
         // Compress and get base64
@@ -263,7 +427,7 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
         
         // Update progress
         setProcessedFiles(i + 1);
-        setUploadProgress(((i + 1) / fileArray.length) * 100);
+        setUploadProgress(((i + 1) / files.length) * 100);
       }
       
       // Clear states after all files are processed
@@ -272,7 +436,7 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       setExtractedInfo(null);
       toast.success(`Successfully processed ${files.length} business cards`);
     } catch (error) {
-      console.error('Error processing files:', error);
+      console.error('[UPLOAD-DEBUG] Error processing files:', error);
       toast.error('Failed to process some business cards');
     } finally {
       setIsProcessing(false);
@@ -281,62 +445,6 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       setUploadProgress(0);
     }
   };
-
-  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const files = event.dataTransfer.files;
-    if (!files || files.length === 0) return;
-
-    try {
-      // Check if user can perform scan action
-      if (!user) {
-        toast.error('Please sign in to scan business cards');
-        return;
-      }
-
-      const canScan = await SubscriptionService.canPerformAction(user.id, 'scan');
-      if (!canScan) {
-        setShowUpgradePrompt(true);
-        return;
-      }
-
-      setTotalFiles(files.length);
-      setProcessedFiles(0);
-      
-      const fileArray = Array.from(files);
-      
-      for (let i = 0; i < fileArray.length; i++) {
-        const file = fileArray[i];
-        setFile(file);
-        
-        // Compress and get base64
-        const compressedBase64 = await compressImage(file);
-        setPreview(compressedBase64);
-        
-        await processImage(compressedBase64);
-        
-        setProcessedFiles(i + 1);
-        setUploadProgress(((i + 1) / fileArray.length) * 100);
-      }
-      
-      setFile(null);
-      setPreview(null);
-      setExtractedInfo(null);
-      toast.success(`Successfully processed ${processedFiles} business cards`);
-      
-    } catch (error) {
-      console.error('Error processing dropped files:', error);
-      toast.error('Failed to process some images');
-    } finally {
-      setTotalFiles(0);
-      setProcessedFiles(0);
-      setUploadProgress(0);
-    }
-  };
-
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-  }
 
   const processImage = async (base64Image: string) => {
     if (!user) {
@@ -421,16 +529,6 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     }
   };
 
-  const handleClear = () => {
-    setFile(null)
-    setPreview(null)
-    setExtractedInfo(null)
-    setProcessingStatus('idle')
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-  }
-
   return (
     <ScrollArea className="h-[calc(100vh-280px)]">
       <div className="p-8 flex items-center justify-center min-h-[calc(100vh-280px)]">
@@ -444,86 +542,94 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <motion.div
-              className="relative"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div
-                className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-primary transition-all duration-300 bg-gray-50"
-                onClick={() => fileInputRef.current?.click()}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                style={{ 
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                  transition: 'all 0.3s ease'
+            <div className="space-y-4">
+              <Button 
+                className="w-full py-6 text-lg font-semibold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.multiple = true;
+                  input.onchange = (e) => {
+                    const files = (e.target as HTMLInputElement).files;
+                    if (files) {
+                      console.log('[UPLOAD-DEBUG] Files selected from input:', files.length);
+                      handleFileSelect(files);
+                    }
+                  };
+                  input.click();
                 }}
+                disabled={isProcessing}
               >
-                {preview ? (
-                  <div className="relative">
-                    <img src={preview} alt={t('scan.preview')} className="max-w-full h-auto mx-auto rounded-md" />
-                    <PremiumButton
-                      icon={X}
-                      label={t('actions.clear')}
+                <Upload className="h-8 w-8 mr-3" />
+                Upload Images
+              </Button>
+
+              <Button 
+                variant="outline"
+                className="w-full py-6 text-lg font-semibold rounded-full border-2 hover:bg-gray-50"
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.capture = 'environment';
+                  input.onchange = (e) => {
+                    const files = (e.target as HTMLInputElement).files;
+                    if (files) {
+                      console.log('[UPLOAD-DEBUG] Photo captured:', files.length);
+                      handleFileSelect(files);
+                    }
+                  };
+                  input.click();
+                }}
+                disabled={isProcessing}
+              >
+                <Camera className="h-8 w-8 mr-3" />
+                Take a Photo
+              </Button>
+            </div>
+
+            {preview && (
+              <div className="mt-6">
+                <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4">
+                  <img src={preview} alt="Preview" className="max-w-full h-auto rounded-lg" />
+                  {!isProcessing && (
+                    <Button
                       variant="destructive"
-                      className="absolute top-2 right-2 !p-2"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleClear()
+                      size="icon"
+                      className="absolute top-2 right-2"
+                      onClick={() => {
+                        setFile(null);
+                        setPreview(null);
+                        setExtractedInfo(null);
                       }}
-                    />
-                  </div>
-                ) : (
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex flex-col items-center"
-                  >
-                    <Upload className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                    <p className="text-lg font-semibold text-gray-700 mb-2">
-                      {t('scan.dropzone.title')}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {t('scan.dropzone.subtitle')}
-                    </p>
-                  </motion.div>
-                )}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                />
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
-            </motion.div>
+            )}
 
             {isProcessing && (
-              <div className="space-y-4 mt-6">
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex flex-col items-center bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-sm"
-                >
-                  <Loader2 className="mb-2 h-5 w-5 animate-spin text-primary" />
-                  <span className="text-sm font-medium text-gray-700">{processingStage}</span>
+              <div className="mt-6">
+                <div className="flex flex-col items-center space-y-4 p-4 bg-gray-50 rounded-lg">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm font-medium text-gray-600">{processingStage}</p>
                   {totalFiles > 0 && (
-                    <div className="w-full mt-3">
-                      <div className="w-full bg-gray-100 rounded-full h-2">
+                    <div className="w-full">
+                      <div className="h-2 bg-gray-200 rounded-full">
                         <div
-                          className="bg-primary h-2 rounded-full transition-all duration-300 ease-out"
+                          className="h-2 bg-primary rounded-full transition-all duration-300"
                           style={{ width: `${uploadProgress}%` }}
                         />
                       </div>
-                      <p className="text-sm text-gray-600 text-center mt-2">
+                      <p className="text-xs text-gray-500 text-center mt-2">
                         Processing {processedFiles} of {totalFiles} files
                       </p>
                     </div>
                   )}
-                </motion.div>
+                </div>
               </div>
             )}
 

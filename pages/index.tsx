@@ -16,17 +16,14 @@ import {
   Settings, 
   Search, 
   Camera, 
-  Upload, 
-  Trash2, 
-  Edit2, 
-  Bell, 
-  HelpCircle, 
-  LogOut, 
-  Mail, 
   Users, 
   LayoutGrid, 
-  X, 
-  Download,
+  Edit2,
+  Trash2,
+  Mail,
+  Bell,
+  HelpCircle,
+  Upload,
   type LucideIcon
 } from 'lucide-react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
@@ -50,6 +47,7 @@ import { Footerdemo } from "@/components/ui/footer-section"
 import { NewsArticle } from '@/types/news'
 import { ChatInterface } from '@/components/chat/ChatInterface'
 import { useTranslation } from 'react-i18next'
+import imageCompression from 'browser-image-compression';
 
 type ViewMode = 'list' | 'grid' | 'carousel' | 'stack';
 
@@ -265,8 +263,6 @@ export default function Component() {
   const [newsFilter, setNewsFilter] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCompany, setSelectedCompany] = useState<string>('')
-  const [isScanning, setIsScanning] = useState(false)
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [orgChartViewMode, setOrgChartViewMode] = useState('tree')
@@ -274,6 +270,11 @@ export default function Component() {
   const { cards, loading, error, addCard, updateCard, deleteCard } = useBusinessCards()
   const { user, signOut } = useAuth()
   const [currentCardIndex, setCurrentCardIndex] = useState(0)
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
+  const [totalFiles, setTotalFiles] = useState(0);
+  const [progressPercent, setProgressPercent] = useState(0);
 
   // Filter cards based on search term
   const filteredCards = cards.filter(card => 
@@ -321,6 +322,32 @@ export default function Component() {
     }
   }
 
+  const compressImage = async (file: File) => {
+    console.log('[DEBUG] Original file:', {
+      size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+      type: file.type
+    });
+
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+      fileType: 'image/jpeg'
+    };
+
+    try {
+      const compressedFile = await imageCompression(file, options);
+      console.log('[DEBUG] Compressed file:', {
+        size: `${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`,
+        type: compressedFile.type
+      });
+      return compressedFile;
+    } catch (error) {
+      console.error('[DEBUG] Compression error:', error);
+      throw error;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <main className="flex-1 flex flex-col">
@@ -351,67 +378,307 @@ export default function Component() {
                   <CardContent>
                     <div className="space-y-4">
                       <Button 
-                        className="w-full py-6 text-lg font-semibold rounded-full transition-all duration-300 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                        className="w-full py-6 text-lg font-semibold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                        disabled={isUploading}
                         onClick={() => {
-                          const input = document.createElement('input')
-                          input.type = 'file'
-                          input.accept = 'image/*'
-                          input.capture = 'environment'
-                          input.onchange = (e) => {
-                            const file = (e.target as HTMLInputElement).files?.[0]
-                            if (file) {
-                              const reader = new FileReader()
-                              reader.onload = (e) => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/*';
+                          input.multiple = true;
+                          input.onchange = async (e) => {
+                            const files = (e.target as HTMLInputElement).files;
+                            if (files && files.length > 0) {
+                              setIsUploading(true);
+                              setTotalFiles(files.length);
+                              setCurrentFileIndex(0);
+                              setProgressPercent(0);
+                              
+                              // Process each file
+                              for (let i = 0; i < files.length; i++) {
+                                setCurrentFileIndex(i);
+                                setProgressPercent((i / files.length) * 100);
+                                const file = files[i];
                                 try {
-                                  setUploadedImage(e.target?.result as string)
+                                  setUploadProgress('Compressing image...');
+                                  const compressedFile = await compressImage(file);
+                                  
+                                  setUploadProgress('Converting to base64...');
+                                  
+                                  // Debug file info
+                                  console.log('[DEBUG] File details:', {
+                                    name: compressedFile.name,
+                                    type: compressedFile.type,
+                                    size: `${(compressedFile.size / 1024).toFixed(2)} KB`
+                                  });
+                                  
+                                  // Convert to base64
+                                  const reader = new FileReader();
+                                  const base64Promise = new Promise<string>((resolve, reject) => {
+                                    reader.onload = () => {
+                                      const result = reader.result as string;
+                                      console.log('[DEBUG] Base64 conversion:', {
+                                        length: result.length,
+                                        preview: result.substring(0, 50) + '...',
+                                        isDataUrl: result.startsWith('data:')
+                                      });
+                                      resolve(result);
+                                    };
+                                    reader.onerror = (error) => {
+                                      console.error('[DEBUG] FileReader error:', error);
+                                      reject(error);
+                                    };
+                                  });
+                                  reader.readAsDataURL(compressedFile);
+                                  const base64 = await base64Promise;
+
+                                  setUploadProgress('Authenticating...');
+                                  // Get fresh session token
+                                  const { data: { session: refreshedSession }, error: refreshError } = 
+                                    await supabase.auth.refreshSession();
+                                  
+                                  if (refreshError || !refreshedSession) {
+                                    console.error('[DEBUG] Auth error:', refreshError);
+                                    throw new Error('Authentication failed');
+                                  }
+
+                                  const accessToken = refreshedSession.access_token;
+
+                                  console.log('[DEBUG] Session data:', {
+                                    hasSession: !!refreshedSession,
+                                    userId: refreshedSession.user.id,
+                                    tokenLength: accessToken.length,
+                                    expiresAt: new Date(refreshedSession.expires_at! * 1000).toISOString()
+                                  });
+
+                                  setUploadProgress('Processing card...');
+                                  // Call scan API with auth token
+                                  const response = await fetch('/api/scan', {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': `Bearer ${accessToken}`
+                                    },
+                                    body: JSON.stringify({ 
+                                      image: base64,
+                                      userId: refreshedSession.user.id,
+                                      debug: true,
+                                      options: {
+                                        extractAllText: true,
+                                        detectLanguage: true,
+                                        enhancedChineseExtraction: true,
+                                        ocrPrompt: `Extract all business card information from this image. Pay special attention to:
+                                          1. Name in both English (鄧潔瑩) and Chinese if present
+                                          2. Title in both languages (副總監 | 市務及傳訊部)
+                                          3. Company name in both languages (太興環球發展有限公司 / TAI HING)
+                                          4. Complete contact details:
+                                             - Email (christina.tang@taihing.com)
+                                             - Phone numbers (D: 3710 9802, M: 9288 3752)
+                                             - Website (www.taihing.com)
+                                          5. Full address in both languages
+                                          6. Any additional identifiers or department information
+                                          7. Look for text in both vertical and horizontal orientations
+                                          8. Check for text in both purple and black colors`,
+                                        textDetectionParams: {
+                                          allowedRotations: [0, 90, 270, 180],
+                                          detectOrientation: true,
+                                          multipleLanguages: true,
+                                          enhancedLayout: true,
+                                          minConfidence: 60
+                                        }
+                                      }
+                                    })
+                                  });
+
+                                  if (!response.ok) {
+                                    const errorText = await response.text();
+                                    console.error('[DEBUG] API Error:', {
+                                      status: response.status,
+                                      statusText: response.statusText,
+                                      headers: Object.fromEntries(response.headers.entries()),
+                                      error: errorText
+                                    });
+                                    throw new Error(`Failed to process image: ${errorText}`);
+                                  }
+
+                                  const result = await response.json();
+                                  console.log('[DEBUG] API Success:', result);
+                                  toast.success(`Card ${i + 1} processed successfully`);
                                 } catch (error: any) {
-                                  console.error('Error loading image:', error)
-                                  toast.error('Failed to load image. Please try again.')
+                                  console.error('[DEBUG] Error details:', {
+                                    message: error.message,
+                                    stack: error.stack,
+                                    name: error.name
+                                  });
+                                  toast.error(`Failed to process card ${i + 1}: ${error.message}`);
                                 }
                               }
-                              reader.readAsDataURL(file)
+                              setProgressPercent(100);
+                              setIsUploading(false);
+                              setUploadProgress('');
+                              setCurrentFileIndex(0);
+                              setTotalFiles(0);
                             }
-                          }
-                          input.click()
+                          };
+                          input.click();
                         }}
                       >
-                        <Camera className="h-8 w-8 mr-3" />
-                        Take a Photo
+                        {isUploading ? (
+                          <div className="w-full space-y-2">
+                            <div className="flex items-center justify-between text-sm text-white">
+                              <span>{uploadProgress}</span>
+                              <span>{currentFileIndex + 1} of {totalFiles}</span>
+                            </div>
+                            <div className="w-full bg-white/20 rounded-full h-2">
+                              <div 
+                                className="bg-white h-2 rounded-full transition-all duration-300 ease-in-out"
+                                style={{ width: `${progressPercent}%` }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center">
+                            <Upload className="h-8 w-8 mr-3" />
+                            Upload Images
+                          </div>
+                        )}
                       </Button>
+
                       <Button 
                         variant="outline"
                         className="w-full py-6 text-lg font-semibold rounded-full border-2 hover:bg-gray-50"
+                        disabled={isUploading}
                         onClick={() => {
-                          const input = document.createElement('input')
-                          input.type = 'file'
-                          input.accept = 'image/*'
-                          input.multiple = true
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/*';
+                          input.capture = 'environment';
                           input.onchange = async (e) => {
-                            // ... existing file upload logic ...
-                          }
-                          input.click()
+                            const files = (e.target as HTMLInputElement).files;
+                            if (files && files.length > 0) {
+                              setIsUploading(true);
+                              setTotalFiles(1);
+                              setCurrentFileIndex(0);
+                              setProgressPercent(0);
+                              
+                              const file = files[0];
+                              try {
+                                setUploadProgress('Compressing image...');
+                                setProgressPercent(10);
+                                const compressedFile = await compressImage(file);
+                                
+                                setUploadProgress('Converting to base64...');
+                                setProgressPercent(20);
+                                
+                                // Convert to base64
+                                const reader = new FileReader();
+                                const base64Promise = new Promise<string>((resolve, reject) => {
+                                  reader.onload = () => resolve(reader.result as string);
+                                  reader.onerror = reject;
+                                });
+                                reader.readAsDataURL(compressedFile);
+                                const base64 = await base64Promise;
+
+                                setUploadProgress('Authenticating...');
+                                // Get fresh session token
+                                const { data: { session: refreshedSession }, error: refreshError } = 
+                                  await supabase.auth.refreshSession();
+                                
+                                if (refreshError || !refreshedSession) {
+                                  console.error('[DEBUG] Auth error:', refreshError);
+                                  throw new Error('Authentication failed');
+                                }
+
+                                const accessToken = refreshedSession.access_token;
+
+                                console.log('[DEBUG] Session data:', {
+                                  hasSession: !!refreshedSession,
+                                  userId: refreshedSession.user.id,
+                                  tokenLength: accessToken.length,
+                                  expiresAt: new Date(refreshedSession.expires_at! * 1000).toISOString()
+                                });
+
+                                setUploadProgress('Processing card...');
+                                // Call scan API with auth token
+                                const response = await fetch('/api/scan', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${accessToken}`
+                                  },
+                                  body: JSON.stringify({ 
+                                    image: base64,
+                                    userId: refreshedSession.user.id,
+                                    debug: true,
+                                    options: {
+                                      extractAllText: true,
+                                      detectLanguage: true,
+                                      enhancedChineseExtraction: true,
+                                      ocrPrompt: `Extract all business card information from this image. Pay special attention to:
+                                        1. Name in both English (鄧潔瑩) and Chinese if present
+                                        2. Title in both languages (副總監 | 市務及傳訊部)
+                                        3. Company name in both languages (太興環球發展有限公司 / TAI HING)
+                                        4. Complete contact details:
+                                           - Email (christina.tang@taihing.com)
+                                           - Phone numbers (D: 3710 9802, M: 9288 3752)
+                                           - Website (www.taihing.com)
+                                        5. Full address in both languages
+                                        6. Any additional identifiers or department information
+                                        7. Look for text in both vertical and horizontal orientations
+                                        8. Check for text in both purple and black colors`,
+                                      textDetectionParams: {
+                                        allowedRotations: [0, 90, 270, 180],
+                                        detectOrientation: true,
+                                        multipleLanguages: true,
+                                        enhancedLayout: true,
+                                        minConfidence: 60
+                                      }
+                                    }
+                                  })
+                                });
+
+                                if (!response.ok) {
+                                  throw new Error('Failed to process image');
+                                }
+
+                                setProgressPercent(100);
+                                const result = await response.json();
+                                toast.success('Card processed successfully');
+                              } catch (error: any) {
+                                console.error('Error processing file:', error);
+                                toast.error('Failed to process card');
+                              } finally {
+                                setIsUploading(false);
+                                setUploadProgress('');
+                                setCurrentFileIndex(0);
+                                setTotalFiles(0);
+                                setProgressPercent(0);
+                              }
+                            }
+                          };
+                          input.click();
                         }}
                       >
-                        <Upload className="h-8 w-8 mr-3" />
-                        {isScanning ? 'Processing...' : 'Upload Images'}
+                        {isUploading ? (
+                          <div className="w-full space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span>{uploadProgress}</span>
+                              <span>1 of 1</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-primary h-2 rounded-full transition-all duration-300 ease-in-out"
+                                style={{ width: `${progressPercent}%` }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center">
+                            <Camera className="h-8 w-8 mr-3" />
+                            Take a Photo
+                          </div>
+                        )}
                       </Button>
                     </div>
-
-                    {uploadedImage && (
-                      <div className="mt-6">
-                        <img src={uploadedImage} alt="Uploaded business card" className="w-full h-auto rounded-lg shadow-lg" />
-                        <Button 
-                          onClick={async () => {
-                            // ... existing scan logic ...
-                          }} 
-                          className="mt-6 w-full py-6 text-lg font-semibold rounded-full transition-all duration-300 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                          disabled={isScanning}
-                        >
-                          <ScanLine className="mr-3 h-6 w-6" />
-                          {isScanning ? 'Scanning...' : 'Scan Card'}
-                        </Button>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
 

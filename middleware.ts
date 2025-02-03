@@ -9,7 +9,10 @@ const PUBLIC_ROUTES = [
   '/auth/callback',
   '/reset-password',
   '/verify',
-  '/api/auth'
+  '/api/auth',
+  '/api/scan',
+  '/api/ocr',
+  '/api/extract-info'
 ]
 
 export const config = {
@@ -22,8 +25,10 @@ export async function middleware(request: NextRequest) {
     // Create a response object that we can modify
     const res = NextResponse.next();
 
-    // Create the Supabase client
-    const supabase = createServerClient(
+    // Create the Supabase client with error handling
+    let supabase;
+    try {
+      supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -47,12 +52,33 @@ export async function middleware(request: NextRequest) {
         },
       }
     );
+    } catch (error) {
+      console.error('[Middleware] Error creating Supabase client:', error);
+      return res;
+    }
 
-    // Get authenticated user data
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+    // Check if the route is public
+    const requestPath = new URL(request.url).pathname;
+    const isPublicRoute = PUBLIC_ROUTES.some(route => requestPath.startsWith(route));
+
+    if (isPublicRoute) {
+      return res;
+    }
+
+    // Get authenticated user data with error handling
+    let user;
+    try {
+      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
     if (userError) {
       console.error('[Middleware] Authentication error:', userError);
+        // Don't return error for API routes
+        if (!requestPath.startsWith('/api/')) {
+          return res;
+        }
+      }
+      user = authUser;
+    } catch (error) {
+      console.error('[Middleware] Error getting user:', error);
       return res;
     }
 
@@ -75,13 +101,14 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/', request.url));
     }
 
-    // Check if the route is public
-    const requestPath = new URL(request.url).pathname;
-    const isPublicRoute = PUBLIC_ROUTES.some(route => requestPath.startsWith(route));
-
     if (!isPublicRoute && user) {
+      try {
       // Apply subscription middleware only for authenticated non-public routes
-      return subscriptionMiddleware(request);
+        return await subscriptionMiddleware(request);
+      } catch (error) {
+        console.error('[Middleware] Subscription middleware error:', error);
+        return res;
+      }
     }
 
     return res;

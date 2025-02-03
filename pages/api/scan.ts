@@ -14,8 +14,17 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  console.log('[SCAN-API-DEBUG] 1. Request received:', {
+    method: req.method,
+    headers: {
+      contentType: req.headers['content-type'],
+      authorization: req.headers.authorization ? 'Present' : 'Missing'
+    }
+  });
+
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    console.log('[SCAN-API-DEBUG] Invalid method:', req.method);
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   // Debug environment variables at API route level
@@ -29,36 +38,71 @@ export default async function handler(
   });
 
   try {
-    console.log('[SCAN] Starting business card scan...')
+    console.log('[SCAN-API-DEBUG] 2. Checking request body');
     const { image } = req.body
 
     if (!image) {
-      console.error('[SCAN] No image provided in request body')
+      console.log('[SCAN-API-DEBUG] No image in request body');
       return res.status(400).json({ error: 'No image provided' })
     }
 
+    console.log('[SCAN-API-DEBUG] 3. Image received, size:', Math.ceil(image.length / 1024), 'KB')
+
     // Get user session from auth header
-    const authHeader = req.headers.authorization
+    const authHeader = req.headers.authorization;
     if (!authHeader) {
-      console.error('[SCAN] No authorization header')
-      return res.status(401).json({ error: 'Unauthorized' })
+      console.log('[SCAN-API-DEBUG] No authorization header');
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const token = authHeader.replace('Bearer ', '')
+    console.log('[SCAN-API-DEBUG] 4. Authorization header present');
+    const token = authHeader.replace('Bearer ', '');
     
-    // Verify the token and get user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    // First try to get session
+    console.log('[SCAN-API-DEBUG] 5. Getting session');
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (authError || !user) {
-      console.error('[SCAN] Auth error:', authError)
-      return res.status(401).json({ error: 'Unauthorized' })
+    if (sessionError) {
+      console.error('[SCAN-API-DEBUG] Session error:', sessionError);
+    }
+    
+    // Then verify the token and get user
+    console.log('[SCAN-API-DEBUG] 6. Verifying token');
+    let userData;
+    const { data: { user: tokenUser }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !tokenUser) {
+      console.error('[SCAN-API-DEBUG] Auth error:', {
+        error: authError,
+        sessionError,
+        hasSession: !!session,
+        token: token ? token.substring(0, 10) + '...' : 'none'
+      });
+      
+      // If we have a session but token verification failed, try using session
+      if (session?.user) {
+        console.log('[SCAN-API-DEBUG] Using session user as fallback');
+        userData = session.user;
+      } else {
+        return res.status(401).json({ 
+          error: 'Unauthorized',
+          details: authError?.message || 'Invalid authentication token'
+        });
+      }
+    } else {
+      userData = tokenUser;
     }
 
-    console.log('[SCAN] Authenticated user:', user.id)
+    console.log('[SCAN-API-DEBUG] 7. User authenticated:', {
+      id: userData.id,
+      email: userData.email,
+      sessionId: session?.access_token ? session.access_token.substring(0, 10) + '...' : 'none'
+    });
+
     console.log('[SCAN] Image received, size:', Math.ceil(image.length / 1024), 'KB')
 
     // Step 1: Perform OCR
-    console.log('[SCAN] Calling OCR endpoint...')
+    console.log('[SCAN-API-DEBUG] 8. Calling OCR endpoint')
     const ocrResponse = await fetch(`${req.headers.origin}/api/ocr`, {
       method: 'POST',
       headers: {
@@ -67,17 +111,21 @@ export default async function handler(
       body: JSON.stringify({ image }),
     })
 
+    console.log('[SCAN-API-DEBUG] 9. OCR response status:', ocrResponse.status)
+
     let ocrErrorData;
     try {
       ocrErrorData = await ocrResponse.json();
+      console.log('[SCAN-API-DEBUG] 10. OCR response parsed successfully');
     } catch (e) {
       const text = await ocrResponse.text();
-      console.error('[SCAN] OCR returned non-JSON response:', text);
+      console.error('[SCAN-API-DEBUG] OCR returned non-JSON response:', text);
+      console.error('[SCAN-API-DEBUG] Parse error:', e);
       throw new Error('OCR service returned invalid response');
     }
 
     if (!ocrResponse.ok) {
-      console.error('[SCAN] OCR failed:', {
+      console.error('[SCAN-API-DEBUG] OCR failed:', {
         status: ocrResponse.status,
         statusText: ocrResponse.statusText,
         error: ocrErrorData
@@ -122,23 +170,23 @@ export default async function handler(
 
     // Upload image to storage
     console.log('[SCAN] Uploading image to storage...')
-    const imageUrl = await SubscriptionService.uploadBusinessCardImage(user.id, image)
+    const imageUrl = await SubscriptionService.uploadBusinessCardImage(userData.id, image)
     console.log('[SCAN] Image uploaded successfully:', imageUrl)
 
     // Format the data to match the table schema
     const cardData = {
-      user_id: user.id, // Ensure this matches the authenticated user's ID
+      user_id: userData.id,
       name: extractedInfo.name?.english || '',
       name_zh: extractedInfo.name?.chinese || '',
       company: extractedInfo.company?.english || '',
       company_zh: extractedInfo.company?.chinese || '',
       title: extractedInfo.title?.english || '',
       title_zh: extractedInfo.title?.chinese || '',
-      email: extractedInfo.contact?.email || '',
-      phone: extractedInfo.contact?.phone || extractedInfo.contact?.mobile || '',
+      email: extractedInfo.email || '',
+      phone: extractedInfo.phone || '',
       address: extractedInfo.address?.english || '',
       address_zh: extractedInfo.address?.chinese || '',
-      image_url: imageUrl, // Add the image URL
+      image_url: imageUrl,
       raw_text: ocrResult.raw_text || ''
     }
 

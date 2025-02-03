@@ -241,9 +241,19 @@ export function NewsView() {
         throw new Error(errorMessage);
       }
 
-      if (!data.articles || !Array.isArray(data.articles)) {
-        console.error('[DEBUG] Invalid response format:', data);
+      // Validate response structure
+      if (!data || typeof data !== 'object') {
         throw new Error('Invalid response format from server');
+      }
+
+      // Handle case where articles array is missing or empty
+      if (!data.articles || !Array.isArray(data.articles)) {
+        console.log('[DEBUG] No articles returned for company:', company);
+        setArticles(prev => {
+          // Remove any existing articles for this company
+          return prev.filter(article => article.company !== company);
+        });
+        return;
       }
 
       const companyArticles = data.articles.filter((article: any) => {
@@ -296,8 +306,12 @@ export function NewsView() {
       });
 
       if (companyArticles.length === 0) {
-        console.warn('[DEBUG] No valid articles found for company:', company);
-        throw new Error('No articles found');
+        console.log('[DEBUG] No valid articles found for company:', company);
+        // Instead of throwing an error, just update the UI with a user-friendly message
+        setErrors(prev => new Map(prev).set(company, `No news articles found for ${company}`));
+        // Remove any existing articles for this company
+        setArticles(prev => prev.filter(article => article.company !== company));
+        return;
       }
 
       console.log('[DEBUG] Found articles:', {
@@ -325,11 +339,14 @@ export function NewsView() {
       
       setErrors(prev => new Map(prev).set(company, message));
       
-      toast({
-        title: 'Error',
-        description: `Failed to fetch news for ${company}: ${message}`,
-        variant: 'destructive',
-      });
+      // Only show toast for actual errors, not for "no articles found" case
+      if (message !== `No news articles found for ${company}`) {
+        toast({
+          title: 'Error',
+          description: `Failed to fetch news for ${company}: ${message}`,
+          variant: 'destructive',
+        });
+      }
     } finally {
       setLoadingCompanies(prev => {
         const next = new Set(Array.from(prev));
