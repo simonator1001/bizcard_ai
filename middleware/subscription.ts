@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { SubscriptionService } from '@/lib/subscription';
@@ -6,52 +6,56 @@ import { SubscriptionService } from '@/lib/subscription';
 export async function subscriptionMiddleware(request: NextRequest) {
   const res = NextResponse.next();
 
-  // Create Supabase client specifically for middleware
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
+  try {
+    // Create Supabase client specifically for middleware
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            res.cookies.set({
+              name,
+              value,
+              ...options,
+            });
+          },
+          remove(name: string, options: CookieOptions) {
+            res.cookies.delete({
+              name,
+              ...options,
+            });
+          },
         },
-        set(name: string, value: string, options: any) {
-          res.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-        },
-        remove(name: string, options: any) {
-          res.cookies.delete({
-            name,
-            ...options,
-          });
-        },
-      },
+      }
+    );
+
+    // Get authenticated user data
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.debug('[Subscription Middleware] No authenticated user found');
+      return res;
     }
-  );
 
-  // Check if user is authenticated
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    // Get current subscription and usage
+    const subscription = await SubscriptionService.getCurrentSubscription(user.id);
+    const usage = await SubscriptionService.getCurrentUsage(user.id);
 
-  if (!session) {
+    // Add subscription info to request headers for use in API routes
+    res.headers.set('x-subscription-tier', subscription?.tier || 'free');
+    res.headers.set('x-subscription-status', subscription?.status || 'inactive');
+    res.headers.set('x-scans-used', usage?.scansCount?.toString() || '0');
+    res.headers.set('x-companies-tracked', usage?.companiesTracked?.toString() || '0');
+
+    return res;
+  } catch (error) {
+    console.error('[Subscription Middleware] Error:', error);
     return res;
   }
-
-  // Get current subscription and usage
-  const subscription = await SubscriptionService.getCurrentSubscription(session.user.id);
-  const usage = await SubscriptionService.getCurrentUsage(session.user.id);
-
-  // Add subscription info to request headers for use in API routes
-  res.headers.set('x-subscription-tier', subscription?.tier || 'free');
-  res.headers.set('x-subscription-status', subscription?.status || 'inactive');
-  res.headers.set('x-scans-used', usage?.scansCount?.toString() || '0');
-  res.headers.set('x-companies-tracked', usage?.companiesTracked?.toString() || '0');
-
-  return res;
 }
 
 // Helper function to check if a user can perform an action based on their subscription

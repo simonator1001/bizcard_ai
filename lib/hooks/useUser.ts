@@ -10,17 +10,42 @@ export function useUser() {
   const supabase = createClient();
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Get initial user data securely
+    const initializeUser = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) {
+          console.error('[useUser] Error getting user:', error);
+          setUser(null);
+        } else {
+          setUser(user);
+        }
+      } catch (err) {
+        console.error('[useUser] Error in getUser:', err);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeUser();
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        // Verify user data on auth state change
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) {
+          console.error('[useUser] Error getting user on auth change:', error);
+          setUser(null);
+        } else {
+          setUser(user);
+        }
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
 
@@ -29,8 +54,5 @@ export function useUser() {
     };
   }, [supabase.auth]);
 
-  return {
-    user,
-    loading,
-  };
+  return { user, loading };
 } 
