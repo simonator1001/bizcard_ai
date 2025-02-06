@@ -2,6 +2,5 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/": "pages/index.js",
-  "/auth/callback": "pages/auth/callback.js"
+  "/": "pages/index.js"
 }

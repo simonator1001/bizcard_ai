@@ -288,3 +288,5 @@ client_id = "859959789432-2kae8tn3c94k4np401hscau3k1kk2l29.apps.googleuserconten
 secret = "env(GOOGLE_CLIENT_SECRET)"
 # Overrides the default auth redirectUrl.
 redirect_uri = "https://supabase.simon-gpt.com/auth/callback"
+# If enabled, the nonce check will be skipped. Required for local sign in with Google auth.
+skip_nonce_check = false
