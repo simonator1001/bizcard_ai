@@ -81,7 +81,6 @@
     "react-dom": "18.2.0",
     "react-hot-toast": "^2.4.1",
     "react-i18next": "^15.2.0",
-    "react-organizational-chart": "^2.2.1",
     "reactflow": "^11.11.4",
     "shadcn-ui": "^0.9.4",
     "sonner": "^1.7.1",
