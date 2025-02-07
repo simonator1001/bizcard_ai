@@ -12,76 +12,68 @@ NC='\033[0m'
 
 echo "Configuring Supabase Auth Settings..."
 
-# Set auth configuration using the management API
-RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/admin/config" \
-  -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "site_url": "https://bizcard.simon-gpt.com",
-    "additional_redirect_urls": [
-      "https://bizcard.simon-gpt.com",
-      "https://bizcard.simon-gpt.com/auth/callback",
-      "https://bizcard.simon-gpt.com/signin"
-    ],
-    "jwt_exp": 3600,
-    "enable_refresh_token_rotation": true,
-    "refresh_token_reuse_interval": 10
-  }')
+# Replace environment variables in the config file
+CONFIG_FILE="supabase/config/auth.json"
+TMP_CONFIG="/tmp/auth_config.json"
 
-HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
-BODY=$(echo "$RESPONSE" | sed '$d')
+# Replace environment variables
+cat $CONFIG_FILE | \
+  sed "s|\${GOOGLE_CLIENT_SECRET}|$GOOGLE_CLIENT_SECRET|g" > $TMP_CONFIG
 
-if [ "$HTTP_STATUS" -eq 200 ]; then
+# Apply configuration using Docker
+docker exec -i supabase_db_1 psql -U postgres -d postgres -c "
+  UPDATE auth.config SET 
+    site_url = '$(jq -r .site_url $TMP_CONFIG)',
+    additional_redirect_urls = array[$(jq -r '.additional_redirect_urls | join(",")' $TMP_CONFIG | sed "s/,/','/g" | sed "s/^/'/" | sed "s/$/'/")],
+    jwt_exp = $(jq .jwt_exp $TMP_CONFIG),
+    enable_refresh_token_rotation = $(jq .enable_refresh_token_rotation $TMP_CONFIG),
+    refresh_token_reuse_interval = $(jq .refresh_token_reuse_interval $TMP_CONFIG);"
+
+if [ $? -eq 0 ]; then
   echo -e "${GREEN}Successfully updated auth configuration${NC}"
 else
   echo -e "${RED}Failed to update auth configuration${NC}"
-  echo "Status Code: $HTTP_STATUS"
-  echo "Response: $BODY"
-  exit 1
-fi
-
-echo "Verifying configuration..."
-
-# Verify configuration using the management API
-RESPONSE=$(curl -s -w "\n%{http_code}" "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/admin/config" \
-  -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
-
-HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
-BODY=$(echo "$RESPONSE" | sed '$d')
-
-if [ "$HTTP_STATUS" -eq 200 ]; then
-  echo -e "${GREEN}Current configuration:${NC}"
-  echo "$BODY" | jq '.'
-else
-  echo -e "${RED}Failed to fetch configuration${NC}"
-  echo "Status Code: $HTTP_STATUS"
-  echo "Response: $BODY"
   exit 1
 fi
 
 # Configure Google OAuth provider
 echo "Configuring Google OAuth provider..."
-RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/admin/providers/google" \
-  -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "enabled": true,
-    "client_id": "859959789432-2kae8tn3c94k4np401hscau3k1kk2l29.apps.googleusercontent.com",
-    "secret": "'$GOOGLE_CLIENT_SECRET'",
-    "redirect_uri": "https://bizcard.simon-gpt.com/auth/callback"
-  }')
+docker exec -i supabase_db_1 psql -U postgres -d postgres -c "
+  INSERT INTO auth.providers (provider_id, provider_type, enabled, client_id, client_secret, redirect_uri)
+  VALUES (
+    'google',
+    'oauth',
+    $(jq '.providers.google.enabled' $TMP_CONFIG),
+    '$(jq -r '.providers.google.client_id' $TMP_CONFIG)',
+    '$(jq -r '.providers.google.secret' $TMP_CONFIG)',
+    '$(jq -r '.providers.google.redirect_uri' $TMP_CONFIG)'
+  )
+  ON CONFLICT (provider_id) DO UPDATE SET
+    enabled = EXCLUDED.enabled,
+    client_id = EXCLUDED.client_id,
+    client_secret = EXCLUDED.client_secret,
+    redirect_uri = EXCLUDED.redirect_uri;"
 
-HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
-BODY=$(echo "$RESPONSE" | sed '$d')
-
-if [ "$HTTP_STATUS" -eq 200 ]; then
+if [ $? -eq 0 ]; then
   echo -e "${GREEN}Successfully configured Google OAuth provider${NC}"
 else
   echo -e "${RED}Failed to configure Google OAuth provider${NC}"
-  echo "Status Code: $HTTP_STATUS"
-  echo "Response: $BODY"
+  exit 1
+fi
+
+# Clean up
+rm $TMP_CONFIG
+
+echo -e "${GREEN}Configuration applied successfully!${NC}"
+
+# Restart auth service to apply changes
+echo "Restarting Supabase Auth service..."
+docker restart supabase_auth_1
+
+if [ $? -eq 0 ]; then
+  echo -e "${GREEN}Auth service restarted successfully${NC}"
+else
+  echo -e "${RED}Failed to restart auth service${NC}"
   exit 1
 fi 
+

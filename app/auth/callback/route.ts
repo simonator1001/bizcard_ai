@@ -14,14 +14,14 @@ export async function GET(request: Request) {
     if (error) {
       console.error('OAuth error:', error, error_description)
       return NextResponse.redirect(
-        `${requestUrl.origin}/signin?error=${encodeURIComponent(error_description || error)}`
+        `${process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'}/signin?error=${encodeURIComponent(error_description || error)}`
       )
     }
 
     // No code present
     if (!code) {
       console.error('No code in callback')
-      return NextResponse.redirect(`${requestUrl.origin}/signin?error=no_code`)
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'}/signin?error=no_code`)
     }
 
     // Exchange the code for a session
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     if (exchangeError) {
       console.error('Error exchanging code for session:', exchangeError)
       return NextResponse.redirect(
-        `${requestUrl.origin}/signin?error=${encodeURIComponent(exchangeError.message)}`
+        `${process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'}/signin?error=${encodeURIComponent(exchangeError.message)}`
       )
     }
 
@@ -43,16 +43,16 @@ export async function GET(request: Request) {
     if (sessionError || !session) {
       console.error('Session verification failed:', sessionError)
       return NextResponse.redirect(
-        `${requestUrl.origin}/signin?error=session_verification_failed`
+        `${process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'}/signin?error=session_verification_failed`
       )
     }
 
     // Successful authentication, redirect to the next page or home
-    return NextResponse.redirect(`${requestUrl.origin}${next}`)
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'}${next}`)
   } catch (error) {
     console.error('Unexpected error in auth callback:', error)
     return NextResponse.redirect(
-      `${requestUrl.origin}/signin?error=unexpected_error`
+      `${process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'}/signin?error=unexpected_error`
     )
   }
 } 
