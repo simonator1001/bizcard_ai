@@ -40,7 +40,7 @@ let _supabase: SupabaseClient | null = null;
 let _supabaseAdmin: SupabaseClient | null = null;
 
 // Add this constant at the top
-const REDIRECT_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://supabase.simon-gpt.com'
+const REDIRECT_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'
 
 export function getSupabaseClient() {
@@ -146,23 +146,6 @@ export function getSupabaseClient() {
       }
     );
     
-    // Set redirect URL after initialization
-    _supabase.auth.setSession({
-      access_token: '',
-      refresh_token: ''
-    }).then(() => {
-      _supabase?.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${REDIRECT_URL}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent'
-          }
-        }
-      });
-    });
-
     console.debug('[Supabase] Client initialized with PKCE flow');
   } else {
     _supabase = createClient(
@@ -361,11 +344,11 @@ export const debugAuth = async () => {
 
 export async function signInWithGoogle() {
   const supabase = getSupabaseClient();
-  const redirectUrl = `${REDIRECT_URL}/auth/v1/callback`;
+  const redirectUrl = `${REDIRECT_URL}/auth/callback`;
   
   console.debug('[Supabase] Initiating Google sign in with:', {
     redirectUrl,
-    baseUrl: APP_URL,
+    baseUrl: REDIRECT_URL,
     env: {
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL
