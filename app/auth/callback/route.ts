@@ -80,7 +80,7 @@ export async function GET(request: Request) {
       name: 'sb-auth-token',
       value: session.access_token,
       path: '/',
-      domain: '.simon-gpt.com', // Use root domain for sharing between subdomains
+      domain: '.simon-gpt.com',
       maxAge: 60 * 60 * 24 * 7, // 1 week
       sameSite: 'lax' as const,
       secure: true,
@@ -117,6 +117,9 @@ export async function GET(request: Request) {
       })
     }
 
+    // Store the session in localStorage
+    response.headers.set('Set-Cookie', `supabase-auth-token=${session.access_token}; Path=/; Domain=.simon-gpt.com; Max-Age=604800; SameSite=Lax; Secure; HttpOnly`)
+
     return response
   } catch (error) {
     console.error('[Auth Callback] Unexpected error:', error)
@@ -125,3 +128,4 @@ export async function GET(request: Request) {
     )
   }
 } 
+

@@ -7,6 +7,7 @@ const PUBLIC_ROUTES = [
   '/signin',
   '/signup',
   '/auth/callback',
+  '/auth/v1/callback',
   '/reset-password',
   '/verify',
   '/api/auth',
@@ -69,11 +70,13 @@ export async function middleware(request: NextRequest) {
     let user;
     try {
       const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
-    if (userError) {
-      console.error('[Middleware] Authentication error:', userError);
+      if (userError) {
+        console.error('[Middleware] Authentication error:', userError);
         // Don't return error for API routes
         if (!requestPath.startsWith('/api/')) {
-          return res;
+          const redirectUrl = new URL('/signin', request.url);
+          redirectUrl.searchParams.set('returnUrl', request.nextUrl.pathname);
+          return NextResponse.redirect(redirectUrl);
         }
       }
       user = authUser;
@@ -83,27 +86,27 @@ export async function middleware(request: NextRequest) {
     }
 
     // Handle authentication for protected routes
-    const isAuthPage = request.nextUrl.pathname.startsWith('/auth');
+    const isAuthPage = requestPath.startsWith('/auth') || requestPath === '/signin' || requestPath === '/signup';
     const isProtectedRoute = !isAuthPage && 
-      !request.nextUrl.pathname.startsWith('/api') && 
-      !request.nextUrl.pathname.startsWith('/_next') &&
-      !request.nextUrl.pathname.startsWith('/static');
+      !requestPath.startsWith('/api') && 
+      !requestPath.startsWith('/_next') &&
+      !requestPath.startsWith('/static');
 
     // Redirect unauthenticated users to login
     if (isProtectedRoute && !user) {
-      const redirectUrl = new URL('/auth/signin', request.url);
-      redirectUrl.searchParams.set('redirectedFrom', request.nextUrl.pathname);
+      const redirectUrl = new URL('/signin', request.url);
+      redirectUrl.searchParams.set('returnUrl', request.nextUrl.pathname);
       return NextResponse.redirect(redirectUrl);
     }
 
     // Redirect authenticated users away from auth pages
-    if (isAuthPage && user) {
+    if (isAuthPage && user && !requestPath.includes('/callback')) {
       return NextResponse.redirect(new URL('/', request.url));
     }
 
     if (!isPublicRoute && user) {
       try {
-      // Apply subscription middleware only for authenticated non-public routes
+        // Apply subscription middleware only for authenticated non-public routes
         return await subscriptionMiddleware(request);
       } catch (error) {
         console.error('[Middleware] Subscription middleware error:', error);

@@ -2,7 +2,6 @@ import { createClient, SupabaseClient, Session, AuthChangeEvent } from '@supabas
 import { createBrowserClient } from '@supabase/ssr'
 import { type CookieOptions } from '@supabase/ssr'
 import { BusinessCard } from '@/types/business-card'
-import { config, getRedirectUrl, getCookieDomain } from './config'
 
 // Debug environment variables in detail
 console.log('[Supabase] Environment debug:', {
@@ -99,7 +98,7 @@ export function getSupabaseClient() {
             const cookieStr = [
               `${name}=${value}`,
               `path=${options.path || '/'}`,
-              `domain=${getCookieDomain()}`,
+              `domain=.simon-gpt.com`,
               `max-age=${options.maxAge || 31536000}`,
               'SameSite=Lax',
               'Secure'
@@ -110,7 +109,7 @@ export function getSupabaseClient() {
             const cookieStr = [
               `${name}=`,
               `path=${options.path || '/'}`,
-              `domain=${getCookieDomain()}`,
+              `domain=.simon-gpt.com`,
               'expires=Thu, 01 Jan 1970 00:00:00 GMT',
               'SameSite=Lax',
               'Secure'
@@ -345,11 +344,19 @@ export const debugAuth = async () => {
 
 export async function signInWithGoogle() {
   const supabase = getSupabaseClient();
-  const redirectUrl = getRedirectUrl();
+  const redirectUrl = `${REDIRECT_URL}/auth/callback`;
+  
+  // Store the current URL as the return URL
+  if (typeof window !== 'undefined') {
+    const returnUrl = window.location.pathname;
+    if (returnUrl !== '/signin') {
+      window.localStorage.setItem('returnUrl', returnUrl);
+    }
+  }
   
   console.debug('[Supabase] Initiating Google sign in with:', {
     redirectUrl,
-    baseUrl: config.appUrl,
+    baseUrl: APP_URL,
     env: {
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL

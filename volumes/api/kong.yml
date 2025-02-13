@@ -8,30 +8,6 @@
         - /auth/v1/verify
   plugins:
     - name: cors
-      config:
-        origins:
-          - http://localhost:3000
-          - https://bizcard.simon-gpt.com
-        methods:
-          - GET
-          - POST
-          - PUT
-          - PATCH
-          - DELETE
-          - OPTIONS
-        headers:
-          - Accept
-          - Accept-Version
-          - Content-Length
-          - Content-MD5
-          - Content-Type
-          - Date
-          - Authorization
-          - X-Client-Info
-        credentials: true
-        max_age: 3600
-        preflight_continue: false
-
 - name: auth-v1-open-callback
   url: http://supabase-auth:9999/callback
   routes:
@@ -42,30 +18,6 @@
         - /auth/callback
   plugins:
     - name: cors
-      config:
-        origins:
-          - http://localhost:3000
-          - https://bizcard.simon-gpt.com
-        methods:
-          - GET
-          - POST
-          - PUT
-          - PATCH
-          - DELETE
-          - OPTIONS
-        headers:
-          - Accept
-          - Accept-Version
-          - Content-Length
-          - Content-MD5
-          - Content-Type
-          - Date
-          - Authorization
-          - X-Client-Info
-        credentials: true
-        max_age: 3600
-        preflight_continue: false
-
 - name: auth-v1-open-authorize
   url: http://supabase-auth:9999/authorize
   routes:
@@ -74,27 +26,4 @@
       paths:
         - /auth/v1/authorize
   plugins:
-    - name: cors
-      config:
-        origins:
-          - http://localhost:3000
-          - https://bizcard.simon-gpt.com
-        methods:
-          - GET
-          - POST
-          - PUT
-          - PATCH
-          - DELETE
-          - OPTIONS
-        headers:
-          - Accept
-          - Accept-Version
-          - Content-Length
-          - Content-MD5
-          - Content-Type
-          - Date
-          - Authorization
-          - X-Client-Info
-        credentials: true
-        max_age: 3600
-        preflight_continue: false 
+    - name: cors 
