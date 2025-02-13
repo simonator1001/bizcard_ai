@@ -6,15 +6,27 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'
   
+  console.debug('[Auth Callback] Full request details:', {
+    url: requestUrl.toString(),
+    searchParams: Object.fromEntries(requestUrl.searchParams),
+    headers: Object.fromEntries(request.headers),
+    baseUrl,
+    env: {
+      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL
+    }
+  })
+  
   try {
     const code = requestUrl.searchParams.get('code')
     const next = requestUrl.searchParams.get('next') || '/'
     const error = requestUrl.searchParams.get('error')
     const error_description = requestUrl.searchParams.get('error_description')
+    const provider = requestUrl.searchParams.get('provider')
 
     // If there's an error from OAuth provider
     if (error) {
-      console.error('OAuth error:', error, error_description)
+      console.error('[Auth Callback] OAuth error:', error, error_description)
       return NextResponse.redirect(
         `${baseUrl}/signin?error=${encodeURIComponent(error_description || error)}`
       )
@@ -22,57 +34,106 @@ export async function GET(request: Request) {
 
     // No code present
     if (!code) {
-      console.error('No code in callback')
+      console.error('[Auth Callback] No code in callback')
       return NextResponse.redirect(`${baseUrl}/signin?error=no_code`)
     }
 
     // Exchange the code for a session
     const cookieStore = cookies()
     const supabase = createRouteHandlerClient({ 
-      cookies: () => cookieStore 
+      cookies: () => cookieStore,
+      options: {
+        auth: {
+          flowType: 'pkce',
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true
+        },
+        global: {
+          headers: {
+            'X-Client-Info': 'nextjs-auth-callback'
+          }
+        }
+      }
     })
     
+    console.debug('[Auth Callback] Exchanging code for session...')
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
     
     if (exchangeError) {
-      console.error('Error exchanging code for session:', exchangeError)
+      console.error('[Auth Callback] Error exchanging code for session:', exchangeError)
       return NextResponse.redirect(
         `${baseUrl}/signin?error=${encodeURIComponent(exchangeError.message)}`
       )
     }
 
     // Verify the session was created
+    console.debug('[Auth Callback] Verifying session...')
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
     if (sessionError || !session) {
-      console.error('Session verification failed:', sessionError)
+      console.error('[Auth Callback] Session verification failed:', sessionError)
       return NextResponse.redirect(
         `${baseUrl}/signin?error=session_verification_failed`
       )
     }
 
     // Log successful authentication
-    console.log('Authentication successful, redirecting to:', `${baseUrl}${next}`)
+    console.debug('[Auth Callback] Authentication successful:', {
+      userId: session.user.id,
+      email: session.user.email,
+      provider: provider || 'unknown',
+      redirectingTo: `${baseUrl}${next}`
+    })
 
     // Create response with redirect
     const response = NextResponse.redirect(`${baseUrl}${next}`)
 
-    // Ensure cookies are properly set
+    // Set auth cookie with proper domain
     const cookieOptions = {
       name: 'sb-auth-token',
       value: session.access_token,
       path: '/',
+      domain: '.simon-gpt.com', // Use root domain for sharing between subdomains
+      maxAge: 60 * 60 * 24 * 7, // 1 week
       sameSite: 'lax' as const,
       secure: true,
-      maxAge: 60 * 60 * 24 * 7 // 1 week
+      httpOnly: true
     }
 
-    // Set the cookie
+    // Set cookies
     response.cookies.set(cookieOptions)
+
+    // Also set refresh token
+    if (session.refresh_token) {
+      response.cookies.set({
+        ...cookieOptions,
+        name: 'sb-refresh-token',
+        value: session.refresh_token
+      })
+    }
+
+    // Set provider token if available
+    if (session.provider_token) {
+      response.cookies.set({
+        ...cookieOptions,
+        name: 'sb-provider-token',
+        value: session.provider_token
+      })
+    }
+
+    // Set provider refresh token if available
+    if (session.provider_refresh_token) {
+      response.cookies.set({
+        ...cookieOptions,
+        name: 'sb-provider-refresh-token',
+        value: session.provider_refresh_token
+      })
+    }
 
     return response
   } catch (error) {
-    console.error('Unexpected error in auth callback:', error)
+    console.error('[Auth Callback] Unexpected error:', error)
     return NextResponse.redirect(
       `${baseUrl}/signin?error=unexpected_error`
     )

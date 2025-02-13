@@ -39,6 +39,10 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 let _supabase: SupabaseClient | null = null;
 let _supabaseAdmin: SupabaseClient | null = null;
 
+// Add this constant at the top
+const REDIRECT_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://supabase.simon-gpt.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'
+
 export function getSupabaseClient() {
   if (_supabase) {
     console.debug('[Supabase] Returning existing client instance');
@@ -51,7 +55,8 @@ export function getSupabaseClient() {
     env_keys: Object.keys(process.env).filter(key => key.includes('SUPABASE')),
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 8) + '...',
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '(exists)' : undefined
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '(exists)' : undefined,
+    REDIRECT_URL
   });
 
   const isClient = typeof window !== 'undefined';
@@ -93,6 +98,7 @@ export function getSupabaseClient() {
             const cookieStr = [
               `${name}=${value}`,
               `path=${options.path || '/'}`,
+              `domain=.simon-gpt.com`,
               `max-age=${options.maxAge || 31536000}`,
               'SameSite=Lax',
               'Secure'
@@ -103,6 +109,7 @@ export function getSupabaseClient() {
             const cookieStr = [
               `${name}=`,
               `path=${options.path || '/'}`,
+              `domain=.simon-gpt.com`,
               'expires=Thu, 01 Jan 1970 00:00:00 GMT',
               'SameSite=Lax',
               'Secure'
@@ -115,7 +122,21 @@ export function getSupabaseClient() {
           persistSession: true,
           detectSessionInUrl: true,
           flowType: 'pkce',
-          debug: true
+          debug: true,
+          storage: {
+            getItem: (key: string) => {
+              console.debug('[Supabase] Getting storage item:', key)
+              return window.localStorage.getItem(key)
+            },
+            setItem: (key: string, value: string) => {
+              console.debug('[Supabase] Setting storage item:', key)
+              window.localStorage.setItem(key, value)
+            },
+            removeItem: (key: string) => {
+              console.debug('[Supabase] Removing storage item:', key)
+              window.localStorage.removeItem(key)
+            }
+          }
         },
         global: {
           headers: {
@@ -124,6 +145,24 @@ export function getSupabaseClient() {
         }
       }
     );
+    
+    // Set redirect URL after initialization
+    _supabase.auth.setSession({
+      access_token: '',
+      refresh_token: ''
+    }).then(() => {
+      _supabase?.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${REDIRECT_URL}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
+        }
+      });
+    });
+
     console.debug('[Supabase] Client initialized with PKCE flow');
   } else {
     _supabase = createClient(
@@ -132,7 +171,8 @@ export function getSupabaseClient() {
       {
         auth: {
           autoRefreshToken: false,
-          persistSession: false
+          persistSession: false,
+          flowType: 'pkce'
         }
       }
     );
@@ -317,4 +357,37 @@ export const debugAuth = async () => {
     console.error('[Supabase] Debug error:', error);
     return { error };
   }
-}; 
+};
+
+export async function signInWithGoogle() {
+  const supabase = getSupabaseClient();
+  const redirectUrl = `${REDIRECT_URL}/auth/v1/callback`;
+  
+  console.debug('[Supabase] Initiating Google sign in with:', {
+    redirectUrl,
+    baseUrl: APP_URL,
+    env: {
+      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL
+    }
+  });
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: redirectUrl,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent'
+      }
+    }
+  });
+
+  if (error) {
+    console.error('[Supabase] Sign in error:', error);
+    throw error;
+  }
+
+  console.debug('[Supabase] Sign in response:', data);
+  return data;
+} 
