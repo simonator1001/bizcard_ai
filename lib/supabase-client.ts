@@ -348,7 +348,7 @@ export async function signInWithGoogle() {
   
   console.debug('[Supabase] Initiating Google sign in with:', {
     redirectUrl,
-    baseUrl: REDIRECT_URL,
+    baseUrl: APP_URL,
     env: {
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL

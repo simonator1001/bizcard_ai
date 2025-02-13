@@ -1,0 +1,29 @@
+## Open Auth routes
+- name: auth-v1-open
+  url: http://supabase-auth:9999/verify
+  routes:
+    - name: auth-v1-open
+      strip_path: true
+      paths:
+        - /auth/v1/verify
+  plugins:
+    - name: cors
+- name: auth-v1-open-callback
+  url: http://supabase-auth:9999/callback
+  routes:
+    - name: auth-v1-open-callback
+      strip_path: true
+      paths:
+        - /auth/v1/callback
+        - /auth/callback
+  plugins:
+    - name: cors
+- name: auth-v1-open-authorize
+  url: http://supabase-auth:9999/authorize
+  routes:
+    - name: auth-v1-open-authorize
+      strip_path: true
+      paths:
+        - /auth/v1/authorize
+  plugins:
+    - name: cors 

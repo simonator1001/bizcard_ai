@@ -1,0 +1,46 @@
+services:
+  supabase-auth:
+    environment:
+        # Core Settings
+        - 'GOTRUE_API_HOST=0.0.0.0'
+        - 'GOTRUE_API_PORT=9999'
+        - 'GOTRUE_SITE_URL=https://bizcard.simon-gpt.com'
+        - 'GOTRUE_URI=http://auth:9999'
+        - 'API_EXTERNAL_URL=https://bizcard.simon-gpt.com'
+        - 'GOTRUE_DB_DRIVER=postgres'
+        - 'GOTRUE_DB_DATABASE_URL=postgres://supabase_auth_admin:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}'
+
+        # JWT Settings
+        - 'GOTRUE_JWT_SECRET=${SERVICE_PASSWORD_JWT}'
+        - 'GOTRUE_JWT_EXP=3600'
+        - 'GOTRUE_JWT_AUD=authenticated'
+        - 'GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated'
+        - 'GOTRUE_JWT_ADMIN_GROUP_NAME=service_role'
+
+        # Cookie Settings
+        - 'GOTRUE_COOKIE_DOMAIN=simon-gpt.com'
+        - 'GOTRUE_COOKIE_SECURE=true'
+        - 'GOTRUE_COOKIE_NAME=sb-auth'
+        - 'GOTRUE_COOKIE_KEY=${SERVICE_PASSWORD_JWT}'
+
+        # State Management
+        - 'GOTRUE_STATE_LIFETIME=300'
+        - 'GOTRUE_STATE_SECRET=${SERVICE_PASSWORD_JWT}'
+
+        # Google OAuth Settings
+        - 'GOTRUE_EXTERNAL_GOOGLE_ENABLED=true'
+        - 'GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}'
+        - 'GOTRUE_EXTERNAL_GOOGLE_SECRET=${GOOGLE_CLIENT_SECRET}'
+        - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://bizcard.simon-gpt.com/auth/callback'
+
+        # Redirect Settings
+        - 'GOTRUE_URI_ALLOW_LIST=https://bizcard.simon-gpt.com/auth/callback,http://localhost:3000/auth/callback'
+        - 'GOTRUE_DISABLE_SIGNUP=false'
+
+        # Email Settings
+        - 'GOTRUE_EXTERNAL_EMAIL_ENABLED=true'
+        - 'GOTRUE_MAILER_AUTOCONFIRM=true'
+
+        # Phone Settings
+        - 'GOTRUE_EXTERNAL_PHONE_ENABLED=false'
+        - 'GOTRUE_SMS_AUTOCONFIRM=false' 
