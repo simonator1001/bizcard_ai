@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'
+  
   try {
     const code = requestUrl.searchParams.get('code')
     const next = requestUrl.searchParams.get('next') || '/'
@@ -14,26 +16,28 @@ export async function GET(request: Request) {
     if (error) {
       console.error('OAuth error:', error, error_description)
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'}/signin?error=${encodeURIComponent(error_description || error)}`
+        `${baseUrl}/signin?error=${encodeURIComponent(error_description || error)}`
       )
     }
 
     // No code present
     if (!code) {
       console.error('No code in callback')
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'}/signin?error=no_code`)
+      return NextResponse.redirect(`${baseUrl}/signin?error=no_code`)
     }
 
     // Exchange the code for a session
     const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const supabase = createRouteHandlerClient({ 
+      cookies: () => cookieStore 
+    })
     
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
     
     if (exchangeError) {
       console.error('Error exchanging code for session:', exchangeError)
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'}/signin?error=${encodeURIComponent(exchangeError.message)}`
+        `${baseUrl}/signin?error=${encodeURIComponent(exchangeError.message)}`
       )
     }
 
@@ -43,16 +47,34 @@ export async function GET(request: Request) {
     if (sessionError || !session) {
       console.error('Session verification failed:', sessionError)
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'}/signin?error=session_verification_failed`
+        `${baseUrl}/signin?error=session_verification_failed`
       )
     }
 
-    // Successful authentication, redirect to the next page or home
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'}${next}`)
+    // Log successful authentication
+    console.log('Authentication successful, redirecting to:', `${baseUrl}${next}`)
+
+    // Create response with redirect
+    const response = NextResponse.redirect(`${baseUrl}${next}`)
+
+    // Ensure cookies are properly set
+    const cookieOptions = {
+      name: 'sb-auth-token',
+      value: session.access_token,
+      path: '/',
+      sameSite: 'lax' as const,
+      secure: true,
+      maxAge: 60 * 60 * 24 * 7 // 1 week
+    }
+
+    // Set the cookie
+    response.cookies.set(cookieOptions)
+
+    return response
   } catch (error) {
     console.error('Unexpected error in auth callback:', error)
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'}/signin?error=unexpected_error`
+      `${baseUrl}/signin?error=unexpected_error`
     )
   }
 } 

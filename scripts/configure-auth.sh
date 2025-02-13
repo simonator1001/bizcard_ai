@@ -76,4 +76,3 @@ else
   echo -e "${RED}Failed to restart auth service${NC}"
   exit 1
 fi 
-

@@ -114,7 +114,13 @@ export function getSupabaseClient() {
           autoRefreshToken: true,
           persistSession: true,
           detectSessionInUrl: true,
-          flowType: 'pkce'
+          flowType: 'pkce',
+          debug: true
+        },
+        global: {
+          headers: {
+            'X-Client-Info': 'supabase-js-web'
+          }
         }
       }
     );
