@@ -2,6 +2,7 @@ import { createClient, SupabaseClient, Session, AuthChangeEvent } from '@supabas
 import { createBrowserClient } from '@supabase/ssr'
 import { type CookieOptions } from '@supabase/ssr'
 import { BusinessCard } from '@/types/business-card'
+import { config, getRedirectUrl, getCookieDomain } from './config'
 
 // Debug environment variables in detail
 console.log('[Supabase] Environment debug:', {
@@ -98,7 +99,7 @@ export function getSupabaseClient() {
             const cookieStr = [
               `${name}=${value}`,
               `path=${options.path || '/'}`,
-              `domain=.simon-gpt.com`,
+              `domain=${getCookieDomain()}`,
               `max-age=${options.maxAge || 31536000}`,
               'SameSite=Lax',
               'Secure'
@@ -109,7 +110,7 @@ export function getSupabaseClient() {
             const cookieStr = [
               `${name}=`,
               `path=${options.path || '/'}`,
-              `domain=.simon-gpt.com`,
+              `domain=${getCookieDomain()}`,
               'expires=Thu, 01 Jan 1970 00:00:00 GMT',
               'SameSite=Lax',
               'Secure'
@@ -344,11 +345,11 @@ export const debugAuth = async () => {
 
 export async function signInWithGoogle() {
   const supabase = getSupabaseClient();
-  const redirectUrl = `${REDIRECT_URL}/auth/callback`;
+  const redirectUrl = getRedirectUrl();
   
   console.debug('[Supabase] Initiating Google sign in with:', {
     redirectUrl,
-    baseUrl: APP_URL,
+    baseUrl: config.appUrl,
     env: {
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL
