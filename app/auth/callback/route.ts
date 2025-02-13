@@ -1,6 +1,7 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { Database } from '@/types/supabase'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
@@ -40,22 +41,7 @@ export async function GET(request: Request) {
 
     // Exchange the code for a session
     const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ 
-      cookies: () => cookieStore,
-      options: {
-        auth: {
-          flowType: 'pkce',
-          autoRefreshToken: true,
-          persistSession: true,
-          detectSessionInUrl: true
-        },
-        global: {
-          headers: {
-            'X-Client-Info': 'nextjs-auth-callback'
-          }
-        }
-      }
-    })
+    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore })
     
     console.debug('[Auth Callback] Exchanging code for session...')
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
