@@ -40,6 +40,10 @@ services:
         - 'GOTRUE_COOKIE_KEY=${SERVICE_PASSWORD_JWT}'
         - 'GOTRUE_COOKIE_MAX_AGE=3600'
 
+        # State Management
+        - 'GOTRUE_STATE_LIFETIME=300'
+        - 'GOTRUE_STATE_SECRET=${SERVICE_PASSWORD_JWT}'
+
         # Google OAuth Settings
         - 'GOTRUE_EXTERNAL_GOOGLE_ENABLED=true'
         - 'GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}'
