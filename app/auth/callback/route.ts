@@ -90,29 +90,72 @@ export async function GET(request: Request) {
 
     // Handle PKCE flow (code exchange)
     if (code) {
-      console.debug('[Auth Callback] Exchanging code for session...')
-      const { data: { session }, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-      
-      if (exchangeError) {
-        console.error('[Auth Callback] Error exchanging code for session:', exchangeError)
-        return NextResponse.redirect(
-          `${baseUrl}/signin?error=${encodeURIComponent(exchangeError.message)}`
+      console.debug('[Auth Callback] Exchanging code for session...', {
+        code: code.substring(0, 20) + '...',
+        provider,
+        cookies: Object.fromEntries(
+          Array.from(cookieStore.getAll())
+            .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
         )
-      }
-
-      if (!session) {
-        console.error('[Auth Callback] No session after code exchange')
-        return NextResponse.redirect(
-          `${baseUrl}/signin?error=no_session_after_exchange`
-        )
-      }
-
-      console.debug('[Auth Callback] Session exchange successful:', {
-        userId: session.user?.id,
-        provider: provider || 'unknown'
       })
 
-      return NextResponse.redirect(`${baseUrl}${next}`)
+      try {
+        const { data: { session }, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+        
+        if (exchangeError) {
+          console.error('[Auth Callback] Error exchanging code for session:', {
+            error: exchangeError,
+            code: exchangeError.status,
+            message: exchangeError.message,
+            provider,
+            cookies: Object.fromEntries(
+              Array.from(cookieStore.getAll())
+                .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
+            )
+          })
+          return NextResponse.redirect(
+            `${baseUrl}/signin?error=${encodeURIComponent(exchangeError.message)}`
+          )
+        }
+
+        if (!session) {
+          console.error('[Auth Callback] No session after code exchange', {
+            provider,
+            cookies: Object.fromEntries(
+              Array.from(cookieStore.getAll())
+                .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
+            )
+          })
+          return NextResponse.redirect(
+            `${baseUrl}/signin?error=no_session_after_exchange`
+          )
+        }
+
+        console.debug('[Auth Callback] Session exchange successful:', {
+          userId: session.user?.id,
+          provider: provider || 'unknown',
+          expiresAt: new Date(session.expires_at! * 1000).toISOString(),
+          cookies: Object.fromEntries(
+            Array.from(cookieStore.getAll())
+              .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
+          )
+        })
+
+        // Create response with redirect
+        const response = NextResponse.redirect(`${baseUrl}${next}`)
+
+        // Add debug headers
+        response.headers.set('x-auth-flow', 'pkce')
+        response.headers.set('x-auth-provider', provider || 'unknown')
+        response.headers.set('x-session-user-id', session.user?.id || 'none')
+
+        return response
+      } catch (error) {
+        console.error('[Auth Callback] Unexpected error during code exchange:', error)
+        return NextResponse.redirect(
+          `${baseUrl}/signin?error=code_exchange_failed`
+        )
+      }
     }
 
     // No code or access token

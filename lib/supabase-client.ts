@@ -91,33 +91,53 @@ export function getSupabaseClient() {
             return cookies[name]
           },
           set(name: string, value: string, options: CookieOptions) {
-            const domain = window.location.hostname === 'localhost' 
-              ? 'localhost' 
-              : '.simon-gpt.com'
-            const cookieStr = [
+            // Don't set domain for localhost
+            const cookieOptions = [
               `${name}=${value}`,
               `path=${options.path || '/'}`,
-              `domain=${domain}`,
+            ]
+            
+            // Only add domain for production
+            if (window.location.hostname !== 'localhost') {
+              cookieOptions.push(`domain=.simon-gpt.com`)
+            }
+            
+            // Add standard security options
+            cookieOptions.push(
               `max-age=${options.maxAge || 31536000}`,
               'SameSite=Lax',
               'Secure'
-            ].join('; ')
-            console.debug('[Supabase] Setting cookie:', { name, domain, path: options.path })
+            )
+            
+            const cookieStr = cookieOptions.join('; ')
+            console.debug('[Supabase] Setting cookie:', {
+              name,
+              domain: window.location.hostname !== 'localhost' ? '.simon-gpt.com' : undefined,
+              path: options.path,
+              value: value.substring(0, 20) + '...'
+            })
             document.cookie = cookieStr
           },
           remove(name: string, options: CookieOptions) {
-            const domain = window.location.hostname === 'localhost' 
-              ? 'localhost' 
-              : '.simon-gpt.com'
-            const cookieStr = [
+            const cookieOptions = [
               `${name}=`,
               `path=${options.path || '/'}`,
-              `domain=${domain}`,
               'expires=Thu, 01 Jan 1970 00:00:00 GMT',
               'SameSite=Lax',
               'Secure'
-            ].join('; ')
-            console.debug('[Supabase] Removing cookie:', name)
+            ]
+            
+            // Only add domain for production
+            if (window.location.hostname !== 'localhost') {
+              cookieOptions.push(`domain=.simon-gpt.com`)
+            }
+            
+            const cookieStr = cookieOptions.join('; ')
+            console.debug('[Supabase] Removing cookie:', {
+              name,
+              domain: window.location.hostname !== 'localhost' ? '.simon-gpt.com' : undefined,
+              path: options.path
+            })
             document.cookie = cookieStr
           }
         },
@@ -125,7 +145,7 @@ export function getSupabaseClient() {
           autoRefreshToken: true,
           persistSession: true,
           detectSessionInUrl: true,
-          flowType: 'implicit',
+          flowType: 'pkce',
           debug: true,
           storage: {
             getItem: (key: string) => {
