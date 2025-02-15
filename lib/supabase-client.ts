@@ -87,20 +87,25 @@ export function getSupabaseClient() {
                 acc[name] = value
                 return acc
               }, {} as Record<string, string>)
-            console.debug('[Supabase] Getting cookie:', name, cookies[name])
+            console.debug('[Supabase] Getting cookie:', name, cookies[name] ? 'present' : 'missing')
             return cookies[name]
           },
           set(name: string, value: string, options: CookieOptions) {
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')
             const cookieOptions = [
               `${name}=${value}`,
               `path=${options.path || '/'}`,
               `max-age=${options.maxAge || 31536000}`,
-              'SameSite=Lax',
-              'Secure'
+              'SameSite=Lax'
             ]
             
-            // Only add domain for production and non-localhost
-            if (window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1')) {
+            // Only add Secure in production or if using HTTPS locally
+            if (!isLocalhost || window.location.protocol === 'https:') {
+              cookieOptions.push('Secure')
+            }
+            
+            // Don't set domain for localhost
+            if (!isLocalhost) {
               cookieOptions.push(`domain=${window.location.hostname}`)
             }
             
@@ -108,29 +113,38 @@ export function getSupabaseClient() {
             console.debug('[Supabase] Setting cookie:', {
               name,
               value: value.substring(0, 20) + '...',
-              domain: window.location.hostname,
+              domain: !isLocalhost ? window.location.hostname : undefined,
+              isLocalhost,
+              protocol: window.location.protocol,
               options: cookieOptions
             })
             document.cookie = cookieStr
           },
           remove(name: string, options: CookieOptions) {
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')
             const cookieOptions = [
               `${name}=`,
               `path=${options.path || '/'}`,
               'expires=Thu, 01 Jan 1970 00:00:00 GMT',
-              'SameSite=Lax',
-              'Secure'
+              'SameSite=Lax'
             ]
             
-            // Only add domain for production and non-localhost
-            if (window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1')) {
+            // Only add Secure in production or if using HTTPS locally
+            if (!isLocalhost || window.location.protocol === 'https:') {
+              cookieOptions.push('Secure')
+            }
+            
+            // Don't set domain for localhost
+            if (!isLocalhost) {
               cookieOptions.push(`domain=${window.location.hostname}`)
             }
             
             const cookieStr = cookieOptions.join('; ')
             console.debug('[Supabase] Removing cookie:', {
               name,
-              domain: window.location.hostname,
+              isLocalhost,
+              protocol: window.location.protocol,
+              domain: !isLocalhost ? window.location.hostname : undefined,
               options: cookieOptions
             })
             document.cookie = cookieStr

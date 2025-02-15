@@ -203,13 +203,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithProvider: async (provider) => {
           try {
             const origin = typeof window !== 'undefined' ? window.location.origin : ''
+            const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1')
             const redirectUrl = `${origin}/auth/callback`
             
             console.debug('[AuthContext] Signing in with provider:', {
               provider,
               redirectUrl,
               origin,
-              hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown'
+              isLocalhost,
+              hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
+              protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown'
             })
             
             const { data, error } = await supabase.auth.signInWithOAuth({
@@ -221,12 +224,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   prompt: 'consent',
                   hd: '*'  // Allow any Google domain
                 },
-                skipBrowserRedirect: false
+                skipBrowserRedirect: false,
+                flowType: 'pkce'
               }
             })
             
             if (error) {
-              console.error('[AuthContext] Provider sign in error:', error)
+              console.error('[AuthContext] Provider sign in error:', {
+                error,
+                provider,
+                isLocalhost,
+                redirectUrl
+              })
               throw error
             }
             

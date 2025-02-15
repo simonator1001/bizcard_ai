@@ -5,14 +5,19 @@ import { Database } from '@/types/supabase'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'
+  const origin = requestUrl.origin
+  const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1')
+  const baseUrl = isLocalhost ? origin : (process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com')
   
   console.debug('[Auth Callback] Full request details:', {
     url: requestUrl.toString(),
+    origin,
+    isLocalhost,
+    baseUrl,
     searchParams: Object.fromEntries(requestUrl.searchParams),
     headers: Object.fromEntries(request.headers),
-    baseUrl,
     env: {
+      NODE_ENV: process.env.NODE_ENV,
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL
     }
@@ -55,11 +60,14 @@ export async function GET(request: Request) {
     }
 
     const cookieStore = cookies()
-    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore })
+    const supabase = createRouteHandlerClient<Database>({ 
+      cookies: () => cookieStore
+    })
 
     console.debug('[Auth Callback] Exchanging code for session...', {
       code: code.substring(0, 20) + '...',
       provider,
+      isLocalhost,
       cookies: Object.fromEntries(
         Array.from(cookieStore.getAll())
           .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
@@ -75,6 +83,7 @@ export async function GET(request: Request) {
           code: exchangeError.status,
           message: exchangeError.message,
           provider,
+          isLocalhost,
           cookies: Object.fromEntries(
             Array.from(cookieStore.getAll())
               .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
@@ -88,6 +97,7 @@ export async function GET(request: Request) {
       if (!session) {
         console.error('[Auth Callback] No session after code exchange', {
           provider,
+          isLocalhost,
           cookies: Object.fromEntries(
             Array.from(cookieStore.getAll())
               .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
@@ -102,6 +112,7 @@ export async function GET(request: Request) {
         userId: session.user?.id,
         provider: provider || 'unknown',
         expiresAt: new Date(session.expires_at! * 1000).toISOString(),
+        isLocalhost,
         cookies: Object.fromEntries(
           Array.from(cookieStore.getAll())
             .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
@@ -115,6 +126,7 @@ export async function GET(request: Request) {
       response.headers.set('x-auth-flow', 'pkce')
       response.headers.set('x-auth-provider', provider || 'unknown')
       response.headers.set('x-session-user-id', session.user?.id || 'none')
+      response.headers.set('x-is-localhost', String(isLocalhost))
 
       return response
     } catch (error) {
