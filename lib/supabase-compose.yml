@@ -78,20 +78,33 @@ services:
                   paths:
                     - /auth/v1/callback
                     - /auth/callback
+                  preserve_host: true
               plugins:
                 - name: cors
                   config:
                     origins:
                       - https://bizcard.simon-gpt.com
+                      - https://supabase.simon-gpt.com
                       - http://localhost:3000
                     credentials: true
                     headers:
                       - Authorization
                       - Content-Type
+                      - X-Client-Info
+                      - Referer
+                      - Origin
                     methods:
                       - GET
                       - POST
                       - OPTIONS
+                    max_age: 3600
+                    preflight_continue: false
+                - name: request-transformer
+                  config:
+                    add:
+                      headers:
+                        - X-Client-Info:$request_uri
+                        - X-Forwarded-Host:$host
 
             - name: auth-v1-open-authorize
               url: http://supabase-auth:9999/authorize
