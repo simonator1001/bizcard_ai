@@ -39,10 +39,6 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 let _supabase: SupabaseClient | null = null;
 let _supabaseAdmin: SupabaseClient | null = null;
 
-// Add this constant at the top
-const REDIRECT_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com'
-
 export function getSupabaseClient() {
   if (_supabase) {
     console.debug('[Supabase] Returning existing client instance');
@@ -55,8 +51,7 @@ export function getSupabaseClient() {
     env_keys: Object.keys(process.env).filter(key => key.includes('SUPABASE')),
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 8) + '...',
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '(exists)' : undefined,
-    REDIRECT_URL
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '(exists)' : undefined
   });
 
   const isClient = typeof window !== 'undefined';
@@ -92,28 +87,37 @@ export function getSupabaseClient() {
                 acc[name] = value
                 return acc
               }, {} as Record<string, string>)
+            console.debug('[Supabase] Getting cookie:', name, cookies[name])
             return cookies[name]
           },
           set(name: string, value: string, options: CookieOptions) {
+            const domain = window.location.hostname === 'localhost' 
+              ? 'localhost' 
+              : '.simon-gpt.com'
             const cookieStr = [
               `${name}=${value}`,
               `path=${options.path || '/'}`,
-              `domain=.simon-gpt.com`,
+              `domain=${domain}`,
               `max-age=${options.maxAge || 31536000}`,
               'SameSite=Lax',
               'Secure'
             ].join('; ')
+            console.debug('[Supabase] Setting cookie:', { name, domain, path: options.path })
             document.cookie = cookieStr
           },
           remove(name: string, options: CookieOptions) {
+            const domain = window.location.hostname === 'localhost' 
+              ? 'localhost' 
+              : '.simon-gpt.com'
             const cookieStr = [
               `${name}=`,
               `path=${options.path || '/'}`,
-              `domain=.simon-gpt.com`,
+              `domain=${domain}`,
               'expires=Thu, 01 Jan 1970 00:00:00 GMT',
               'SameSite=Lax',
               'Secure'
             ].join('; ')
+            console.debug('[Supabase] Removing cookie:', name)
             document.cookie = cookieStr
           }
         },
@@ -121,15 +125,16 @@ export function getSupabaseClient() {
           autoRefreshToken: true,
           persistSession: true,
           detectSessionInUrl: true,
-          flowType: 'pkce',
+          flowType: 'implicit',
           debug: true,
           storage: {
             getItem: (key: string) => {
-              console.debug('[Supabase] Getting storage item:', key)
-              return window.localStorage.getItem(key)
+              const value = window.localStorage.getItem(key)
+              console.debug('[Supabase] Getting storage item:', key, value ? 'present' : 'missing')
+              return value
             },
             setItem: (key: string, value: string) => {
-              console.debug('[Supabase] Setting storage item:', key)
+              console.debug('[Supabase] Setting storage item:', key, value.substring(0, 20) + '...')
               window.localStorage.setItem(key, value)
             },
             removeItem: (key: string) => {
@@ -137,15 +142,9 @@ export function getSupabaseClient() {
               window.localStorage.removeItem(key)
             }
           }
-        },
-        global: {
-          headers: {
-            'X-Client-Info': 'supabase-js-web'
-          }
         }
       }
     );
-    
     console.debug('[Supabase] Client initialized with PKCE flow');
   } else {
     _supabase = createClient(
@@ -154,8 +153,7 @@ export function getSupabaseClient() {
       {
         auth: {
           autoRefreshToken: false,
-          persistSession: false,
-          flowType: 'pkce'
+          persistSession: false
         }
       }
     );
@@ -341,45 +339,3 @@ export const debugAuth = async () => {
     return { error };
   }
 };
-
-export async function signInWithGoogle() {
-  const supabase = getSupabaseClient();
-  const redirectUrl = `${REDIRECT_URL}/auth/callback`;
-  
-  // Store the current URL as the return URL
-  if (typeof window !== 'undefined') {
-    const returnUrl = window.location.pathname;
-    if (returnUrl !== '/signin') {
-      window.localStorage.setItem('returnUrl', returnUrl);
-    }
-  }
-  
-  console.debug('[Supabase] Initiating Google sign in with:', {
-    redirectUrl,
-    baseUrl: APP_URL,
-    env: {
-      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL
-    }
-  });
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: redirectUrl,
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-      },
-      skipBrowserRedirect: false
-    }
-  });
-
-  if (error) {
-    console.error('[Supabase] Sign in error:', error);
-    throw error;
-  }
-
-  console.debug('[Supabase] Sign in response:', data);
-  return data;
-} 

@@ -24,6 +24,23 @@ export async function GET(request: Request) {
     const error = requestUrl.searchParams.get('error')
     const error_description = requestUrl.searchParams.get('error_description')
     const provider = requestUrl.searchParams.get('provider')
+    const access_token = requestUrl.searchParams.get('access_token')
+    const refresh_token = requestUrl.searchParams.get('refresh_token')
+
+    console.debug('[Auth Callback] Parsed parameters:', {
+      code: code ? 'present' : 'missing',
+      next,
+      error,
+      error_description,
+      provider,
+      hasAccessToken: !!access_token,
+      hasRefreshToken: !!refresh_token,
+      cookies: Object.fromEntries(
+        Array.from(cookies().getAll())
+          .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
+      ),
+      headers: Object.fromEntries(request.headers)
+    })
 
     // If there's an error from OAuth provider
     if (error) {
@@ -33,94 +50,77 @@ export async function GET(request: Request) {
       )
     }
 
-    // No code present
-    if (!code) {
-      console.error('[Auth Callback] No code in callback')
-      return NextResponse.redirect(`${baseUrl}/signin?error=no_code`)
-    }
-
-    // Exchange the code for a session
     const cookieStore = cookies()
     const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore })
-    
-    console.debug('[Auth Callback] Exchanging code for session...')
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-    
-    if (exchangeError) {
-      console.error('[Auth Callback] Error exchanging code for session:', exchangeError)
-      return NextResponse.redirect(
-        `${baseUrl}/signin?error=${encodeURIComponent(exchangeError.message)}`
-      )
-    }
 
-    // Verify the session was created
-    console.debug('[Auth Callback] Verifying session...')
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    
-    if (sessionError || !session) {
-      console.error('[Auth Callback] Session verification failed:', sessionError)
-      return NextResponse.redirect(
-        `${baseUrl}/signin?error=session_verification_failed`
-      )
-    }
-
-    // Log successful authentication
-    console.debug('[Auth Callback] Authentication successful:', {
-      userId: session.user.id,
-      email: session.user.email,
-      provider: provider || 'unknown',
-      redirectingTo: `${baseUrl}${next}`
-    })
-
-    // Create response with redirect
-    const response = NextResponse.redirect(`${baseUrl}${next}`)
-
-    // Set auth cookie with proper domain
-    const cookieOptions = {
-      name: 'sb-auth-token',
-      value: session.access_token,
-      path: '/',
-      domain: '.simon-gpt.com',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
-      sameSite: 'lax' as const,
-      secure: true,
-      httpOnly: true
-    }
-
-    // Set cookies
-    response.cookies.set(cookieOptions)
-
-    // Also set refresh token
-    if (session.refresh_token) {
-      response.cookies.set({
-        ...cookieOptions,
-        name: 'sb-refresh-token',
-        value: session.refresh_token
+    // Handle implicit flow (access_token in URL)
+    if (access_token) {
+      console.debug('[Auth Callback] Using implicit flow with access token')
+      const { data: { session }, error: setSessionError } = await supabase.auth.setSession({
+        access_token,
+        refresh_token: refresh_token || ''
       })
-    }
 
-    // Set provider token if available
-    if (session.provider_token) {
-      response.cookies.set({
-        ...cookieOptions,
-        name: 'sb-provider-token',
-        value: session.provider_token
+      if (setSessionError) {
+        console.error('[Auth Callback] Error setting session:', setSessionError)
+        return NextResponse.redirect(
+          `${baseUrl}/signin?error=${encodeURIComponent(setSessionError.message)}`
+        )
+      }
+
+      if (!session) {
+        console.error('[Auth Callback] No session after setting tokens')
+        return NextResponse.redirect(
+          `${baseUrl}/signin?error=no_session_after_token_exchange`
+        )
+      }
+
+      console.debug('[Auth Callback] Session set successfully:', {
+        userId: session.user?.id,
+        provider: provider || 'unknown',
+        expiresAt: new Date(session.expires_at! * 1000).toISOString(),
+        cookies: Object.fromEntries(
+          Array.from(cookieStore.getAll())
+            .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
+        )
       })
+
+      return NextResponse.redirect(`${baseUrl}${next}`)
     }
 
-    // Set provider refresh token if available
-    if (session.provider_refresh_token) {
-      response.cookies.set({
-        ...cookieOptions,
-        name: 'sb-provider-refresh-token',
-        value: session.provider_refresh_token
+    // Handle PKCE flow (code exchange)
+    if (code) {
+      console.debug('[Auth Callback] Exchanging code for session...')
+      const { data: { session }, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+      
+      if (exchangeError) {
+        console.error('[Auth Callback] Error exchanging code for session:', exchangeError)
+        return NextResponse.redirect(
+          `${baseUrl}/signin?error=${encodeURIComponent(exchangeError.message)}`
+        )
+      }
+
+      if (!session) {
+        console.error('[Auth Callback] No session after code exchange')
+        return NextResponse.redirect(
+          `${baseUrl}/signin?error=no_session_after_exchange`
+        )
+      }
+
+      console.debug('[Auth Callback] Session exchange successful:', {
+        userId: session.user?.id,
+        provider: provider || 'unknown'
       })
+
+      return NextResponse.redirect(`${baseUrl}${next}`)
     }
 
-    // Store the session in localStorage
-    response.headers.set('Set-Cookie', `supabase-auth-token=${session.access_token}; Path=/; Domain=.simon-gpt.com; Max-Age=604800; SameSite=Lax; Secure; HttpOnly`)
+    // No code or access token
+    console.error('[Auth Callback] No code or access token in callback')
+    return NextResponse.redirect(
+      `${baseUrl}/signin?error=no_auth_credentials`
+    )
 
-    return response
   } catch (error) {
     console.error('[Auth Callback] Unexpected error:', error)
     return NextResponse.redirect(
