@@ -24,8 +24,6 @@ export async function GET(request: Request) {
     const error = requestUrl.searchParams.get('error')
     const error_description = requestUrl.searchParams.get('error_description')
     const provider = requestUrl.searchParams.get('provider')
-    const access_token = requestUrl.searchParams.get('access_token')
-    const refresh_token = requestUrl.searchParams.get('refresh_token')
 
     console.debug('[Auth Callback] Parsed parameters:', {
       code: code ? 'present' : 'missing',
@@ -33,8 +31,6 @@ export async function GET(request: Request) {
       error,
       error_description,
       provider,
-      hasAccessToken: !!access_token,
-      hasRefreshToken: !!refresh_token,
       cookies: Object.fromEntries(
         Array.from(cookies().getAll())
           .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
@@ -50,32 +46,59 @@ export async function GET(request: Request) {
       )
     }
 
+    // Require code for PKCE flow
+    if (!code) {
+      console.error('[Auth Callback] No code provided for PKCE flow')
+      return NextResponse.redirect(
+        `${baseUrl}/signin?error=no_code_provided`
+      )
+    }
+
     const cookieStore = cookies()
     const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore })
 
-    // Handle implicit flow (access_token in URL)
-    if (access_token) {
-      console.debug('[Auth Callback] Using implicit flow with access token')
-      const { data: { session }, error: setSessionError } = await supabase.auth.setSession({
-        access_token,
-        refresh_token: refresh_token || ''
-      })
+    console.debug('[Auth Callback] Exchanging code for session...', {
+      code: code.substring(0, 20) + '...',
+      provider,
+      cookies: Object.fromEntries(
+        Array.from(cookieStore.getAll())
+          .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
+      )
+    })
 
-      if (setSessionError) {
-        console.error('[Auth Callback] Error setting session:', setSessionError)
+    try {
+      const { data: { session }, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+      
+      if (exchangeError) {
+        console.error('[Auth Callback] Error exchanging code for session:', {
+          error: exchangeError,
+          code: exchangeError.status,
+          message: exchangeError.message,
+          provider,
+          cookies: Object.fromEntries(
+            Array.from(cookieStore.getAll())
+              .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
+          )
+        })
         return NextResponse.redirect(
-          `${baseUrl}/signin?error=${encodeURIComponent(setSessionError.message)}`
+          `${baseUrl}/signin?error=${encodeURIComponent(exchangeError.message)}`
         )
       }
 
       if (!session) {
-        console.error('[Auth Callback] No session after setting tokens')
+        console.error('[Auth Callback] No session after code exchange', {
+          provider,
+          cookies: Object.fromEntries(
+            Array.from(cookieStore.getAll())
+              .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
+          )
+        })
         return NextResponse.redirect(
-          `${baseUrl}/signin?error=no_session_after_token_exchange`
+          `${baseUrl}/signin?error=no_session_after_exchange`
         )
       }
 
-      console.debug('[Auth Callback] Session set successfully:', {
+      console.debug('[Auth Callback] Session exchange successful:', {
         userId: session.user?.id,
         provider: provider || 'unknown',
         expiresAt: new Date(session.expires_at! * 1000).toISOString(),
@@ -85,85 +108,21 @@ export async function GET(request: Request) {
         )
       })
 
-      return NextResponse.redirect(`${baseUrl}${next}`)
+      // Create response with redirect
+      const response = NextResponse.redirect(`${baseUrl}${next}`)
+
+      // Add debug headers
+      response.headers.set('x-auth-flow', 'pkce')
+      response.headers.set('x-auth-provider', provider || 'unknown')
+      response.headers.set('x-session-user-id', session.user?.id || 'none')
+
+      return response
+    } catch (error) {
+      console.error('[Auth Callback] Unexpected error during code exchange:', error)
+      return NextResponse.redirect(
+        `${baseUrl}/signin?error=code_exchange_failed`
+      )
     }
-
-    // Handle PKCE flow (code exchange)
-    if (code) {
-      console.debug('[Auth Callback] Exchanging code for session...', {
-        code: code.substring(0, 20) + '...',
-        provider,
-        cookies: Object.fromEntries(
-          Array.from(cookieStore.getAll())
-            .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
-        )
-      })
-
-      try {
-        const { data: { session }, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-        
-        if (exchangeError) {
-          console.error('[Auth Callback] Error exchanging code for session:', {
-            error: exchangeError,
-            code: exchangeError.status,
-            message: exchangeError.message,
-            provider,
-            cookies: Object.fromEntries(
-              Array.from(cookieStore.getAll())
-                .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
-            )
-          })
-          return NextResponse.redirect(
-            `${baseUrl}/signin?error=${encodeURIComponent(exchangeError.message)}`
-          )
-        }
-
-        if (!session) {
-          console.error('[Auth Callback] No session after code exchange', {
-            provider,
-            cookies: Object.fromEntries(
-              Array.from(cookieStore.getAll())
-                .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
-            )
-          })
-          return NextResponse.redirect(
-            `${baseUrl}/signin?error=no_session_after_exchange`
-          )
-        }
-
-        console.debug('[Auth Callback] Session exchange successful:', {
-          userId: session.user?.id,
-          provider: provider || 'unknown',
-          expiresAt: new Date(session.expires_at! * 1000).toISOString(),
-          cookies: Object.fromEntries(
-            Array.from(cookieStore.getAll())
-              .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
-          )
-        })
-
-        // Create response with redirect
-        const response = NextResponse.redirect(`${baseUrl}${next}`)
-
-        // Add debug headers
-        response.headers.set('x-auth-flow', 'pkce')
-        response.headers.set('x-auth-provider', provider || 'unknown')
-        response.headers.set('x-session-user-id', session.user?.id || 'none')
-
-        return response
-      } catch (error) {
-        console.error('[Auth Callback] Unexpected error during code exchange:', error)
-        return NextResponse.redirect(
-          `${baseUrl}/signin?error=code_exchange_failed`
-        )
-      }
-    }
-
-    // No code or access token
-    console.error('[Auth Callback] No code or access token in callback')
-    return NextResponse.redirect(
-      `${baseUrl}/signin?error=no_auth_credentials`
-    )
-
   } catch (error) {
     console.error('[Auth Callback] Unexpected error:', error)
     return NextResponse.redirect(

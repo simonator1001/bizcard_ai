@@ -205,8 +205,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const origin = typeof window !== 'undefined' ? window.location.origin : ''
             const redirectUrl = `${origin}/auth/callback`
             
-            console.debug('[AuthContext] Signing in with provider:', provider)
-            console.debug('[AuthContext] Redirect URL:', redirectUrl)
+            console.debug('[AuthContext] Signing in with provider:', {
+              provider,
+              redirectUrl,
+              origin,
+              hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown'
+            })
             
             const { data, error } = await supabase.auth.signInWithOAuth({
               provider,
@@ -214,7 +218,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 redirectTo: redirectUrl,
                 queryParams: {
                   access_type: 'offline',
-                  prompt: 'consent'
+                  prompt: 'consent',
+                  hd: '*'  // Allow any Google domain
                 },
                 skipBrowserRedirect: false
               }
