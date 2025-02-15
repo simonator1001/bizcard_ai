@@ -77,8 +77,21 @@ services:
                   strip_path: true
                   paths:
                     - /auth/v1/callback
+                    - /auth/callback
               plugins:
                 - name: cors
+                  config:
+                    origins:
+                      - https://bizcard.simon-gpt.com
+                      - http://localhost:3000
+                    credentials: true
+                    headers:
+                      - Authorization
+                      - Content-Type
+                    methods:
+                      - GET
+                      - POST
+                      - OPTIONS
 
             - name: auth-v1-open-authorize
               url: http://supabase-auth:9999/authorize
@@ -468,8 +481,8 @@ services:
         # Core Settings
         - 'GOTRUE_API_HOST=0.0.0.0'
         - 'GOTRUE_API_PORT=9999'
-        - 'GOTRUE_SITE_URL=https://supabase.simon-gpt.com'
-        - 'API_EXTERNAL_URL=https://supabase.simon-gpt.com'
+        - 'GOTRUE_SITE_URL=https://bizcard.simon-gpt.com'
+        - 'API_EXTERNAL_URL=https://bizcard.simon-gpt.com'
         - 'GOTRUE_DB_DRIVER=postgres'
         - 'GOTRUE_DB_DATABASE_URL=postgres://supabase_auth_admin:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}'
 
@@ -500,16 +513,17 @@ services:
         - 'GOTRUE_EXTERNAL_GOOGLE_ENABLED=true'
         - 'GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}'
         - 'GOTRUE_EXTERNAL_GOOGLE_SECRET=${GOOGLE_CLIENT_SECRET}'
-        - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://supabase.simon-gpt.com/auth/callback'
+        - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://bizcard.simon-gpt.com/auth/callback'
         - 'GOTRUE_EXTERNAL_GOOGLE_SCOPE=email profile'
 
         # Redirect Settings
-        - 'GOTRUE_URI_ALLOW_LIST=https://supabase.simon-gpt.com/auth/callback,https://supabase.simon-gpt.com/auth/v1/callback,https://bizcard.simon-gpt.com/auth/callback,http://localhost:3000/auth/callback'
+        - 'GOTRUE_URI_ALLOW_LIST=https://bizcard.simon-gpt.com/auth/callback,https://bizcard.simon-gpt.com/auth/v1/callback,http://localhost:3000/auth/callback'
         - 'GOTRUE_DISABLE_SIGNUP=false'
 
         # Email Settings
         - 'GOTRUE_EXTERNAL_EMAIL_ENABLED=true'
         - 'GOTRUE_MAILER_AUTOCONFIRM=true'
+      
 
         # Phone Settings
         - 'GOTRUE_EXTERNAL_PHONE_ENABLED=false'
