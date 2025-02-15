@@ -37,7 +37,8 @@ export async function GET(request: Request) {
       error_description,
       provider,
       cookies: Object.fromEntries(
-        Array.from(cookies().getAll())
+        (await cookies())
+          .getAll()
           .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
       ),
       headers: Object.fromEntries(request.headers)
@@ -69,7 +70,8 @@ export async function GET(request: Request) {
       provider,
       isLocalhost,
       cookies: Object.fromEntries(
-        Array.from(cookieStore.getAll())
+        (await cookies())
+          .getAll()
           .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
       )
     })
@@ -85,7 +87,8 @@ export async function GET(request: Request) {
           provider,
           isLocalhost,
           cookies: Object.fromEntries(
-            Array.from(cookieStore.getAll())
+            (await cookies())
+              .getAll()
               .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
           )
         })
@@ -99,7 +102,8 @@ export async function GET(request: Request) {
           provider,
           isLocalhost,
           cookies: Object.fromEntries(
-            Array.from(cookieStore.getAll())
+            (await cookies())
+              .getAll()
               .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
           )
         })
@@ -114,7 +118,8 @@ export async function GET(request: Request) {
         expiresAt: new Date(session.expires_at! * 1000).toISOString(),
         isLocalhost,
         cookies: Object.fromEntries(
-          Array.from(cookieStore.getAll())
+          (await cookies())
+            .getAll()
             .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
         )
       })

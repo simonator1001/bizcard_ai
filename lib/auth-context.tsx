@@ -224,8 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   prompt: 'consent',
                   hd: '*'  // Allow any Google domain
                 },
-                skipBrowserRedirect: false,
-                flowType: 'pkce'
+                skipBrowserRedirect: false
               }
             })
             
