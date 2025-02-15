@@ -209,7 +209,7 @@ services:
       interval: 5s
       retries: 3
     environment:
-              # Core Settings
+        # Core Settings
         - 'GOTRUE_API_HOST=0.0.0.0'
         - 'GOTRUE_API_PORT=9999'
         - 'GOTRUE_SITE_URL=https://supabase.simon-gpt.com'
@@ -225,19 +225,18 @@ services:
         - 'GOTRUE_JWT_ADMIN_GROUP_NAME=service_role'
 
         # Cookie Settings
-        - 'GOTRUE_COOKIE_DOMAIN=supabase.simon-gpt.com'
+        - 'GOTRUE_COOKIE_DOMAIN=.simon-gpt.com'
         - 'GOTRUE_COOKIE_SECURE=true'
         - 'GOTRUE_COOKIE_SAME_SITE=lax'
         - 'GOTRUE_COOKIE_NAME=sb-auth'
         - 'GOTRUE_COOKIE_KEY=${SERVICE_PASSWORD_JWT}'
         - 'GOTRUE_COOKIE_MAX_AGE=3600'
-        
 
         # State Management
         - 'GOTRUE_STATE_LIFETIME=300'
         - 'GOTRUE_STATE_SECRET=${SERVICE_PASSWORD_JWT}'
         - 'GOTRUE_STATE_COOKIE_NAME=sb-oauth-state'
-        - 'GOTRUE_STATE_COOKIE_DOMAIN=supabase.simon-gpt.com'
+        - 'GOTRUE_STATE_COOKIE_DOMAIN=.simon-gpt.com'
         - 'GOTRUE_STATE_COOKIE_SECURE=true'
         - 'GOTRUE_STATE_COOKIE_SAMESITE=lax'
 

@@ -77,13 +77,13 @@ export async function GET(request: Request) {
     })
 
     try {
-      const { data: { session }, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+      const { error } = await supabase.auth.exchangeCodeForSession(code)
       
-      if (exchangeError) {
+      if (error) {
         console.error('[Auth Callback] Error exchanging code for session:', {
-          error: exchangeError,
-          code: exchangeError.status,
-          message: exchangeError.message,
+          error: error,
+          code: error.status,
+          message: error.message,
           provider,
           isLocalhost,
           cookies: Object.fromEntries(
@@ -93,22 +93,16 @@ export async function GET(request: Request) {
           )
         })
         return NextResponse.redirect(
-          `${baseUrl}/signin?error=${encodeURIComponent(exchangeError.message)}`
+          `${baseUrl}/signin?error=${encodeURIComponent(error.message)}`
         )
       }
 
-      if (!session) {
-        console.error('[Auth Callback] No session after code exchange', {
-          provider,
-          isLocalhost,
-          cookies: Object.fromEntries(
-            (await cookies())
-              .getAll()
-              .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
-          )
-        })
+      // Verify the session was created
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError || !session) {
+        console.error('[Auth Callback] Session verification failed:', sessionError)
         return NextResponse.redirect(
-          `${baseUrl}/signin?error=no_session_after_exchange`
+          `${baseUrl}/signin?error=session_verification_failed`
         )
       }
 

@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient, Session, AuthChangeEvent } from '@supabase/supabase-js'
+import { createClient as createSupabaseClient, SupabaseClient, Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { createBrowserClient } from '@supabase/ssr'
 import { type CookieOptions } from '@supabase/ssr'
 import { BusinessCard } from '@/types/business-card'
@@ -39,144 +39,11 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 let _supabase: SupabaseClient | null = null;
 let _supabaseAdmin: SupabaseClient | null = null;
 
-export function getSupabaseClient() {
-  if (_supabase) {
-    console.debug('[Supabase] Returning existing client instance');
-    return _supabase;
-  }
-
-  console.debug('[Supabase] Environment debug:', {
-    context: typeof window === 'undefined' ? 'server' : 'client',
-    NODE_ENV: process.env.NODE_ENV,
-    env_keys: Object.keys(process.env).filter(key => key.includes('SUPABASE')),
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 8) + '...',
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '(exists)' : undefined
-  });
-
+export function createClient() {
   const isClient = typeof window !== 'undefined';
-  const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const hasAnonKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  console.debug('[Supabase] Environment check:', {
-    hasUrl,
-    hasAnonKey,
-    hasServiceKey,
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    isServer: !isClient
-  });
-
-  if (!hasUrl || !hasAnonKey) {
-    throw new Error('Missing Supabase environment variables');
-  }
-
-  console.debug('[Supabase] Creating new client instance');
-
-  if (isClient) {
-    _supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            const cookies = document.cookie.split(';')
-              .map(cookie => cookie.trim())
-              .reduce((acc, cookie) => {
-                const [name, value] = cookie.split('=')
-                acc[name] = value
-                return acc
-              }, {} as Record<string, string>)
-            console.debug('[Supabase] Getting cookie:', name, cookies[name] ? 'present' : 'missing')
-            return cookies[name]
-          },
-          set(name: string, value: string, options: CookieOptions) {
-            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')
-            const cookieOptions = [
-              `${name}=${value}`,
-              `path=${options.path || '/'}`,
-              `max-age=${options.maxAge || 31536000}`,
-              'SameSite=Lax'
-            ]
-            
-            // Only add Secure in production or if using HTTPS locally
-            if (!isLocalhost || window.location.protocol === 'https:') {
-              cookieOptions.push('Secure')
-            }
-            
-            // Don't set domain for localhost
-            if (!isLocalhost) {
-              cookieOptions.push(`domain=${window.location.hostname}`)
-            }
-            
-            const cookieStr = cookieOptions.join('; ')
-            console.debug('[Supabase] Setting cookie:', {
-              name,
-              value: value.substring(0, 20) + '...',
-              domain: !isLocalhost ? window.location.hostname : undefined,
-              isLocalhost,
-              protocol: window.location.protocol,
-              options: cookieOptions
-            })
-            document.cookie = cookieStr
-          },
-          remove(name: string, options: CookieOptions) {
-            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')
-            const cookieOptions = [
-              `${name}=`,
-              `path=${options.path || '/'}`,
-              'expires=Thu, 01 Jan 1970 00:00:00 GMT',
-              'SameSite=Lax'
-            ]
-            
-            // Only add Secure in production or if using HTTPS locally
-            if (!isLocalhost || window.location.protocol === 'https:') {
-              cookieOptions.push('Secure')
-            }
-            
-            // Don't set domain for localhost
-            if (!isLocalhost) {
-              cookieOptions.push(`domain=${window.location.hostname}`)
-            }
-            
-            const cookieStr = cookieOptions.join('; ')
-            console.debug('[Supabase] Removing cookie:', {
-              name,
-              isLocalhost,
-              protocol: window.location.protocol,
-              domain: !isLocalhost ? window.location.hostname : undefined,
-              options: cookieOptions
-            })
-            document.cookie = cookieStr
-          }
-        },
-        auth: {
-          autoRefreshToken: true,
-          persistSession: true,
-          detectSessionInUrl: true,
-          flowType: 'pkce',
-          debug: true,
-          storage: {
-            getItem: (key: string) => {
-              const value = window.localStorage.getItem(key)
-              console.debug('[Supabase] Getting storage item:', key, value ? 'present' : 'missing')
-              return value
-            },
-            setItem: (key: string, value: string) => {
-              console.debug('[Supabase] Setting storage item:', key, value.substring(0, 20) + '...')
-              window.localStorage.setItem(key, value)
-            },
-            removeItem: (key: string) => {
-              console.debug('[Supabase] Removing storage item:', key)
-              window.localStorage.removeItem(key)
-            }
-          }
-        }
-      }
-    );
-    console.debug('[Supabase] Client initialized with PKCE flow');
-  } else {
-    _supabase = createClient(
+  
+  if (!isClient) {
+    return createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -186,9 +53,118 @@ export function getSupabaseClient() {
         }
       }
     );
-    console.debug('[Supabase] Server client initialized');
   }
 
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          const cookies = document.cookie.split(';')
+            .map(cookie => cookie.trim())
+            .reduce((acc, cookie) => {
+              const [name, value] = cookie.split('=')
+              acc[name] = value
+              return acc
+            }, {} as Record<string, string>)
+          console.debug('[Supabase] Getting cookie:', name, cookies[name] ? 'present' : 'missing')
+          return cookies[name]
+        },
+        set(name: string, value: string, options: any) {
+          const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')
+          const cookieOptions = [
+            `${name}=${value}`,
+            `path=${options.path || '/'}`,
+            `max-age=${options.maxAge || 3600}`,
+            'SameSite=Lax'
+          ]
+          
+          // Only add Secure in production or if using HTTPS locally
+          if (!isLocalhost || window.location.protocol === 'https:') {
+            cookieOptions.push('Secure')
+          }
+          
+          // Don't set domain for localhost
+          if (!isLocalhost) {
+            cookieOptions.push(`domain=.simon-gpt.com`)
+          }
+          
+          const cookieStr = cookieOptions.join('; ')
+          console.debug('[Supabase] Setting cookie:', {
+            name,
+            value: value.substring(0, 20) + '...',
+            domain: !isLocalhost ? '.simon-gpt.com' : undefined,
+            isLocalhost,
+            protocol: window.location.protocol,
+            options: cookieOptions
+          })
+          document.cookie = cookieStr
+        },
+        remove(name: string, options: any) {
+          const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')
+          const cookieOptions = [
+            `${name}=`,
+            `path=${options.path || '/'}`,
+            'expires=Thu, 01 Jan 1970 00:00:00 GMT',
+            'SameSite=Lax'
+          ]
+          
+          // Only add Secure in production or if using HTTPS locally
+          if (!isLocalhost || window.location.protocol === 'https:') {
+            cookieOptions.push('Secure')
+          }
+          
+          // Don't set domain for localhost
+          if (!isLocalhost) {
+            cookieOptions.push(`domain=.simon-gpt.com`)
+          }
+          
+          const cookieStr = cookieOptions.join('; ')
+          console.debug('[Supabase] Removing cookie:', {
+            name,
+            isLocalhost,
+            protocol: window.location.protocol,
+            domain: !isLocalhost ? '.simon-gpt.com' : undefined,
+            options: cookieOptions
+          })
+          document.cookie = cookieStr
+        }
+      },
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce',
+        debug: true,
+        storage: {
+          getItem: (key: string) => {
+            const value = window.localStorage.getItem(key)
+            console.debug('[Supabase] Getting storage item:', key, value ? 'present' : 'missing')
+            return value
+          },
+          setItem: (key: string, value: string) => {
+            console.debug('[Supabase] Setting storage item:', key, value.substring(0, 20) + '...')
+            window.localStorage.setItem(key, value)
+          },
+          removeItem: (key: string) => {
+            console.debug('[Supabase] Removing storage item:', key)
+            window.localStorage.removeItem(key)
+          }
+        }
+      }
+    }
+  )
+}
+
+export function getSupabaseClient() {
+  if (_supabase) {
+    console.debug('[Supabase] Returning existing client instance');
+    return _supabase;
+  }
+
+  console.debug('[Supabase] Creating new client instance');
+  _supabase = createClient();
   return _supabase;
 }
 
@@ -214,7 +190,7 @@ export function getSupabaseAdmin() {
 
   console.debug('[Supabase] Creating new admin client instance');
 
-  _supabaseAdmin = createClient(
+  _supabaseAdmin = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     {
