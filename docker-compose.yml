@@ -34,8 +34,9 @@ services:
         - 'GOTRUE_JWT_ADMIN_GROUP_NAME=service_role'
 
         # Cookie Settings
-        - 'GOTRUE_COOKIE_DOMAIN=.simon-gpt.com'
-        - 'GOTRUE_COOKIE_SECURE=true'
+        - 'GOTRUE_COOKIE_DOMAIN=${COOKIE_DOMAIN:-}'
+        - 'GOTRUE_COOKIE_SECURE=${COOKIE_SECURE:-true}'
+        - 'GOTRUE_COOKIE_SAME_SITE=${COOKIE_SAME_SITE:-lax}'
         - 'GOTRUE_COOKIE_NAME=sb-auth'
         - 'GOTRUE_COOKIE_KEY=${SERVICE_PASSWORD_JWT}'
         - 'GOTRUE_COOKIE_MAX_AGE=3600'
