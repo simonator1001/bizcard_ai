@@ -1,8 +1,8 @@
 {
-  "/api/chat/route": "app/api/chat/route.js",
-  "/api/test/route": "app/api/test/route.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
   "/auth/callback/route": "app/auth/callback/route.js",
+  "/api/test/route": "app/api/test/route.js",
+  "/api/chat/route": "app/api/chat/route.js",
   "/_not-found/page": "app/_not-found/page.js",
   "/payment/page": "app/payment/page.js",
   "/pricing/page": "app/pricing/page.js",

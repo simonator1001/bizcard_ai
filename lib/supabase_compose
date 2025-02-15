@@ -19,31 +19,267 @@ services:
       - 'DASHBOARD_USERNAME=${SERVICE_USER_ADMIN}'
       - 'DASHBOARD_PASSWORD=${SERVICE_PASSWORD_ADMIN}'
     volumes:
-      -
-        type: bind
+      - type: bind
         source: ./volumes/api/kong.yml
         target: /home/kong/temp.yml
-        content: "_format_version: '2.1'\n_transform: true\n\n###\n### Consumers / Users\n###\nconsumers:\n  - username: DASHBOARD\n  - username: anon\n    keyauth_credentials:\n      - key: $SUPABASE_ANON_KEY\n  - username: service_role\n    keyauth_credentials:\n      - key: $SUPABASE_SERVICE_KEY\n\n###\n### Access Control List\n###\nacls:\n  - consumer: anon\n    group: anon\n  - consumer: service_role\n    group: admin\n\n###\n### Dashboard credentials\n###\nbasicauth_credentials:\n- consumer: DASHBOARD\n  username: $DASHBOARD_USERNAME\n  password: $DASHBOARD_PASSWORD\n\n\n###\n### API Routes\n###\nservices:\n\n  ## Open Auth routes\n  - name: auth-v1-open\n    url: http://supabase-auth:9999/verify\n    routes:\n      - name: auth-v1-open\n        strip_path: true\n        paths:\n          - /auth/v1/verify\n    plugins:\n      - name: cors\n  - name: auth-v1-open-callback\n    url: http://supabase-auth:9999/callback\n    routes:\n      - name: auth-v1-open-callback\n        strip_path: true\n        paths:\n          - /auth/v1/callback\n    plugins:\n      - name: cors\n  - name: auth-v1-open-authorize\n    url: http://supabase-auth:9999/authorize\n    routes:\n      - name: auth-v1-open-authorize\n        strip_path: true\n        paths:\n          - /auth/v1/authorize\n    plugins:\n      - name: cors\n\n  ## Secure Auth routes\n  - name: auth-v1\n    _comment: 'GoTrue: /auth/v1/* -> http://supabase-auth:9999/*'\n    url: http://supabase-auth:9999/\n    routes:\n      - name: auth-v1-all\n        strip_path: true\n        paths:\n          - /auth/v1/\n    plugins:\n      - name: cors\n      - name: key-auth\n        config:\n          hide_credentials: false\n      - name: acl\n        config:\n          hide_groups_header: true\n          allow:\n            - admin\n            - anon\n\n  ## Secure REST routes\n  - name: rest-v1\n    _comment: 'PostgREST: /rest/v1/* -> http://supabase-rest:3000/*'\n    url: http://supabase-rest:3000/\n    routes:\n      - name: rest-v1-all\n        strip_path: true\n        paths:\n          - /rest/v1/\n    plugins:\n      - name: cors\n      - name: key-auth\n        config:\n          hide_credentials: true\n      - name: acl\n        config:\n          hide_groups_header: true\n          allow:\n            - admin\n            - anon\n\n  ## Secure GraphQL routes\n  - name: graphql-v1\n    _comment: 'PostgREST: /graphql/v1/* -> http://supabase-rest:3000/rpc/graphql'\n    url: http://supabase-rest:3000/rpc/graphql\n    routes:\n      - name: graphql-v1-all\n        strip_path: true\n        paths:\n          - /graphql/v1\n    plugins:\n      - name: cors\n      - name: key-auth\n        config:\n          hide_credentials: true\n      - name: request-transformer\n        config:\n          add:\n            headers:\n              - Content-Profile:graphql_public\n      - name: acl\n        config:\n          hide_groups_header: true\n          allow:\n            - admin\n            - anon\n\n  ## Secure Realtime routes\n  - name: realtime-v1-ws\n    _comment: 'Realtime: /realtime/v1/* -> ws://realtime:4000/socket/*'\n    url: http://realtime-dev:4000/socket\n    protocol: ws\n    routes:\n      - name: realtime-v1-ws\n        strip_path: true\n        paths:\n          - /realtime/v1/\n    plugins:\n      - name: cors\n      - name: key-auth\n        config:\n          hide_credentials: false\n      - name: acl\n        config:\n          hide_groups_header: true\n          allow:\n            - admin\n            - anon\n  - name: realtime-v1-rest\n    _comment: 'Realtime: /realtime/v1/* -> ws://realtime:4000/socket/*'\n    url: http://realtime-dev:4000/api\n    protocol: http\n    routes:\n      - name: realtime-v1-rest\n        strip_path: true\n        paths:\n          - /realtime/v1/api\n    plugins:\n      - name: cors\n      - name: key-auth\n        config:\n          hide_credentials: false\n      - name: acl\n        config:\n          hide_groups_header: true\n          allow:\n            - admin\n            - anon\n\n  ## Storage routes: the storage server manages its own auth\n  - name: storage-v1\n    _comment: 'Storage: /storage/v1/* -> http://supabase-storage:5000/*'\n    url: http://supabase-storage:5000/\n    routes:\n      - name: storage-v1-all\n        strip_path: true\n        paths:\n          - /storage/v1/\n    plugins:\n      - name: cors\n\n  ## Edge Functions routes\n  - name: functions-v1\n    _comment: 'Edge Functions: /functions/v1/* -> http://supabase-edge-functions:9000/*'\n    url: http://supabase-edge-functions:9000/\n    routes:\n      - name: functions-v1-all\n        strip_path: true\n        paths:\n          - /functions/v1/\n    plugins:\n      - name: cors\n\n  ## Analytics routes
-  - name: analytics-v1
-    _comment: 'Analytics: /analytics/v1/* -> http://logflare:4000/*'
-    url: http://supabase-analytics:4000/
-    routes:
-      - name: analytics-v1-all
-        strip_path: true
-        paths:
-          - /analytics/v1/
-          - /api/projects/default/analytics/
-    plugins:
-      - name: cors
-      - name: key-auth
-        config:
-          hide_credentials: false
-      - name: acl
-        config:
-          hide_groups_header: true
-          allow:
-            - admin
-            - anon\n\n  ## Secure Database routes\n  - name: meta\n    _comment: 'pg-meta: /pg/* -> http://supabase-meta:8080/*'\n    url: http://supabase-meta:8080/\n    routes:\n      - name: meta-all\n        strip_path: true\n        paths:\n          - /pg/\n    plugins:\n      - name: key-auth\n        config:\n          hide_credentials: false\n      - name: acl\n        config:\n          hide_groups_header: true\n          allow:\n            - admin\n\n  ## Protected Dashboard - catch all remaining routes\n  - name: dashboard\n    _comment: 'Studio: /* -> http://studio:3000/*'\n    url: http://supabase-studio:3000/\n    routes:\n      - name: dashboard-all\n        strip_path: true\n        paths:\n          - /\n    plugins:\n      - name: cors\n      - name: basic-auth\n        config:\n          hide_credentials: true\n"
+        content: |
+          _format_version: '2.1'
+          _transform: true
+
+          ###
+          ### Consumers / Users
+          ###
+          consumers:
+            - username: DASHBOARD
+            - username: anon
+              keyauth_credentials:
+                - key: $SUPABASE_ANON_KEY
+            - username: service_role
+              keyauth_credentials:
+                - key: $SUPABASE_SERVICE_KEY
+
+          ###
+          ### Access Control List
+          ###
+          acls:
+            - consumer: anon
+              group: anon
+            - consumer: service_role
+              group: admin
+
+          ###
+          ### Dashboard credentials
+          ###
+          basicauth_credentials:
+            - consumer: DASHBOARD
+              username: $DASHBOARD_USERNAME
+              password: $DASHBOARD_PASSWORD
+
+          ###
+          ### API Routes
+          ###
+          services:
+            ## Open Auth routes
+            - name: auth-v1-open
+              url: http://supabase-auth:9999/verify
+              routes:
+                - name: auth-v1-open
+                  strip_path: true
+                  paths:
+                    - /auth/v1/verify
+              plugins:
+                - name: cors
+
+            - name: auth-v1-open-callback
+              url: http://supabase-auth:9999/callback
+              routes:
+                - name: auth-v1-open-callback
+                  strip_path: true
+                  paths:
+                    - /auth/v1/callback
+              plugins:
+                - name: cors
+
+            - name: auth-v1-open-authorize
+              url: http://supabase-auth:9999/authorize
+              routes:
+                - name: auth-v1-open-authorize
+                  strip_path: true
+                  paths:
+                    - /auth/v1/authorize
+              plugins:
+                - name: cors
+
+            ## Secure Auth routes
+            - name: auth-v1
+              _comment: 'GoTrue: /auth/v1/* -> http://supabase-auth:9999/*'
+              url: http://supabase-auth:9999/
+              routes:
+                - name: auth-v1-all
+                  strip_path: true
+                  paths:
+                    - /auth/v1/
+              plugins:
+                - name: cors
+                - name: key-auth
+                  config:
+                    hide_credentials: false
+                - name: acl
+                  config:
+                    hide_groups_header: true
+                    allow:
+                      - admin
+                      - anon
+
+            ## Secure REST routes
+            - name: rest-v1
+              _comment: 'PostgREST: /rest/v1/* -> http://supabase-rest:3000/*'
+              url: http://supabase-rest:3000/
+              routes:
+                - name: rest-v1-all
+                  strip_path: true
+                  paths:
+                    - /rest/v1/
+              plugins:
+                - name: cors
+                - name: key-auth
+                  config:
+                    hide_credentials: true
+                - name: acl
+                  config:
+                    hide_groups_header: true
+                    allow:
+                      - admin
+                      - anon
+
+            ## Secure GraphQL routes
+            - name: graphql-v1
+              _comment: 'PostgREST: /graphql/v1/* -> http://supabase-rest:3000/rpc/graphql'
+              url: http://supabase-rest:3000/rpc/graphql
+              routes:
+                - name: graphql-v1-all
+                  strip_path: true
+                  paths:
+                    - /graphql/v1
+              plugins:
+                - name: cors
+                - name: key-auth
+                  config:
+                    hide_credentials: true
+                - name: request-transformer
+                  config:
+                    add:
+                      headers:
+                        - Content-Profile:graphql_public
+                - name: acl
+                  config:
+                    hide_groups_header: true
+                    allow:
+                      - admin
+                      - anon
+
+            ## Secure Realtime routes
+            - name: realtime-v1-ws
+              _comment: 'Realtime: /realtime/v1/* -> ws://realtime:4000/socket/*'
+              url: http://realtime-dev:4000/socket
+              protocol: ws
+              routes:
+                - name: realtime-v1-ws
+                  strip_path: true
+                  paths:
+                    - /realtime/v1/
+              plugins:
+                - name: cors
+                - name: key-auth
+                  config:
+                    hide_credentials: false
+                - name: acl
+                  config:
+                    hide_groups_header: true
+                    allow:
+                      - admin
+                      - anon
+
+            - name: realtime-v1-rest
+              _comment: 'Realtime: /realtime/v1/* -> ws://realtime:4000/socket/*'
+              url: http://realtime-dev:4000/api
+              protocol: http
+              routes:
+                - name: realtime-v1-rest
+                  strip_path: true
+                  paths:
+                    - /realtime/v1/api
+              plugins:
+                - name: cors
+                - name: key-auth
+                  config:
+                    hide_credentials: false
+                - name: acl
+                  config:
+                    hide_groups_header: true
+                    allow:
+                      - admin
+                      - anon
+
+            ## Storage routes: the storage server manages its own auth
+            - name: storage-v1
+              _comment: 'Storage: /storage/v1/* -> http://supabase-storage:5000/*'
+              url: http://supabase-storage:5000/
+              routes:
+                - name: storage-v1-all
+                  strip_path: true
+                  paths:
+                    - /storage/v1/
+              plugins:
+                - name: cors
+
+            ## Edge Functions routes
+            - name: functions-v1
+              _comment: 'Edge Functions: /functions/v1/* -> http://supabase-edge-functions:9000/*'
+              url: http://supabase-edge-functions:9000/
+              routes:
+                - name: functions-v1-all
+                  strip_path: true
+                  paths:
+                    - /functions/v1/
+              plugins:
+                - name: cors
+
+            ## Analytics routes
+            - name: analytics-v1
+              _comment: 'Analytics: /analytics/v1/* -> http://logflare:4000/*'
+              url: http://supabase-analytics:4000/
+              routes:
+                - name: analytics-v1-all
+                  strip_path: true
+                  paths:
+                    - /analytics/v1/
+                    - /api/projects/default/analytics/
+              plugins:
+                - name: cors
+                - name: key-auth
+                  config:
+                    hide_credentials: false
+                - name: acl
+                  config:
+                    hide_groups_header: true
+                    allow:
+                      - admin
+                      - anon
+
+            ## Secure Database routes
+            - name: meta
+              _comment: 'pg-meta: /pg/* -> http://supabase-meta:8080/*'
+              url: http://supabase-meta:8080/
+              routes:
+                - name: meta-all
+                  strip_path: true
+                  paths:
+                    - /pg/
+              plugins:
+                - name: key-auth
+                  config:
+                    hide_credentials: false
+                - name: acl
+                  config:
+                    hide_groups_header: true
+                    allow:
+                      - admin
+
+            ## Protected Dashboard - catch all remaining routes
+            - name: dashboard
+              _comment: 'Studio: /* -> http://studio:3000/*'
+              url: http://supabase-studio:3000/
+              routes:
+                - name: dashboard-all
+                  strip_path: true
+                  paths:
+                    - /
+              plugins:
+                - name: cors
+                - name: basic-auth
+                  config:
+                    hide_credentials: true
   supabase-studio:
     image: 'supabase/studio:20240923-2e3e90c'
     healthcheck:
