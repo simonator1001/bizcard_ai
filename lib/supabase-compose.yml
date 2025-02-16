@@ -106,6 +106,12 @@ services:
                       - OPTIONS
                     max_age: 3600
                     preflight_continue: false
+                    exposed_headers:
+                      - Authorization
+                      - Content-Type
+                      - X-Client-Info
+                      - apikey
+                      - X-Session-Id
                 - name: request-transformer
                   config:
                     add:
@@ -113,6 +119,22 @@ services:
                         - X-Forwarded-Proto:${SITE_PROTOCOL:-http}
                         - X-Forwarded-Port:${SITE_PORT:-3000}
                         - X-Forwarded-Host:${SITE_HOST:-localhost}
+                - name: key-auth
+                  config:
+                    key_names:
+                      - apikey
+                      - Authorization
+                    hide_credentials: false
+                    anonymous: true
+                    key_in_body: false
+                    run_on_preflight: false
+                - name: acl
+                  config:
+                    hide_groups_header: true
+                    allow:
+                      - anonymous
+                      - admin
+                      - anon
 
             - name: auth-v1-open-authorize
               url: http://supabase-auth:9999/authorize
