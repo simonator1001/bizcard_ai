@@ -72,6 +72,8 @@ services:
       - name: cors
         config:
           origins:
+            - https://bizcard.simon-gpt.com
+            - https://supabase.simon-gpt.com
             - ${SITE_URL:-http://localhost:3000}
             - ${API_URL:-http://localhost:8000}
           credentials: true
@@ -84,6 +86,8 @@ services:
             - Referer
             - Origin
             - Cookie
+            - X-Forwarded-For
+            - X-Real-IP
           methods:
             - GET
             - POST

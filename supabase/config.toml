@@ -102,7 +102,10 @@ site_url = "https://bizcard.simon-gpt.com"
 additional_redirect_urls = [
     "https://bizcard.simon-gpt.com",
     "https://bizcard.simon-gpt.com/auth/callback",
-    "https://bizcard.simon-gpt.com/signin"
+    "https://bizcard.simon-gpt.com/auth/v1/callback",
+    "https://bizcard.simon-gpt.com/signin",
+    "http://localhost:3000/auth/callback",
+    "http://localhost:3000/auth/v1/callback"
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
@@ -286,3 +289,4 @@ enabled = true
 client_id = "859959789432-2kae8tn3c94k4np401hscau3k1kk2l29.apps.googleusercontent.com"
 secret = "env(GOOGLE_CLIENT_SECRET)"
 redirect_uri = "https://bizcard.simon-gpt.com/auth/callback"
+skip_nonce_check = false
