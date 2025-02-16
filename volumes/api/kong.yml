@@ -72,9 +72,8 @@ services:
       - name: cors
         config:
           origins:
-            - https://bizcard.simon-gpt.com
-            - https://supabase.simon-gpt.com
-            - http://localhost:3000
+            - ${SITE_URL:-http://localhost:3000}
+            - ${API_URL:-http://localhost:8000}
           credentials: true
           headers:
             - Authorization
@@ -95,9 +94,9 @@ services:
         config:
           add:
             headers:
-              - X-Forwarded-Proto:https
-              - X-Forwarded-Port:443
-              - X-Forwarded-Host:supabase.simon-gpt.com
+              - X-Forwarded-Proto:${PROTOCOL:-http}
+              - X-Forwarded-Port:${PORT:-8000}
+              - X-Forwarded-Host:${HOST:-localhost}
       - name: acl
         config:
           hide_groups_header: true

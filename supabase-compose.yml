@@ -82,31 +82,20 @@ services:
                 - name: cors
                   config:
                     origins:
-                      - https://bizcard.simon-gpt.com
-                      - https://supabase.simon-gpt.com
                       - http://localhost:3000
-                    credentials: true
-                    headers:
-                      - Authorization
-                      - Content-Type
-                      - X-Client-Info
-                      - apikey
-                      - X-Session-Id
-                      - Referer
-                      - Origin
-                      - Cookie
+                      - https://bizcard.simon-gpt.com
                     methods:
                       - GET
                       - POST
-                      - OPTIONS
-                    exposed_headers:
+                    headers:
+                      - Accept
                       - Authorization
                       - Content-Type
-                      - X-Client-Info
-                      - apikey
-                      - X-Session-Id
+                      - Origin
+                      - X-CSRF-TOKEN
+                      - X-Requested-With
+                    credentials: true
                     max_age: 3600
-                    preflight_continue: false
                 - name: request-transformer
                   config:
                     add:
@@ -510,13 +499,13 @@ services:
         # Core Settings
         - 'GOTRUE_API_HOST=0.0.0.0'
         - 'GOTRUE_API_PORT=9999'
-        - 'GOTRUE_SITE_URL=https://bizcard.simon-gpt.com'
-        - 'API_EXTERNAL_URL=https://supabase.simon-gpt.com'
+        - 'GOTRUE_SITE_URL=${SITE_URL:-http://localhost:3000}'
+        - 'API_EXTERNAL_URL=${API_URL:-http://localhost:8000}'
         - 'GOTRUE_DB_DRIVER=postgres'
         - 'GOTRUE_DB_DATABASE_URL=postgres://supabase_auth_admin:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}'
-        - 'GOTRUE_API_EXTERNAL_URL=https://supabase.simon-gpt.com'
-        - 'GOTRUE_API_ENDPOINT=https://supabase.simon-gpt.com'
-        - 'GOTRUE_PUBLIC_API_ENDPOINT=https://supabase.simon-gpt.com'
+        - 'GOTRUE_API_EXTERNAL_URL=${API_URL:-http://localhost:8000}'
+        - 'GOTRUE_API_ENDPOINT=${API_URL:-http://localhost:8000}'
+        - 'GOTRUE_PUBLIC_API_ENDPOINT=${API_URL:-http://localhost:8000}'
 
         # JWT Settings
         - 'GOTRUE_JWT_SECRET=${SERVICE_PASSWORD_JWT}'
@@ -526,8 +515,8 @@ services:
         - 'GOTRUE_JWT_ADMIN_GROUP_NAME=service_role'
 
         # Cookie Settings
-        - 'GOTRUE_COOKIE_DOMAIN=.simon-gpt.com'
-        - 'GOTRUE_COOKIE_SECURE=true'
+        - 'GOTRUE_COOKIE_DOMAIN='
+        - 'GOTRUE_COOKIE_SECURE=${COOKIE_SECURE:-false}'
         - 'GOTRUE_COOKIE_SAME_SITE=lax'
         - 'GOTRUE_COOKIE_NAME=sb-auth'
         - 'GOTRUE_COOKIE_KEY=${SERVICE_PASSWORD_JWT}'
@@ -538,8 +527,8 @@ services:
         - 'GOTRUE_STATE_LIFETIME=300'
         - 'GOTRUE_STATE_SECRET=${SERVICE_PASSWORD_JWT}'
         - 'GOTRUE_STATE_COOKIE_NAME=sb-oauth-state'
-        - 'GOTRUE_STATE_COOKIE_DOMAIN=.simon-gpt.com'
-        - 'GOTRUE_STATE_COOKIE_SECURE=true'
+        - 'GOTRUE_STATE_COOKIE_DOMAIN='
+        - 'GOTRUE_STATE_COOKIE_SECURE=${COOKIE_SECURE:-false}'
         - 'GOTRUE_STATE_COOKIE_SAMESITE=lax'
         - 'GOTRUE_STATE_COOKIE_PATH=/'
 
@@ -547,11 +536,11 @@ services:
         - 'GOTRUE_EXTERNAL_GOOGLE_ENABLED=true'
         - 'GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}'
         - 'GOTRUE_EXTERNAL_GOOGLE_SECRET=${GOOGLE_CLIENT_SECRET}'
-        - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://supabase.simon-gpt.com/auth/callback'
+        - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=${API_URL:-http://localhost:8000}/auth/callback'
         - 'GOTRUE_EXTERNAL_GOOGLE_SCOPE=email profile'
 
         # Redirect Settings
-        - 'GOTRUE_URI_ALLOW_LIST=https://supabase.simon-gpt.com/auth/callback,https://supabase.simon-gpt.com/auth/v1/callback,https://bizcard.simon-gpt.com/auth/callback,http://localhost:3000/auth/callback'
+        - 'GOTRUE_URI_ALLOW_LIST=${SITE_URL:-http://localhost:3000}/auth/callback,${API_URL:-http://localhost:8000}/auth/callback,${API_URL:-http://localhost:8000}/auth/v1/callback'
         - 'GOTRUE_DISABLE_SIGNUP=false'
         - 'GOTRUE_OPERATOR_TOKEN=${SERVICE_SUPABASEANON_KEY}'
         - 'GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED=true'
@@ -795,4 +784,5 @@ services:
         source: ./volumes/pooler/pooler.exs
         target: /etc/pooler/pooler.exs
         content: "{:ok, _} = Application.ensure_all_started(:supavisor)\n{:ok, version} =\n    case Supavisor.Repo.query!(\"select version()\") do\n    %{rows: [[ver]]} -> Supavisor.Helpers.parse_pg_version(ver)\n    _ -> nil\n    end\nparams = %{\n    \"external_id\" => System.get_env(\"POOLER_TENANT_ID\"),\n    \"db_host\" => System.get_env(\"POSTGRES_HOSTNAME\"),\n    \"db_port\" => System.get_env(\"POSTGRES_PORT\") |> String.to_integer(),\n    \"db_database\" => System.get_env(\"POSTGRES_DB\"),\n    \"require_user\" => false,\n    \"auth_query\" => \"SELECT * FROM pgbouncer.get_auth($1)\",\n    \"default_max_clients\" => System.get_env(\"POOLER_MAX_CLIENT_CONN\"),\n    \"default_pool_size\" => System.get_env(\"POOLER_DEFAULT_POOL_SIZE\"),\n    \"default_parameter_status\" => %{\"server_version\" => version},\n    \"users\" => [%{\n    \"db_user\" => \"pgbouncer\",\n    \"db_password\" => System.get_env(\"POSTGRES_PASSWORD\"),\n    \"mode_type\" => System.get_env(\"POOLER_POOL_MODE\"),\n    \"pool_size\" => System.get_env(\"POOLER_DEFAULT_POOL_SIZE\"),\n    \"is_manager\" => true\n    }]\n}\n\ntenant = Supavisor.Tenants.get_tenant_by_external_id(params[\"external_id\"])\n\nif tenant do\n  {:ok, _} = Supavisor.Tenants.update_tenant(tenant, params)\nelse\n  {:ok, _} = Supavisor.Tenants.create_tenant(params)\nend\n"
+
 
