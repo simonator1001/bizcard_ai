@@ -13,7 +13,9 @@ const PUBLIC_ROUTES = [
   '/api/auth',
   '/api/scan',
   '/api/ocr',
-  '/api/extract-info'
+  '/api/extract-info',
+  '/images',
+  '/assets'
 ]
 
 export const config = {
@@ -22,102 +24,80 @@ export const config = {
 }
 
 export async function middleware(request: NextRequest) {
-  try {
-    // Create a response object that we can modify
-    const res = NextResponse.next();
+  console.debug('[Middleware] Processing request:', {
+    url: request.url,
+    method: request.method,
+    headers: Object.fromEntries(request.headers)
+  })
 
-    // Create the Supabase client with error handling
-    let supabase;
-    try {
-      supabase = createServerClient(
+  // Skip middleware for public routes and static files
+  const path = new URL(request.url).pathname
+  if (PUBLIC_ROUTES.some(route => path.startsWith(route)) || 
+      path.match(/\.(ico|png|jpg|jpeg|svg|css|js|woff|woff2)$/)) {
+    console.debug('[Middleware] Skipping auth check for public route:', path)
+    return NextResponse.next()
+  }
+
+  try {
+    // Create a response object that we can return
+    let response = NextResponse.next()
+
+    // Create a Supabase client
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get(name: string) {
-            return request.cookies.get(name)?.value;
+            return request.cookies.get(name)?.value
           },
           set(name: string, value: string, options: CookieOptions) {
-            res.cookies.set({
+            // If the cookie is updated, update the response
+            response.cookies.set({
               name,
               value,
               ...options,
-            });
+              sameSite: 'lax',
+              secure: process.env.NODE_ENV === 'production'
+            })
           },
           remove(name: string, options: CookieOptions) {
-            res.cookies.delete({
+            // If the cookie is removed, update the response
+            response.cookies.set({
               name,
+              value: '',
               ...options,
-            });
-          },
-        },
-      }
-    );
-    } catch (error) {
-      console.error('[Middleware] Error creating Supabase client:', error);
-      return res;
-    }
-
-    // Check if the route is public
-    const requestPath = new URL(request.url).pathname;
-    const isPublicRoute = PUBLIC_ROUTES.some(route => requestPath.startsWith(route));
-
-    if (isPublicRoute) {
-      return res;
-    }
-
-    // Get authenticated user data with error handling
-    let user;
-    try {
-      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
-      if (userError) {
-        console.error('[Middleware] Authentication error:', userError);
-        // Don't return error for API routes
-        if (!requestPath.startsWith('/api/')) {
-          const redirectUrl = new URL('/signin', request.url);
-          redirectUrl.searchParams.set('returnUrl', request.nextUrl.pathname);
-          return NextResponse.redirect(redirectUrl);
+              maxAge: 0
+            })
+          }
         }
       }
-      user = authUser;
-    } catch (error) {
-      console.error('[Middleware] Error getting user:', error);
-      return res;
+    )
+
+    // Refresh the session if it exists
+    const { data: { session }, error } = await supabase.auth.getSession()
+    
+    if (error) {
+      console.error('[Middleware] Session error:', error)
+      return NextResponse.redirect(new URL('/signin', request.url))
     }
 
-    // Handle authentication for protected routes
-    const isAuthPage = requestPath.startsWith('/auth') || requestPath === '/signin' || requestPath === '/signup';
-    const isProtectedRoute = !isAuthPage && 
-      !requestPath.startsWith('/api') && 
-      !requestPath.startsWith('/_next') &&
-      !requestPath.startsWith('/static');
-
-    // Redirect unauthenticated users to login
-    if (isProtectedRoute && !user) {
-      const redirectUrl = new URL('/signin', request.url);
-      redirectUrl.searchParams.set('returnUrl', request.nextUrl.pathname);
-      return NextResponse.redirect(redirectUrl);
+    if (!session) {
+      console.debug('[Middleware] No session found, redirecting to signin')
+      const searchParams = new URLSearchParams()
+      searchParams.set('returnUrl', request.url)
+      return NextResponse.redirect(new URL(`/signin?${searchParams.toString()}`, request.url))
     }
 
-    // Redirect authenticated users away from auth pages
-    if (isAuthPage && user && !requestPath.includes('/callback')) {
-      return NextResponse.redirect(new URL('/', request.url));
+    // Call subscription middleware
+    const subscriptionResponse = await subscriptionMiddleware(request)
+    if (subscriptionResponse) {
+      return subscriptionResponse
     }
 
-    if (!isPublicRoute && user) {
-      try {
-        // Apply subscription middleware only for authenticated non-public routes
-        return await subscriptionMiddleware(request);
-      } catch (error) {
-        console.error('[Middleware] Subscription middleware error:', error);
-        return res;
-      }
-    }
-
-    return res;
-  } catch (error) {
-    console.error('[Middleware] Error:', error);
-    // On error, allow the request to continue but log the error
-    return NextResponse.next();
+    return response
+  } catch (e) {
+    console.error('[Middleware] Unexpected error:', e)
+    return NextResponse.redirect(new URL('/signin', request.url))
   }
 } 
