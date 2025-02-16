@@ -119,11 +119,18 @@ services:
       - name: cors
       - name: key-auth
         config:
+          key_names:
+            - apikey
+            - Authorization
           hide_credentials: false
+          anonymous: true
+          key_in_body: false
+          run_on_preflight: false
       - name: acl
         config:
           hide_groups_header: true
           allow:
+            - anonymous
             - admin
             - anon
 
