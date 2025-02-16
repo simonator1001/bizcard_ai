@@ -79,6 +79,10 @@ services:
                     - /auth/v1/callback
                     - /auth/callback
                   preserve_host: true
+                  methods:
+                    - GET
+                    - POST
+                    - OPTIONS
               plugins:
                 - name: cors
                   config:
@@ -93,18 +97,33 @@ services:
                       - X-Client-Info
                       - Referer
                       - Origin
+                      - Cookie
                     methods:
                       - GET
                       - POST
                       - OPTIONS
                     max_age: 3600
                     preflight_continue: false
+                    expose_headers:
+                      - Content-Range
+                      - Date
                 - name: request-transformer
                   config:
                     add:
                       headers:
                         - X-Client-Info:$request_uri
                         - X-Forwarded-Host:$host
+                        - X-Forwarded-Proto:https
+                        - X-Forwarded-Port:443
+                - name: key-auth
+                  config:
+                    key_names:
+                      - apikey
+                      - Authorization
+                    hide_credentials: false
+                    anonymous: true
+                    key_in_body: false
+                    run_on_preflight: false
 
             - name: auth-v1-open-authorize
               url: http://supabase-auth:9999/authorize
@@ -498,6 +517,9 @@ services:
         - 'API_EXTERNAL_URL=https://supabase.simon-gpt.com'
         - 'GOTRUE_DB_DRIVER=postgres'
         - 'GOTRUE_DB_DATABASE_URL=postgres://supabase_auth_admin:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}'
+        - 'GOTRUE_API_EXTERNAL_URL=https://supabase.simon-gpt.com'
+        - 'GOTRUE_API_ENDPOINT=https://supabase.simon-gpt.com'
+        - 'GOTRUE_PUBLIC_API_ENDPOINT=https://supabase.simon-gpt.com'
 
         # JWT Settings
         - 'GOTRUE_JWT_SECRET=${SERVICE_PASSWORD_JWT}'
@@ -513,6 +535,7 @@ services:
         - 'GOTRUE_COOKIE_NAME=sb-auth'
         - 'GOTRUE_COOKIE_KEY=${SERVICE_PASSWORD_JWT}'
         - 'GOTRUE_COOKIE_MAX_AGE=3600'
+        - 'GOTRUE_COOKIE_PATH=/'
 
         # State Management
         - 'GOTRUE_STATE_LIFETIME=300'
@@ -521,6 +544,7 @@ services:
         - 'GOTRUE_STATE_COOKIE_DOMAIN=.simon-gpt.com'
         - 'GOTRUE_STATE_COOKIE_SECURE=true'
         - 'GOTRUE_STATE_COOKIE_SAMESITE=lax'
+        - 'GOTRUE_STATE_COOKIE_PATH=/'
 
         # Google OAuth Settings
         - 'GOTRUE_EXTERNAL_GOOGLE_ENABLED=true'
@@ -532,11 +556,13 @@ services:
         # Redirect Settings
         - 'GOTRUE_URI_ALLOW_LIST=https://supabase.simon-gpt.com/auth/callback,https://supabase.simon-gpt.com/auth/v1/callback,https://bizcard.simon-gpt.com/auth/callback,http://localhost:3000/auth/callback'
         - 'GOTRUE_DISABLE_SIGNUP=false'
+        - 'GOTRUE_OPERATOR_TOKEN=${SERVICE_SUPABASEANON_KEY}'
+        - 'GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED=true'
+        - 'GOTRUE_SECURITY_MANUAL_LINKING_ENABLED=true'
 
         # Email Settings
         - 'GOTRUE_EXTERNAL_EMAIL_ENABLED=true'
         - 'GOTRUE_MAILER_AUTOCONFIRM=true'
-      
 
         # Phone Settings
         - 'GOTRUE_EXTERNAL_PHONE_ENABLED=false'
