@@ -53,6 +53,11 @@ services:
         paths:
           - /auth/v1/callback
           - /auth/callback
+          preserve_host: true
+          methods:
+            - GET
+            - POST
+            - OPTIONS
     plugins:
       - name: cors
         config:
@@ -65,15 +70,31 @@ services:
             - Authorization
             - Content-Type
             - X-Client-Info
+            - apikey
+            - X-Session-Id
+            - Referer
+            - Origin
+            - Cookie
           methods:
             - GET
             - POST
             - OPTIONS
+          max_age: 3600
+          preflight_continue: false
       - name: request-transformer
         config:
           add:
             headers:
-              - X-Client-Info:$request_uri
+              - X-Forwarded-Proto:https
+              - X-Forwarded-Port:443
+              - X-Forwarded-Host:supabase.simon-gpt.com
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - anonymous
+            - admin
+            - anon
 
   - name: auth-v1-open-authorize
     url: http://supabase-auth:9999/authorize
