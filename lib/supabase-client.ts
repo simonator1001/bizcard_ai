@@ -90,14 +90,14 @@ export function createClient() {
           
           // Set domain for production
           if (!isLocalhost) {
-            cookieOptions.push(`domain=bizcard.simon-gpt.com`)
+            cookieOptions.push(`domain=.simon-gpt.com`)
           }
           
           const cookieStr = cookieOptions.join('; ')
           console.debug('[Supabase] Setting cookie:', {
             name,
             value: value.substring(0, 20) + '...',
-            domain: !isLocalhost ? 'bizcard.simon-gpt.com' : undefined,
+            domain: !isLocalhost ? '.simon-gpt.com' : undefined,
             isLocalhost,
             protocol: window.location.protocol,
             options: cookieOptions,
@@ -121,7 +121,7 @@ export function createClient() {
           
           // Don't set domain for localhost
           if (!isLocalhost) {
-            cookieOptions.push(`domain=bizcard.simon-gpt.com`)
+            cookieOptions.push(`domain=.simon-gpt.com`)
           }
           
           const cookieStr = cookieOptions.join('; ')
@@ -129,7 +129,7 @@ export function createClient() {
             name,
             isLocalhost,
             protocol: window.location.protocol,
-            domain: !isLocalhost ? 'bizcard.simon-gpt.com' : undefined,
+            domain: !isLocalhost ? '.simon-gpt.com' : undefined,
             options: cookieOptions,
             currentHostname: window.location.hostname
           })
