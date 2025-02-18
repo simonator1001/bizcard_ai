@@ -21,11 +21,8 @@ curl -X PATCH "$NEXT_PUBLIC_SUPABASE_URL/dashboard/v1/auth/config" \
     "site_url": "https://bizcard.simon-gpt.com",
     "additional_redirect_urls": [
       "https://bizcard.simon-gpt.com/auth/callback",
-      "https://bizcard.simon-gpt.com/auth/v1/callback",
       "https://supabase.simon-gpt.com/auth/callback",
-      "https://supabase.simon-gpt.com/auth/v1/callback",
-      "http://localhost:3000/auth/callback",
-      "http://localhost:3000/auth/v1/callback"
+      "http://localhost:3000/auth/callback"
     ],
     "jwt_exp": 3600,
     "enable_refresh_token_rotation": true,
@@ -51,5 +48,5 @@ curl -X PATCH "$NEXT_PUBLIC_SUPABASE_URL/dashboard/v1/auth/providers/google" \
     "enabled": true,
     "client_id": "859959789432-2kae8tn3c94k4np401hscau3k1kk2l29.apps.googleusercontent.com",
     "secret": "'$GOOGLE_CLIENT_SECRET'",
-    "redirect_uri": "https://supabase.simon-gpt.com/auth/v1/callback"
+    "redirect_uri": "https://supabase.simon-gpt.com/auth/callback"
   }' 
