@@ -68,10 +68,13 @@ export function createClient() {
               acc[name] = value
               return acc
             }, {} as Record<string, string>)
-          console.debug('[Supabase] Getting cookie:', name, cookies[name] ? 'present' : 'missing')
+          console.debug('[Supabase] Getting cookie:', name, cookies[name] ? 'present' : 'missing', {
+            cookieStr: document.cookie,
+            hostname: window.location.hostname
+          })
           return cookies[name]
         },
-        set(name: string, value: string, options: any) {
+        set(name: string, value: string, options: CookieOptions) {
           const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')
           const cookieOptions = [
             `${name}=${value}`,
@@ -87,14 +90,14 @@ export function createClient() {
           
           // Set domain for production
           if (!isLocalhost) {
-            cookieOptions.push(`domain=.simon-gpt.com`)
+            cookieOptions.push(`domain=bizcard.simon-gpt.com`)
           }
           
           const cookieStr = cookieOptions.join('; ')
           console.debug('[Supabase] Setting cookie:', {
             name,
             value: value.substring(0, 20) + '...',
-            domain: !isLocalhost ? '.simon-gpt.com' : undefined,
+            domain: !isLocalhost ? 'bizcard.simon-gpt.com' : undefined,
             isLocalhost,
             protocol: window.location.protocol,
             options: cookieOptions,
@@ -102,7 +105,7 @@ export function createClient() {
           })
           document.cookie = cookieStr
         },
-        remove(name: string, options: any) {
+        remove(name: string, options: CookieOptions) {
           const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')
           const cookieOptions = [
             `${name}=`,
@@ -118,7 +121,7 @@ export function createClient() {
           
           // Don't set domain for localhost
           if (!isLocalhost) {
-            cookieOptions.push(`domain=.simon-gpt.com`)
+            cookieOptions.push(`domain=bizcard.simon-gpt.com`)
           }
           
           const cookieStr = cookieOptions.join('; ')
@@ -126,7 +129,7 @@ export function createClient() {
             name,
             isLocalhost,
             protocol: window.location.protocol,
-            domain: !isLocalhost ? '.simon-gpt.com' : undefined,
+            domain: !isLocalhost ? 'bizcard.simon-gpt.com' : undefined,
             options: cookieOptions,
             currentHostname: window.location.hostname
           })
