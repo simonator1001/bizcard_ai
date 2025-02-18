@@ -85,9 +85,10 @@ export function createClient() {
             cookieOptions.push('Secure')
           }
           
-          // Don't set domain for localhost
+          // Set domain for production
           if (!isLocalhost) {
-            cookieOptions.push(`domain=.simon-gpt.com`)
+            const domain = window.location.hostname.split('.').slice(-2).join('.')
+            cookieOptions.push(`domain=.${domain}`)
           }
           
           const cookieStr = cookieOptions.join('; ')
