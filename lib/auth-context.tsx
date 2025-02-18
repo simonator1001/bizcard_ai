@@ -206,7 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1')
             const redirectUrl = isLocalhost 
               ? `${origin}/auth/callback`
-              : 'https://supabase.simon-gpt.com/auth/callback'
+              : 'https://bizcard.simon-gpt.com/auth/callback'
             
             console.debug('[AuthContext] Signing in with provider:', {
               provider,
