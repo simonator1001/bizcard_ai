@@ -1,11 +1,11 @@
 {
   "pages": {
-    "/api/auth/[...nextauth]/route": [
+    "/api/chat/route": [
       "static/chunks/webpack-a129ee6727dc2c75.js",
       "static/chunks/4bd1b696-7b6392ceb816ef21.js",
       "static/chunks/517-c188e3839044a1ba.js",
       "static/chunks/main-app-2a21252a8a3131ff.js",
-      "static/chunks/app/api/auth/[...nextauth]/route-70434f1ddfc54397.js"
+      "static/chunks/app/api/chat/route-0034d793719470aa.js"
     ],
     "/auth/callback/route": [
       "static/chunks/webpack-a129ee6727dc2c75.js",
@@ -21,12 +21,12 @@
       "static/chunks/main-app-2a21252a8a3131ff.js",
       "static/chunks/app/api/test/route-ddbd288f644751a7.js"
     ],
-    "/api/chat/route": [
+    "/api/auth/[...nextauth]/route": [
       "static/chunks/webpack-a129ee6727dc2c75.js",
       "static/chunks/4bd1b696-7b6392ceb816ef21.js",
       "static/chunks/517-c188e3839044a1ba.js",
       "static/chunks/main-app-2a21252a8a3131ff.js",
-      "static/chunks/app/api/chat/route-0034d793719470aa.js"
+      "static/chunks/app/api/auth/[...nextauth]/route-70434f1ddfc54397.js"
     ],
     "/global-error": [
       "static/chunks/webpack-a129ee6727dc2c75.js",
