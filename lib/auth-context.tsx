@@ -208,13 +208,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               ? `${origin}/auth/callback`
               : 'https://bizcard.simon-gpt.com/auth/callback'
             
-            console.debug('[AuthContext] Signing in with provider:', {
+            // Debug: Log environment state before OAuth
+            console.debug('[AuthContext] Pre-OAuth state:', {
+              cookies: document.cookie.split(';')
+                .map(c => c.trim())
+                .filter(c => c.startsWith('sb-'))
+                .map(c => ({ name: c.split('=')[0] })),
+              localStorage: Object.keys(window.localStorage)
+                .filter(k => k.startsWith('sb-'))
+                .map(k => ({ key: k })),
               provider,
               redirectUrl,
               origin,
               isLocalhost,
-              hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
-              protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown'
+              hostname: window.location.hostname,
+              protocol: window.location.protocol,
+              userAgent: window.navigator.userAgent
             })
             
             const { data, error } = await supabase.auth.signInWithOAuth({
@@ -234,14 +243,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 error,
                 provider,
                 isLocalhost,
-                redirectUrl
+                redirectUrl,
+                cookies: document.cookie.split(';')
+                  .map(c => c.trim())
+                  .filter(c => c.startsWith('sb-'))
+                  .map(c => ({ name: c.split('=')[0] }))
               })
               throw error
             }
+
+            // Debug: Log OAuth initiation success
+            console.debug('[AuthContext] OAuth flow initiated:', {
+              provider,
+              url: data.url,
+              cookies: document.cookie.split(';')
+                .map(c => c.trim())
+                .filter(c => c.startsWith('sb-'))
+                .map(c => ({ name: c.split('=')[0] }))
+            })
             
             return data
           } catch (error) {
-            console.error('[AuthContext] Provider sign in error:', error)
+            console.error('[AuthContext] Provider sign in error:', {
+              error,
+              stack: error instanceof Error ? error.stack : undefined,
+              provider,
+              cookies: document.cookie.split(';')
+                .map(c => c.trim())
+                .filter(c => c.startsWith('sb-'))
+                .map(c => ({ name: c.split('=')[0] }))
+            })
             throw error
           }
         },

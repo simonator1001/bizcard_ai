@@ -8,21 +8,34 @@ export async function GET(request: Request) {
     const next = url.searchParams.get('next') || '/';
     const error = url.searchParams.get('error');
     const error_description = url.searchParams.get('error_description');
+    const state = url.searchParams.get('state');
 
-    console.debug('[Auth Callback] Received callback:', {
-      code: code ? 'present' : 'missing',
-      next,
-      error,
-      error_description,
+    // Debug: Log all cookies
+    console.debug('[Auth Callback] Cookies:', {
+      raw: request.headers.get('cookie'),
+      parsed: request.headers.get('cookie')?.split(';').map(c => {
+        const [name, value] = c.trim().split('=');
+        return { name, valuePreview: value?.substring(0, 20) + '...' };
+      })
+    });
+
+    // Debug: Log all request details
+    console.debug('[Auth Callback] Request details:', {
       url: url.toString(),
+      params: Object.fromEntries(url.searchParams),
       headers: Object.fromEntries(request.headers),
-      cookies: request.headers.get('cookie'),
+      state,
+      hasCode: !!code,
+      method: request.method,
+      origin: url.origin
     });
 
     if (error) {
       console.error('[Auth Callback] OAuth error:', {
         error,
         description: error_description,
+        state,
+        cookies: request.headers.get('cookie'),
       });
       return NextResponse.redirect(
         `${url.origin}/signin?error=${encodeURIComponent(error_description || error)}`
@@ -30,32 +43,76 @@ export async function GET(request: Request) {
     }
 
     if (!code) {
-      console.error('[Auth Callback] No code received');
+      console.error('[Auth Callback] No code received:', {
+        params: Object.fromEntries(url.searchParams),
+        state,
+        cookies: request.headers.get('cookie'),
+      });
       return NextResponse.redirect(
         `${url.origin}/signin?error=No authorization code received`
       );
     }
 
     const supabase = createClient();
+
+    // Debug: Log pre-exchange state
+    console.debug('[Auth Callback] Pre-exchange state:', {
+      code: code.substring(0, 10) + '...',
+      state,
+      cookies: request.headers.get('cookie')?.split(';')
+        .filter(c => c.includes('sb-'))
+        .map(c => {
+          const [name] = c.trim().split('=');
+          return name;
+        })
+    });
+
     const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
     if (exchangeError) {
-      console.error('[Auth Callback] Session exchange error:', exchangeError);
+      console.error('[Auth Callback] Session exchange error:', {
+        error: exchangeError,
+        code: code.substring(0, 10) + '...',
+        state,
+        cookies: request.headers.get('cookie')?.split(';')
+          .filter(c => c.includes('sb-'))
+          .map(c => {
+            const [name] = c.trim().split('=');
+            return name;
+          })
+      });
       return NextResponse.redirect(
         `${url.origin}/signin?error=${encodeURIComponent(exchangeError.message)}`
       );
     }
 
+    // Debug: Log successful exchange
     console.debug('[Auth Callback] Code exchange successful:', {
       success: !!data.session,
       sessionExpiry: data.session?.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : null,
       userId: data.session?.user?.id,
       userEmail: data.session?.user?.email,
+      state,
+      cookies: request.headers.get('cookie')?.split(';')
+        .filter(c => c.includes('sb-'))
+        .map(c => {
+          const [name] = c.trim().split('=');
+          return name;
+        })
     });
 
     return NextResponse.redirect(new URL(next, url.origin));
   } catch (error) {
-    console.error('[Auth Callback] Unexpected error:', error);
+    console.error('[Auth Callback] Unexpected error:', {
+      error,
+      stack: error instanceof Error ? error.stack : undefined,
+      cookies: request.headers.get('cookie')?.split(';')
+        .filter(c => c.includes('sb-'))
+        .map(c => {
+          const [name] = c.trim().split('=');
+          return name;
+        })
+    });
     return NextResponse.redirect(
       new URL('/signin?error=Unexpected error during authentication', request.url)
     );
