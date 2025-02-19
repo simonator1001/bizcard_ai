@@ -72,38 +72,29 @@ services:
       - name: cors
         config:
           origins:
-            - ${SITE_URL}
-            - ${API_URL}
-            - http://localhost:3000
-            - http://localhost:8000
+            - https://bizcard.simon-gpt.com
           credentials: true
           headers:
             - Authorization
             - Content-Type
             - X-Client-Info
             - apikey
-            - X-Session-Id
-            - Referer
-            - Origin
             - Cookie
-            - X-Forwarded-For
-            - X-Real-IP
-            - X-Forwarded-Proto
-            - X-Forwarded-Host
-            - X-Forwarded-Port
+            - Set-Cookie
           methods:
             - GET
             - POST
             - OPTIONS
           max_age: 3600
-          preflight_continue: false
+          preflight_continue: true
       - name: request-transformer
         config:
           add:
             headers:
-              - X-Forwarded-Proto:${PROTOCOL:-http}
-              - X-Forwarded-Port:${PORT:-8000}
-              - X-Forwarded-Host:${HOST:-localhost}
+              - X-Forwarded-Proto:https
+              - X-Forwarded-Port:443
+              - X-Forwarded-Host:bizcard.simon-gpt.com
+          preserve_host: true
       - name: acl
         config:
           hide_groups_header: true

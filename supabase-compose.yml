@@ -96,6 +96,8 @@ services:
                       - X-CSRF-TOKEN
                       - X-Requested-With
                       - X-Client-Info
+                      - Cookie
+                      - Set-Cookie
                     credentials: true
                     max_age: 3600
                     preflight_continue: true
@@ -108,6 +110,11 @@ services:
                         - X-Forwarded-Host:bizcard.simon-gpt.com
                         - X-Real-IP:${client_ip}
                         - X-Client-Info:${http_x_client_info}
+                    preserve_host: true
+                    remove:
+                      headers:
+                        - Origin
+                        - Referer
                 - name: acl
                   config:
                     hide_groups_header: true
@@ -518,7 +525,7 @@ services:
         - 'GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated'
 
         # Cookie Settings
-        - 'GOTRUE_COOKIE_DOMAIN=simon-gpt.com'
+        - 'GOTRUE_COOKIE_DOMAIN=bizcard.simon-gpt.com'
         - 'GOTRUE_COOKIE_SECURE=true'
         - 'GOTRUE_COOKIE_SAME_SITE=lax'
         - 'GOTRUE_COOKIE_NAME=sb-auth'
@@ -530,7 +537,7 @@ services:
         - 'GOTRUE_STATE_LIFETIME=300'
         - 'GOTRUE_STATE_SECRET=${SERVICE_PASSWORD_JWT}'
         - 'GOTRUE_STATE_COOKIE_NAME=sb-oauth-state'
-        - 'GOTRUE_STATE_COOKIE_DOMAIN=simon-gpt.com'
+        - 'GOTRUE_STATE_COOKIE_DOMAIN=bizcard.simon-gpt.com'
         - 'GOTRUE_STATE_COOKIE_SECURE=true'
         - 'GOTRUE_STATE_COOKIE_SAMESITE=lax'
         - 'GOTRUE_STATE_COOKIE_PATH=/'
@@ -556,6 +563,9 @@ services:
         # Debug Settings
         - 'LOG_LEVEL=debug'
         - 'GOTRUE_LOG_LEVEL=debug'
+        - 'GOTRUE_SECURITY_CAPTCHA_ENABLED=false'
+        - 'GOTRUE_MAILER_AUTOCONFIRM=true'
+        - 'GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_REAUTHENTICATION=false'
   realtime-dev:
     image: 'supabase/realtime:v2.30.34'
     container_name: realtime-dev.supabase-realtime
