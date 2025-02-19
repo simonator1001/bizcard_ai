@@ -21,13 +21,18 @@ curl -X PATCH "$NEXT_PUBLIC_SUPABASE_URL/dashboard/v1/auth/config" \
     "site_url": "https://bizcard.simon-gpt.com",
     "additional_redirect_urls": [
       "https://bizcard.simon-gpt.com/auth/callback",
-      "https://supabase.simon-gpt.com/auth/callback",
       "http://localhost:3000/auth/callback"
     ],
     "jwt_exp": 3600,
     "enable_refresh_token_rotation": true,
     "refresh_token_reuse_interval": 10,
-    "mailer_autoconfirm": true
+    "mailer_autoconfirm": true,
+    "cookie": {
+      "name": "sb-auth",
+      "domain": ".simon-gpt.com",
+      "secure": true,
+      "sameSite": "lax"
+    }
   }'
 
 echo -e "\nVerifying current configuration..."
@@ -46,7 +51,7 @@ curl -X PATCH "$NEXT_PUBLIC_SUPABASE_URL/dashboard/v1/auth/providers/google" \
   -H "Content-Type: application/json" \
   -d '{
     "enabled": true,
-    "client_id": "859959789432-2kae8tn3c94k4np401hscau3k1kk2l29.apps.googleusercontent.com",
+    "client_id": "'$GOOGLE_CLIENT_ID'",
     "secret": "'$GOOGLE_CLIENT_SECRET'",
     "redirect_uri": "https://supabase.simon-gpt.com/auth/callback"
   }' 
