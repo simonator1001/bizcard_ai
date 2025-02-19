@@ -102,7 +102,7 @@ services:
                       headers:
                         - X-Forwarded-Proto:https
                         - X-Forwarded-Port:443
-                        - X-Forwarded-Host:supabase.simon-gpt.com
+                        - X-Forwarded-Host:bizcard.simon-gpt.com
                 - name: acl
                   config:
                     hide_groups_header: true
@@ -500,19 +500,12 @@ services:
         - 'GOTRUE_API_HOST=0.0.0.0'
         - 'GOTRUE_API_PORT=9999'
         - 'GOTRUE_SITE_URL=https://bizcard.simon-gpt.com'
-        - 'API_EXTERNAL_URL=https://supabase.simon-gpt.com'
+        - 'API_EXTERNAL_URL=https://bizcard.simon-gpt.com'
         - 'GOTRUE_DB_DRIVER=postgres'
         - 'GOTRUE_DB_DATABASE_URL=postgres://supabase_auth_admin:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}'
-        - 'GOTRUE_API_EXTERNAL_URL=https://supabase.simon-gpt.com'
-        - 'GOTRUE_API_ENDPOINT=https://supabase.simon-gpt.com'
-        - 'GOTRUE_PUBLIC_API_ENDPOINT=https://supabase.simon-gpt.com'
-
-        # JWT Settings
-        - 'GOTRUE_JWT_SECRET=${SERVICE_PASSWORD_JWT}'
-        - 'GOTRUE_JWT_EXP=3600'
-        - 'GOTRUE_JWT_AUD=authenticated'
-        - 'GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated'
-        - 'GOTRUE_JWT_ADMIN_GROUP_NAME=service_role'
+        - 'GOTRUE_API_EXTERNAL_URL=https://bizcard.simon-gpt.com'
+        - 'GOTRUE_API_ENDPOINT=https://bizcard.simon-gpt.com'
+        - 'GOTRUE_PUBLIC_API_ENDPOINT=https://bizcard.simon-gpt.com'
 
         # Cookie Settings
         - 'GOTRUE_COOKIE_DOMAIN=simon-gpt.com'
