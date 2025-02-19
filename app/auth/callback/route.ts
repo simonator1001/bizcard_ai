@@ -1,144 +1,89 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
-import { Database } from '@/types/supabase'
+import { createClient } from '@/lib/supabase-client';
+import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
-  const requestUrl = new URL(request.url)
-  const origin = requestUrl.origin
-  const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1')
-  const baseUrl = isLocalhost ? origin : (process.env.NEXT_PUBLIC_APP_URL || 'https://bizcard.simon-gpt.com')
-  
-  console.debug('[Auth Callback] Full request details:', {
-    url: requestUrl.toString(),
-    origin,
-    isLocalhost,
-    baseUrl,
-    searchParams: Object.fromEntries(requestUrl.searchParams),
-    headers: Object.fromEntries(request.headers),
-    env: {
-      NODE_ENV: process.env.NODE_ENV,
-      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL
-    }
-  })
-  
   try {
-    const code = requestUrl.searchParams.get('code')
-    const next = requestUrl.searchParams.get('next') || '/'
-    const error = requestUrl.searchParams.get('error')
-    const error_description = requestUrl.searchParams.get('error_description')
-    const provider = requestUrl.searchParams.get('provider')
+    const requestUrl = new URL(request.url);
+    const code = requestUrl.searchParams.get('code');
+    const next = requestUrl.searchParams.get('next') || '/';
+    const error = requestUrl.searchParams.get('error');
+    const error_description = requestUrl.searchParams.get('error_description');
+    const state = requestUrl.searchParams.get('state');
 
-    console.debug('[Auth Callback] Parsed parameters:', {
+    console.debug('[Auth Callback] Received callback:', {
       code: code ? 'present' : 'missing',
+      state: state ? 'present' : 'missing',
       next,
       error,
       error_description,
-      provider,
-      cookies: Object.fromEntries(
-        (await cookies())
-          .getAll()
-          .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
-      ),
-      headers: Object.fromEntries(request.headers)
-    })
+      url: requestUrl.toString(),
+      headers: Object.fromEntries(request.headers),
+      cookies: request.headers.get('cookie'),
+    });
 
-    // If there's an error from OAuth provider
     if (error) {
-      console.error('[Auth Callback] OAuth error:', error, error_description)
+      console.error('[Auth Callback] OAuth error:', {
+        error,
+        description: error_description,
+      });
       return NextResponse.redirect(
-        `${baseUrl}/signin?error=${encodeURIComponent(error_description || error)}`
-      )
+        `${requestUrl.origin}/signin?error=${encodeURIComponent(error_description || error)}`
+      );
     }
 
-    // Require code for PKCE flow
     if (!code) {
-      console.error('[Auth Callback] No code provided for PKCE flow')
+      console.error('[Auth Callback] No code received');
       return NextResponse.redirect(
-        `${baseUrl}/signin?error=no_code_provided`
-      )
+        `${requestUrl.origin}/signin?error=No authorization code received`
+      );
     }
 
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient<Database>({ 
-      cookies: () => cookieStore
-    })
-
-    console.debug('[Auth Callback] Exchanging code for session...', {
-      code: code.substring(0, 20) + '...',
-      provider,
-      isLocalhost,
-      cookies: Object.fromEntries(
-        (await cookies())
-          .getAll()
-          .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
-      )
-    })
-
-    try {
-      const { error } = await supabase.auth.exchangeCodeForSession(code)
-      
-      if (error) {
-        console.error('[Auth Callback] Error exchanging code for session:', {
-          error: error,
-          code: error.status,
-          message: error.message,
-          provider,
-          isLocalhost,
-          cookies: Object.fromEntries(
-            (await cookies())
-              .getAll()
-              .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
-          )
-        })
-        return NextResponse.redirect(
-          `${baseUrl}/signin?error=${encodeURIComponent(error.message)}`
-        )
-      }
-
-      // Verify the session was created
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError || !session) {
-        console.error('[Auth Callback] Session verification failed:', sessionError)
-        return NextResponse.redirect(
-          `${baseUrl}/signin?error=session_verification_failed`
-        )
-      }
-
-      console.debug('[Auth Callback] Session exchange successful:', {
-        userId: session.user?.id,
-        provider: provider || 'unknown',
-        expiresAt: new Date(session.expires_at! * 1000).toISOString(),
-        isLocalhost,
-        cookies: Object.fromEntries(
-          (await cookies())
-            .getAll()
-            .map(cookie => [cookie.name, cookie.value.substring(0, 20) + '...'])
-        )
-      })
-
-      // Create response with redirect
-      const response = NextResponse.redirect(`${baseUrl}${next}`)
-
-      // Add debug headers
-      response.headers.set('x-auth-flow', 'pkce')
-      response.headers.set('x-auth-provider', provider || 'unknown')
-      response.headers.set('x-session-user-id', session.user?.id || 'none')
-      response.headers.set('x-is-localhost', String(isLocalhost))
-
-      return response
-    } catch (error) {
-      console.error('[Auth Callback] Unexpected error during code exchange:', error)
+    if (!state) {
+      console.error('[Auth Callback] No state received');
       return NextResponse.redirect(
-        `${baseUrl}/signin?error=code_exchange_failed`
-      )
+        `${requestUrl.origin}/signin?error=Invalid OAuth state`
+      );
     }
-  } catch (error) {
-    console.error('[Auth Callback] Unexpected error:', error)
+
+    const supabase = createClient();
+
+    const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+    console.debug('[Auth Callback] Code exchange result:', {
+      success: !!data.session,
+      error: exchangeError,
+      sessionExpiry: data.session?.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : null,
+      userId: data.session?.user?.id,
+      userEmail: data.session?.user?.email,
+    });
+
+    if (exchangeError) {
+      console.error('[Auth Callback] Session exchange error:', {
+        error: exchangeError,
+        code: exchangeError.status,
+        message: exchangeError.message,
+        details: exchangeError.stack
+      });
+      return NextResponse.redirect(
+        `${requestUrl.origin}/signin?error=${encodeURIComponent(exchangeError.message)}`
+      );
+    }
+
+    const response = NextResponse.redirect(`${requestUrl.origin}${next}`);
+    
+    console.debug('[Auth Callback] Successfully completed OAuth flow:', {
+      redirectTo: `${requestUrl.origin}${next}`,
+      sessionId: data.session?.access_token?.substring(0, 8) + '...',
+      expiresIn: data.session?.expires_in
+    });
+
+    return response;
+  } catch (err) {
+    const url = new URL(request.url);
+    console.error('[Auth Callback] Unexpected error:', err);
     return NextResponse.redirect(
-      `${baseUrl}/signin?error=unexpected_error`
-    )
+      `${url.origin}/signin?error=${encodeURIComponent('An unexpected error occurred')}`
+    );
   }
 } 
 

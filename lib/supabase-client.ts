@@ -43,6 +43,7 @@ export function createClient() {
   const isClient = typeof window !== 'undefined';
   
   if (!isClient) {
+    console.debug('[Supabase] Creating server-side client');
     return createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -55,6 +56,7 @@ export function createClient() {
     );
   }
 
+  console.debug('[Supabase] Creating browser client with cookie handling');
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -68,9 +70,12 @@ export function createClient() {
               acc[name] = value
               return acc
             }, {} as Record<string, string>)
-          console.debug('[Supabase] Getting cookie:', name, cookies[name] ? 'present' : 'missing', {
-            cookieStr: document.cookie,
-            hostname: window.location.hostname
+          console.debug('[Supabase] Getting cookie:', {
+            name,
+            exists: !!cookies[name],
+            allCookies: Object.keys(cookies).filter(k => k.startsWith('sb-')),
+            hostname: window.location.hostname,
+            path: window.location.pathname
           })
           return cookies[name]
         },
@@ -83,27 +88,30 @@ export function createClient() {
             'SameSite=Lax'
           ]
           
-          // Only add Secure in production or if using HTTPS locally
           if (!isLocalhost || window.location.protocol === 'https:') {
             cookieOptions.push('Secure')
           }
           
-          // Let the browser handle the domain automatically
-          // This allows proper cookie sharing between subdomains
-          
           const cookieStr = cookieOptions.join('; ')
           console.debug('[Supabase] Setting cookie:', {
             name,
-            value: value.substring(0, 20) + '...',
+            valuePreview: value.substring(0, 20) + '...',
             isLocalhost,
             protocol: window.location.protocol,
             options: cookieOptions,
-            currentHostname: window.location.hostname,
+            hostname: window.location.hostname,
+            path: window.location.pathname,
             cookieStr
           })
           document.cookie = cookieStr
         },
         remove(name: string, options: CookieOptions) {
+          console.debug('[Supabase] Removing cookie:', {
+            name,
+            hostname: window.location.hostname,
+            path: window.location.pathname,
+            options
+          })
           const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')
           const cookieOptions = [
             `${name}=`,
@@ -112,23 +120,11 @@ export function createClient() {
             'SameSite=Lax'
           ]
           
-          // Only add Secure in production or if using HTTPS locally
           if (!isLocalhost || window.location.protocol === 'https:') {
             cookieOptions.push('Secure')
           }
           
-          // Let the browser handle the domain automatically
-          
-          const cookieStr = cookieOptions.join('; ')
-          console.debug('[Supabase] Removing cookie:', {
-            name,
-            isLocalhost,
-            protocol: window.location.protocol,
-            options: cookieOptions,
-            currentHostname: window.location.hostname,
-            cookieStr
-          })
-          document.cookie = cookieStr
+          document.cookie = cookieOptions.join('; ')
         }
       },
       auth: {
@@ -140,21 +136,29 @@ export function createClient() {
         storage: {
           getItem: (key: string) => {
             const value = window.localStorage.getItem(key)
-            console.debug('[Supabase] Getting storage item:', key, value ? 'present' : 'missing', {
+            console.debug('[Supabase] Getting storage item:', {
+              key,
+              exists: !!value,
               allKeys: Object.keys(window.localStorage).filter(k => k.startsWith('sb-')),
-              hostname: window.location.hostname
+              hostname: window.location.hostname,
+              path: window.location.pathname
             })
             return value
           },
           setItem: (key: string, value: string) => {
-            console.debug('[Supabase] Setting storage item:', key, value.substring(0, 20) + '...', {
-              hostname: window.location.hostname
+            console.debug('[Supabase] Setting storage item:', {
+              key,
+              valuePreview: value.substring(0, 20) + '...',
+              hostname: window.location.hostname,
+              path: window.location.pathname
             })
             window.localStorage.setItem(key, value)
           },
           removeItem: (key: string) => {
-            console.debug('[Supabase] Removing storage item:', key, {
-              hostname: window.location.hostname
+            console.debug('[Supabase] Removing storage item:', {
+              key,
+              hostname: window.location.hostname,
+              path: window.location.pathname
             })
             window.localStorage.removeItem(key)
           }
@@ -217,7 +221,15 @@ export const supabaseAdmin = getSupabaseAdmin();
 
 // Test connection and log result
 supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
-  console.debug('[Supabase] Auth state changed:', event, session ? 'Session exists' : 'No session');
+  console.debug('[Supabase] Auth state changed:', {
+    event,
+    sessionExists: !!session,
+    userId: session?.user?.id,
+    userEmail: session?.user?.email,
+    expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
+    hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
+    path: typeof window !== 'undefined' ? window.location.pathname : 'server'
+  });
 });
 
 // Add logging to help debug

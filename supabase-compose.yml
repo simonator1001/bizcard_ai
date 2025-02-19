@@ -87,6 +87,7 @@ services:
                     methods:
                       - GET
                       - POST
+                      - OPTIONS
                     headers:
                       - Accept
                       - Authorization
@@ -94,8 +95,10 @@ services:
                       - Origin
                       - X-CSRF-TOKEN
                       - X-Requested-With
+                      - X-Client-Info
                     credentials: true
                     max_age: 3600
+                    preflight_continue: true
                 - name: request-transformer
                   config:
                     add:
@@ -103,6 +106,8 @@ services:
                         - X-Forwarded-Proto:https
                         - X-Forwarded-Port:443
                         - X-Forwarded-Host:bizcard.simon-gpt.com
+                        - X-Real-IP:${client_ip}
+                        - X-Client-Info:${http_x_client_info}
                 - name: acl
                   config:
                     hide_groups_header: true
@@ -507,6 +512,11 @@ services:
         - 'GOTRUE_API_ENDPOINT=https://bizcard.simon-gpt.com'
         - 'GOTRUE_PUBLIC_API_ENDPOINT=https://bizcard.simon-gpt.com'
 
+        # JWT Settings
+        - 'GOTRUE_JWT_SECRET=${SERVICE_PASSWORD_JWT}'
+        - 'GOTRUE_JWT_EXP=3600'
+        - 'GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated'
+
         # Cookie Settings
         - 'GOTRUE_COOKIE_DOMAIN=simon-gpt.com'
         - 'GOTRUE_COOKIE_SECURE=true'
@@ -525,6 +535,12 @@ services:
         - 'GOTRUE_STATE_COOKIE_SAMESITE=lax'
         - 'GOTRUE_STATE_COOKIE_PATH=/'
 
+        # PKCE Settings
+        - 'GOTRUE_SECURITY_PKCE_ENABLED=true'
+        - 'GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED=true'
+        - 'GOTRUE_SECURITY_REFRESH_TOKEN_REUSE_INTERVAL=10'
+        - 'GOTRUE_SECURITY_MANUAL_LINKING_ENABLED=true'
+
         # Google OAuth Settings
         - 'GOTRUE_EXTERNAL_GOOGLE_ENABLED=true'
         - 'GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}'
@@ -536,16 +552,10 @@ services:
         - 'GOTRUE_URI_ALLOW_LIST=https://bizcard.simon-gpt.com/auth/callback,http://localhost:3000/auth/callback'
         - 'GOTRUE_DISABLE_SIGNUP=false'
         - 'GOTRUE_OPERATOR_TOKEN=${SERVICE_SUPABASEANON_KEY}'
-        - 'GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED=true'
-        - 'GOTRUE_SECURITY_MANUAL_LINKING_ENABLED=true'
 
-        # Email Settings
-        - 'GOTRUE_EXTERNAL_EMAIL_ENABLED=true'
-        - 'GOTRUE_MAILER_AUTOCONFIRM=true'
-
-        # Phone Settings
-        - 'GOTRUE_EXTERNAL_PHONE_ENABLED=false'
-        - 'GOTRUE_SMS_AUTOCONFIRM=false'
+        # Debug Settings
+        - 'LOG_LEVEL=debug'
+        - 'GOTRUE_LOG_LEVEL=debug'
   realtime-dev:
     image: 'supabase/realtime:v2.30.34'
     container_name: realtime-dev.supabase-realtime
