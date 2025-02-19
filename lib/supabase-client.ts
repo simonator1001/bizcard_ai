@@ -88,20 +88,18 @@ export function createClient() {
             cookieOptions.push('Secure')
           }
           
-          // Set domain for production
-          if (!isLocalhost) {
-            cookieOptions.push(`domain=.simon-gpt.com`)
-          }
+          // Let the browser handle the domain automatically
+          // This allows proper cookie sharing between subdomains
           
           const cookieStr = cookieOptions.join('; ')
           console.debug('[Supabase] Setting cookie:', {
             name,
             value: value.substring(0, 20) + '...',
-            domain: !isLocalhost ? '.simon-gpt.com' : undefined,
             isLocalhost,
             protocol: window.location.protocol,
             options: cookieOptions,
-            currentHostname: window.location.hostname
+            currentHostname: window.location.hostname,
+            cookieStr
           })
           document.cookie = cookieStr
         },
@@ -119,19 +117,16 @@ export function createClient() {
             cookieOptions.push('Secure')
           }
           
-          // Don't set domain for localhost
-          if (!isLocalhost) {
-            cookieOptions.push(`domain=.simon-gpt.com`)
-          }
+          // Let the browser handle the domain automatically
           
           const cookieStr = cookieOptions.join('; ')
           console.debug('[Supabase] Removing cookie:', {
             name,
             isLocalhost,
             protocol: window.location.protocol,
-            domain: !isLocalhost ? '.simon-gpt.com' : undefined,
             options: cookieOptions,
-            currentHostname: window.location.hostname
+            currentHostname: window.location.hostname,
+            cookieStr
           })
           document.cookie = cookieStr
         }
