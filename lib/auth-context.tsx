@@ -205,8 +205,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const origin = typeof window !== 'undefined' ? window.location.origin : ''
             const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1')
             const redirectUrl = isLocalhost 
-              ? `${origin}/auth/v1/callback`
-              : 'https://bizcard.simon-gpt.com/auth/v1/callback'
+              ? `${origin}/v1/auth/callback`
+              : 'https://bizcard.simon-gpt.com/v1/auth/callback'
             
             // Debug: Log environment state before OAuth
             console.debug('[AuthContext] Pre-OAuth state:', {
