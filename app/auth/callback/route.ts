@@ -19,6 +19,11 @@ export async function GET(request: Request) {
       })
     });
 
+    // Get the correct origin from the host header
+    const host = request.headers.get('host') || 'bizcard.simon-gpt.com';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const origin = `${protocol}://${host}`;
+
     // Debug: Log all request details
     console.debug('[Auth Callback] Request details:', {
       url: url.toString(),
@@ -27,7 +32,9 @@ export async function GET(request: Request) {
       state,
       hasCode: !!code,
       method: request.method,
-      origin: url.origin
+      origin,
+      host,
+      protocol
     });
 
     if (error) {
@@ -38,7 +45,7 @@ export async function GET(request: Request) {
         cookies: request.headers.get('cookie'),
       });
       return NextResponse.redirect(
-        `${url.origin}/signin?error=${encodeURIComponent(error_description || error)}`
+        `${origin}/signin?error=${encodeURIComponent(error_description || error)}`
       );
     }
 
@@ -49,7 +56,7 @@ export async function GET(request: Request) {
         cookies: request.headers.get('cookie'),
       });
       return NextResponse.redirect(
-        `${url.origin}/signin?error=No authorization code received`
+        `${origin}/signin?error=No authorization code received`
       );
     }
 
@@ -82,7 +89,7 @@ export async function GET(request: Request) {
           })
       });
       return NextResponse.redirect(
-        `${url.origin}/signin?error=${encodeURIComponent(exchangeError.message)}`
+        `${origin}/signin?error=${encodeURIComponent(exchangeError.message)}`
       );
     }
 
@@ -101,7 +108,7 @@ export async function GET(request: Request) {
         })
     });
 
-    return NextResponse.redirect(new URL(next, url.origin));
+    return NextResponse.redirect(new URL(next, origin));
   } catch (error) {
     console.error('[Auth Callback] Unexpected error:', {
       error,
