@@ -10,31 +10,46 @@ export async function GET(request: Request) {
     const error_description = url.searchParams.get('error_description');
     const state = url.searchParams.get('state');
 
-    // Debug: Log all cookies
-    console.debug('[Auth Callback] Cookies:', {
-      raw: request.headers.get('cookie'),
-      parsed: request.headers.get('cookie')?.split(';').map(c => {
-        const [name, value] = c.trim().split('=');
-        return { name, valuePreview: value?.substring(0, 20) + '...' };
-      })
+    // Debug: Log request environment
+    console.debug('[Auth Callback] Environment:', {
+      NODE_ENV: process.env.NODE_ENV,
+      NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+      SITE_URL: process.env.SITE_URL,
+      SUPABASE_AUTH_SITE_URL: process.env.SUPABASE_AUTH_SITE_URL
     });
 
-    // Get the correct origin from the host header
-    const host = request.headers.get('host') || 'bizcard.simon-gpt.com';
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    const origin = `${protocol}://${host}`;
-
-    // Debug: Log all request details
+    // Debug: Log all cookies and headers
     console.debug('[Auth Callback] Request details:', {
+      cookies: request.headers.get('cookie')?.split(';')
+        .map(c => c.trim())
+        .filter(c => c.startsWith('sb-'))
+        .map(c => ({ name: c.split('=')[0] })),
+      headers: {
+        host: request.headers.get('host'),
+        origin: request.headers.get('origin'),
+        referer: request.headers.get('referer'),
+        'x-forwarded-host': request.headers.get('x-forwarded-host'),
+        'x-forwarded-proto': request.headers.get('x-forwarded-proto'),
+      },
       url: url.toString(),
-      params: Object.fromEntries(url.searchParams),
-      headers: Object.fromEntries(request.headers),
-      state,
-      hasCode: !!code,
-      method: request.method,
+      params: Object.fromEntries(url.searchParams)
+    });
+
+    // Get the correct host and origin
+    const host = request.headers.get('host') || 'bizcard.simon-gpt.com';
+    const isContainerId = /^[a-f0-9]{12}(:\d+)?$/.test(host); // Check if host is a container ID
+    const targetHost = isContainerId ? 'bizcard.simon-gpt.com' : host;
+    const protocol = targetHost.includes('localhost') ? 'http' : 'https';
+    const origin = `${protocol}://${targetHost}`;
+
+    // Debug: Log host resolution
+    console.debug('[Auth Callback] Host resolution:', {
+      originalHost: host,
+      isContainerId,
+      targetHost,
+      protocol,
       origin,
-      host,
-      protocol
+      state
     });
 
     if (error) {
@@ -42,7 +57,8 @@ export async function GET(request: Request) {
         error,
         description: error_description,
         state,
-        cookies: request.headers.get('cookie'),
+        host: targetHost,
+        origin
       });
       return NextResponse.redirect(
         `${origin}/signin?error=${encodeURIComponent(error_description || error)}`
@@ -53,7 +69,8 @@ export async function GET(request: Request) {
       console.error('[Auth Callback] No code received:', {
         params: Object.fromEntries(url.searchParams),
         state,
-        cookies: request.headers.get('cookie'),
+        host: targetHost,
+        origin
       });
       return NextResponse.redirect(
         `${origin}/signin?error=No authorization code received`
@@ -66,6 +83,8 @@ export async function GET(request: Request) {
     console.debug('[Auth Callback] Pre-exchange state:', {
       code: code.substring(0, 10) + '...',
       state,
+      host: targetHost,
+      origin,
       cookies: request.headers.get('cookie')?.split(';')
         .filter(c => c.includes('sb-'))
         .map(c => {
@@ -81,6 +100,8 @@ export async function GET(request: Request) {
         error: exchangeError,
         code: code.substring(0, 10) + '...',
         state,
+        host: targetHost,
+        origin,
         cookies: request.headers.get('cookie')?.split(';')
           .filter(c => c.includes('sb-'))
           .map(c => {
@@ -100,6 +121,8 @@ export async function GET(request: Request) {
       userId: data.session?.user?.id,
       userEmail: data.session?.user?.email,
       state,
+      host: targetHost,
+      origin,
       cookies: request.headers.get('cookie')?.split(';')
         .filter(c => c.includes('sb-'))
         .map(c => {
