@@ -181,7 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               password,
               options: {
                 data: { name },
-                emailRedirectTo: `${window.location.origin}/v1/auth/callback`
+                emailRedirectTo: `${window.location.origin}/auth/v1/callback`
               },
             })
             if (error) throw error
@@ -205,8 +205,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const origin = typeof window !== 'undefined' ? window.location.origin : ''
             const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1')
             const redirectUrl = isLocalhost 
-              ? `${origin}/v1/auth/callback`
-              : 'https://bizcard.simon-gpt.com/v1/auth/callback'
+              ? `${origin}/auth/v1/callback`
+              : 'https://bizcard.simon-gpt.com/auth/v1/callback'
             
             console.debug('[AuthContext] Signing in with provider:', {
               provider,
