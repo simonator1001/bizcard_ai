@@ -9,21 +9,30 @@ export async function GET(request: Request) {
     const next = requestUrl.searchParams.get('next') || '/';
     const error = requestUrl.searchParams.get('error');
     const error_description = requestUrl.searchParams.get('error_description');
+    const state = requestUrl.searchParams.get('state');
+    const scope = requestUrl.searchParams.get('scope');
 
-    // Debug: Log request environment and cookies
-    console.debug('[Auth Callback] Environment and cookies:', {
+    // Debug: Log full request details
+    console.debug('[Auth Callback] Full request details:', {
       NODE_ENV: process.env.NODE_ENV,
       SITE_URL: process.env.SITE_URL,
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      SUPABASE_AUTH_FLOW_TYPE: process.env.SUPABASE_AUTH_FLOW_TYPE,
       cookies: request.headers.get('cookie')?.split(';')
         .map(c => c.trim())
         .filter(c => c.startsWith('sb-'))
         .map(c => ({ name: c.split('=')[0], value: c.split('=')[1]?.substring(0, 10) + '...' })),
       code: code ? `${code.substring(0, 10)}...` : 'none',
+      state: state ? `${state.substring(0, 20)}...` : 'none',
+      scope,
       error,
       error_description,
       headers: Object.fromEntries(request.headers),
-      url: request.url
+      url: request.url,
+      searchParams: Object.fromEntries(requestUrl.searchParams),
+      pkceVerifierCookie: request.headers.get('cookie')?.split(';')
+        .map(c => c.trim())
+        .find(c => c.startsWith('sb-auth-token-code-verifier'))
     });
 
     // Get the correct host and origin
@@ -38,7 +47,8 @@ export async function GET(request: Request) {
         error,
         description: error_description,
         host: targetHost,
-        origin
+        origin,
+        state
       });
       return NextResponse.redirect(
         `${origin}/signin?error=${encodeURIComponent(error_description || error)}`
@@ -54,15 +64,19 @@ export async function GET(request: Request) {
 
     const supabase = createClient();
 
-    // Debug: Log pre-exchange state
+    // Debug: Log pre-exchange state with PKCE details
     console.debug('[Auth Callback] Pre-exchange state:', {
       code: `${code.substring(0, 10)}...`,
       host: targetHost,
       origin,
+      state: state ? `${state.substring(0, 20)}...` : 'none',
       cookies: request.headers.get('cookie')?.split(';')
         .map(c => c.trim())
         .filter(c => c.startsWith('sb-'))
-        .map(c => ({ name: c.split('=')[0], value: c.split('=')[1]?.substring(0, 10) + '...' }))
+        .map(c => ({ name: c.split('=')[0], value: c.split('=')[1]?.substring(0, 10) + '...' })),
+      hasPKCEVerifier: request.headers.get('cookie')?.includes('sb-auth-token-code-verifier'),
+      hasStateToken: request.headers.get('cookie')?.includes('sb-oauth-state'),
+      flowType: process.env.SUPABASE_AUTH_FLOW_TYPE
     });
 
     const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -73,6 +87,7 @@ export async function GET(request: Request) {
         code: `${code.substring(0, 10)}...`,
         host: targetHost,
         origin,
+        state: state ? `${state.substring(0, 20)}...` : 'none',
         cookies: request.headers.get('cookie')?.split(';')
           .map(c => c.trim())
           .filter(c => c.startsWith('sb-'))
@@ -84,7 +99,9 @@ export async function GET(request: Request) {
         console.error('[Auth Callback] PKCE verification failed:', {
           error: exchangeError.message,
           hasPKCECookie: request.headers.get('cookie')?.includes('sb-auth-token-code-verifier'),
-          cookieHeader: request.headers.get('cookie')
+          hasStateToken: request.headers.get('cookie')?.includes('sb-oauth-state'),
+          cookieHeader: request.headers.get('cookie'),
+          state
         });
       }
 
@@ -100,7 +117,8 @@ export async function GET(request: Request) {
       userId: data.session?.user?.id,
       userEmail: data.session?.user?.email,
       host: targetHost,
-      origin
+      origin,
+      state: state ? `${state.substring(0, 20)}...` : 'none'
     });
 
     // Create response with redirect
