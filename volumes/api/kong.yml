@@ -90,6 +90,8 @@ services:
             - OPTIONS
           max_age: 3600
           preflight_continue: true
+          exposed_headers:
+            - Set-Cookie
       - name: request-transformer
         config:
           add:

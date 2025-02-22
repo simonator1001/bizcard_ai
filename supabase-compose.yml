@@ -525,7 +525,7 @@ services:
         - 'GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated'
 
         # Cookie Settings
-        - 'GOTRUE_COOKIE_DOMAIN=bizcard.simon-gpt.com'
+        - 'GOTRUE_COOKIE_DOMAIN=.simon-gpt.com'
         - 'GOTRUE_COOKIE_SECURE=true'
         - 'GOTRUE_COOKIE_SAME_SITE=lax'
         - 'GOTRUE_COOKIE_NAME=sb-auth'
@@ -537,7 +537,7 @@ services:
         - 'GOTRUE_STATE_LIFETIME=300'
         - 'GOTRUE_STATE_SECRET=${SERVICE_PASSWORD_JWT}'
         - 'GOTRUE_STATE_COOKIE_NAME=sb-oauth-state'
-        - 'GOTRUE_STATE_COOKIE_DOMAIN=bizcard.simon-gpt.com'
+        - 'GOTRUE_STATE_COOKIE_DOMAIN=.simon-gpt.com'
         - 'GOTRUE_STATE_COOKIE_SECURE=true'
         - 'GOTRUE_STATE_COOKIE_SAMESITE=lax'
         - 'GOTRUE_STATE_COOKIE_PATH=/'
@@ -547,6 +547,11 @@ services:
         - 'GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED=true'
         - 'GOTRUE_SECURITY_REFRESH_TOKEN_REUSE_INTERVAL=10'
         - 'GOTRUE_SECURITY_MANUAL_LINKING_ENABLED=true'
+        - 'GOTRUE_SECURITY_PKCE_CODE_VERIFIER_COOKIE_NAME=sb-pkce-verifier'
+        - 'GOTRUE_SECURITY_PKCE_CODE_VERIFIER_COOKIE_DOMAIN=.simon-gpt.com'
+        - 'GOTRUE_SECURITY_PKCE_CODE_VERIFIER_COOKIE_PATH=/'
+        - 'GOTRUE_SECURITY_PKCE_CODE_VERIFIER_COOKIE_SECURE=true'
+        - 'GOTRUE_SECURITY_PKCE_CODE_VERIFIER_COOKIE_SAMESITE=lax'
 
         # Google OAuth Settings
         - 'GOTRUE_EXTERNAL_GOOGLE_ENABLED=true'
