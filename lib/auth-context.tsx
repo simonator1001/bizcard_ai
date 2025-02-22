@@ -181,7 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               password,
               options: {
                 data: { name },
-                emailRedirectTo: `${window.location.origin}/auth/callback`
+                emailRedirectTo: `${window.location.origin}/v1/auth/callback`
               },
             })
             if (error) throw error
@@ -208,22 +208,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               ? `${origin}/v1/auth/callback`
               : 'https://bizcard.simon-gpt.com/v1/auth/callback'
             
-            // Debug: Log environment state before OAuth
-            console.debug('[AuthContext] Pre-OAuth state:', {
-              cookies: document.cookie.split(';')
-                .map(c => c.trim())
-                .filter(c => c.startsWith('sb-'))
-                .map(c => ({ name: c.split('=')[0], value: c.split('=')[1]?.substring(0, 10) + '...' })),
-              localStorage: Object.keys(window.localStorage)
-                .filter(k => k.startsWith('sb-'))
-                .map(k => ({ key: k, value: window.localStorage.getItem(k)?.substring(0, 10) + '...' })),
+            console.debug('[AuthContext] Signing in with provider:', {
               provider,
               redirectUrl,
               origin,
               isLocalhost,
-              hostname: window.location.hostname,
-              protocol: window.location.protocol,
-              userAgent: window.navigator.userAgent
+              hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
+              protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown'
             })
             
             const { data, error } = await supabase.auth.signInWithOAuth({
@@ -233,7 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 queryParams: {
                   access_type: 'offline',
                   prompt: 'consent',
-                  scope: 'openid email profile'
+                  hd: '*'  // Allow any Google domain
                 },
                 skipBrowserRedirect: false
               }
@@ -244,36 +235,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 error,
                 provider,
                 isLocalhost,
-                redirectUrl,
-                cookies: document.cookie.split(';')
-                  .map(c => c.trim())
-                  .filter(c => c.startsWith('sb-'))
-                  .map(c => ({ name: c.split('=')[0], value: c.split('=')[1]?.substring(0, 10) + '...' }))
+                redirectUrl
               })
               throw error
             }
-
-            // Debug: Log OAuth initiation success
-            console.debug('[AuthContext] OAuth flow initiated:', {
-              provider,
-              url: data.url,
-              cookies: document.cookie.split(';')
-                .map(c => c.trim())
-                .filter(c => c.startsWith('sb-'))
-                .map(c => ({ name: c.split('=')[0], value: c.split('=')[1]?.substring(0, 10) + '...' }))
-            })
             
             return data
           } catch (error) {
-            console.error('[AuthContext] Provider sign in error:', {
-              error,
-              stack: error instanceof Error ? error.stack : undefined,
-              provider,
-              cookies: document.cookie.split(';')
-                .map(c => c.trim())
-                .filter(c => c.startsWith('sb-'))
-                .map(c => ({ name: c.split('=')[0], value: c.split('=')[1]?.substring(0, 10) + '...' }))
-            })
+            console.error('[AuthContext] Provider sign in error:', error)
             throw error
           }
         },
