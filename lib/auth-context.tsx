@@ -205,18 +205,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const origin = typeof window !== 'undefined' ? window.location.origin : ''
             const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1')
             const redirectUrl = isLocalhost 
-              ? `${origin}/auth/callback`
-              : 'https://bizcard.simon-gpt.com/auth/callback'
+              ? `${origin}/auth/v1/callback`
+              : 'https://bizcard.simon-gpt.com/auth/v1/callback'
             
             // Debug: Log environment state before OAuth
             console.debug('[AuthContext] Pre-OAuth state:', {
               cookies: document.cookie.split(';')
                 .map(c => c.trim())
                 .filter(c => c.startsWith('sb-'))
-                .map(c => ({ name: c.split('=')[0] })),
+                .map(c => ({ name: c.split('=')[0], value: c.split('=')[1]?.substring(0, 10) + '...' })),
               localStorage: Object.keys(window.localStorage)
                 .filter(k => k.startsWith('sb-'))
-                .map(k => ({ key: k })),
+                .map(k => ({ key: k, value: window.localStorage.getItem(k)?.substring(0, 10) + '...' })),
               provider,
               redirectUrl,
               origin,
@@ -233,6 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 queryParams: {
                   access_type: 'offline',
                   prompt: 'consent',
+                  scope: 'openid email profile'
                 },
                 skipBrowserRedirect: false
               }
@@ -247,7 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 cookies: document.cookie.split(';')
                   .map(c => c.trim())
                   .filter(c => c.startsWith('sb-'))
-                  .map(c => ({ name: c.split('=')[0] }))
+                  .map(c => ({ name: c.split('=')[0], value: c.split('=')[1]?.substring(0, 10) + '...' }))
               })
               throw error
             }
@@ -259,7 +260,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               cookies: document.cookie.split(';')
                 .map(c => c.trim())
                 .filter(c => c.startsWith('sb-'))
-                .map(c => ({ name: c.split('=')[0] }))
+                .map(c => ({ name: c.split('=')[0], value: c.split('=')[1]?.substring(0, 10) + '...' }))
             })
             
             return data
@@ -271,7 +272,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               cookies: document.cookie.split(';')
                 .map(c => c.trim())
                 .filter(c => c.startsWith('sb-'))
-                .map(c => ({ name: c.split('=')[0] }))
+                .map(c => ({ name: c.split('=')[0], value: c.split('=')[1]?.substring(0, 10) + '...' }))
             })
             throw error
           }

@@ -14,13 +14,16 @@ export async function GET(request: Request) {
     console.debug('[Auth Callback] Environment and cookies:', {
       NODE_ENV: process.env.NODE_ENV,
       SITE_URL: process.env.SITE_URL,
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       cookies: request.headers.get('cookie')?.split(';')
         .map(c => c.trim())
         .filter(c => c.startsWith('sb-'))
-        .map(c => ({ name: c.split('=')[0] })),
+        .map(c => ({ name: c.split('=')[0], value: c.split('=')[1]?.substring(0, 10) + '...' })),
       code: code ? `${code.substring(0, 10)}...` : 'none',
       error,
-      error_description
+      error_description,
+      headers: Object.fromEntries(request.headers),
+      url: request.url
     });
 
     // Get the correct host and origin
@@ -59,7 +62,7 @@ export async function GET(request: Request) {
       cookies: request.headers.get('cookie')?.split(';')
         .map(c => c.trim())
         .filter(c => c.startsWith('sb-'))
-        .map(c => ({ name: c.split('=')[0] }))
+        .map(c => ({ name: c.split('=')[0], value: c.split('=')[1]?.substring(0, 10) + '...' }))
     });
 
     const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -73,8 +76,18 @@ export async function GET(request: Request) {
         cookies: request.headers.get('cookie')?.split(';')
           .map(c => c.trim())
           .filter(c => c.startsWith('sb-'))
-          .map(c => ({ name: c.split('=')[0] }))
+          .map(c => ({ name: c.split('=')[0], value: c.split('=')[1]?.substring(0, 10) + '...' }))
       });
+
+      // Check if the error is related to PKCE
+      if (exchangeError.message.includes('code verifier')) {
+        console.error('[Auth Callback] PKCE verification failed:', {
+          error: exchangeError.message,
+          hasPKCECookie: request.headers.get('cookie')?.includes('sb-auth-token-code-verifier'),
+          cookieHeader: request.headers.get('cookie')
+        });
+      }
+
       return NextResponse.redirect(
         `${origin}/signin?error=${encodeURIComponent(exchangeError.message)}`
       );
@@ -90,7 +103,11 @@ export async function GET(request: Request) {
       origin
     });
 
-    return NextResponse.redirect(new URL(next, origin));
+    // Create response with redirect
+    const response = NextResponse.redirect(new URL(next, origin));
+
+    // Let the Supabase client handle cookie management
+    return response;
   } catch (error) {
     console.error('[Auth Callback] Unexpected error:', error);
     return NextResponse.redirect(

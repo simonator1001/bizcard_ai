@@ -63,16 +63,17 @@ services:
         paths:
           - /auth/v1/callback
           - /auth/callback
-          preserve_host: true
-          methods:
-            - GET
-            - POST
-            - OPTIONS
+        preserve_host: true
+        methods:
+          - GET
+          - POST
+          - OPTIONS
     plugins:
       - name: cors
         config:
           origins:
             - https://bizcard.simon-gpt.com
+            - http://localhost:3000
           credentials: true
           headers:
             - Authorization
@@ -81,6 +82,8 @@ services:
             - apikey
             - Cookie
             - Set-Cookie
+            - Origin
+            - Referer
           methods:
             - GET
             - POST
@@ -94,7 +97,13 @@ services:
               - X-Forwarded-Proto:https
               - X-Forwarded-Port:443
               - X-Forwarded-Host:bizcard.simon-gpt.com
+              - X-Real-IP:${client_ip}
+              - X-Client-Info:${http_x_client_info}
           preserve_host: true
+          remove:
+            headers:
+              - Origin
+              - Referer
       - name: acl
         config:
           hide_groups_header: true
