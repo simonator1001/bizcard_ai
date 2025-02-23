@@ -17,15 +17,45 @@
       "wasm": [],
       "assets": [],
       "env": {
-        "__NEXT_BUILD_ID": "6x_wcfrG-q6drxo2Fxw0p",
+        "__NEXT_BUILD_ID": "6tIR43suWi0gPdPXJYZ1s",
         "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "ze/tN2vaBTatalMBvu4FVcug73yverLu2l9oFjoD81o=",
-        "__NEXT_PREVIEW_MODE_ID": "6b36841186e56733618e57297fcb95b1",
-        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "8acfe9f4226602e55335203c77eb026047d4e0b368ab0eb1ce1d1110cc228eb1",
-        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "75b27fb90869d14c9fd02e268b354f358a0153a0c76de769f4de0f56f2ed1449"
+        "__NEXT_PREVIEW_MODE_ID": "477e0cb78638ddf7b98d9219f39fa416",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "a741b233fbac81cca817ea7a30b73662c4f4d8fbfada84284d722f78c602d6a3",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "0922b71313dae3331c4846341078b3158628073bdf7756641aa6a307c93193dd"
       }
     }
   },
-  "functions": {},
+  "functions": {
+    "/auth/callback/route": {
+      "files": [
+        "server/server-reference-manifest.js",
+        "server/app/auth/callback/route_client-reference-manifest.js",
+        "server/middleware-build-manifest.js",
+        "server/middleware-react-loadable-manifest.js",
+        "server/next-font-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "server/edge-runtime-webpack.js",
+        "server/app/auth/callback/route.js"
+      ],
+      "name": "app/auth/callback/route",
+      "page": "/auth/callback/route",
+      "matchers": [
+        {
+          "regexp": "^/auth/callback$",
+          "originalSource": "/auth/callback"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "6tIR43suWi0gPdPXJYZ1s",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "ze/tN2vaBTatalMBvu4FVcug73yverLu2l9oFjoD81o=",
+        "__NEXT_PREVIEW_MODE_ID": "477e0cb78638ddf7b98d9219f39fa416",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "a741b233fbac81cca817ea7a30b73662c4f4d8fbfada84284d722f78c602d6a3",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "0922b71313dae3331c4846341078b3158628073bdf7756641aa6a307c93193dd"
+      }
+    }
+  },
   "sortedMiddleware": [
     "/"
   ]

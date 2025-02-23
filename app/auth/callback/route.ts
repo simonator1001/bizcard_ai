@@ -4,6 +4,8 @@ import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { ResponseCookie } from 'next/dist/compiled/@edge-runtime/cookies';
 
+export const runtime = 'edge';
+
 export async function GET(request: Request) {
   try {
     const requestUrl = new URL(request.url);
@@ -76,8 +78,7 @@ export async function GET(request: Request) {
 
     // Get the correct host and origin
     const host = request.headers.get('host') || 'bizcard.simon-gpt.com';
-    const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
-    const protocol = isLocalhost ? 'http' : 'https';
+    const protocol = 'https';
     const origin = `${protocol}://${host}`;
 
     if (error || !code) {
