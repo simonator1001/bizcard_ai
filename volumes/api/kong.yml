@@ -89,10 +89,13 @@ services:
           max_age: 300
       - name: request-transformer
         config:
+          preserve_host: true
           add:
             headers:
               - X-Debug-Flow-State:${cookie.sb-oauth-state}
               - X-Debug-PKCE-Verifier:${cookie.sb-pkce-verifier}
+              - X-Original-URI:${uri}
+              - X-Original-Host:${host}
 
   - name: auth-v1-open-token
     url: http://supabase-auth:9999/token
@@ -132,6 +135,8 @@ services:
             headers:
               - X-Debug-Flow-State:${cookie.sb-oauth-state}
               - X-Debug-PKCE-Verifier:${cookie.sb-pkce-verifier}
+              - X-Original-URI:${uri}
+              - X-Original-Host:${host}
 
   - name: auth-v1-open-authorize
     url: http://supabase-auth:9999/authorize

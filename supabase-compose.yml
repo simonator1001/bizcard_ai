@@ -550,7 +550,7 @@ services:
         - 'GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated'
 
         # Cookie Settings
-        - 'GOTRUE_COOKIE_DOMAIN=bizcard.simon-gpt.com'
+        - 'GOTRUE_COOKIE_DOMAIN=simon-gpt.com'
         - 'GOTRUE_COOKIE_SECURE=true'
         - 'GOTRUE_COOKIE_SAME_SITE=lax'
         - 'GOTRUE_COOKIE_NAME=sb-auth'
@@ -562,7 +562,7 @@ services:
         - 'GOTRUE_STATE_LIFETIME=300'
         - 'GOTRUE_STATE_SECRET=${SERVICE_PASSWORD_JWT}'
         - 'GOTRUE_STATE_COOKIE_NAME=sb-oauth-state'
-        - 'GOTRUE_STATE_COOKIE_DOMAIN=bizcard.simon-gpt.com'
+        - 'GOTRUE_STATE_COOKIE_DOMAIN=simon-gpt.com'
         - 'GOTRUE_STATE_COOKIE_SECURE=true'
         - 'GOTRUE_STATE_COOKIE_SAMESITE=lax'
         - 'GOTRUE_STATE_COOKIE_PATH=/'
@@ -577,7 +577,7 @@ services:
         - 'GOTRUE_EXTERNAL_GOOGLE_ENABLED=true'
         - 'GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}'
         - 'GOTRUE_EXTERNAL_GOOGLE_SECRET=${GOOGLE_CLIENT_SECRET}'
-        - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://bizcard.simon-gpt.com/v1/auth/callback'
+        - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://bizcard.simon-gpt.com/auth/v1/callback'
         - 'GOTRUE_EXTERNAL_GOOGLE_SCOPE=email profile'
 
         # Redirect Settings
@@ -591,6 +591,7 @@ services:
         - 'GOTRUE_SECURITY_CAPTCHA_ENABLED=false'
         - 'GOTRUE_MAILER_AUTOCONFIRM=true'
         - 'GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_REAUTHENTICATION=false'
+        - 'GOTRUE_SECURITY_FLOW_STATE_TOLERANCE=60'
   realtime-dev:
     image: 'supabase/realtime:v2.30.34'
     container_name: realtime-dev.supabase-realtime

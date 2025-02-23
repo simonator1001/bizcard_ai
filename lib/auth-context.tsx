@@ -205,7 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const origin = typeof window !== 'undefined' ? window.location.origin : ''
             const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1')
             const redirectUrl = isLocalhost 
-              ? `${origin}/auth/v1/callback`
+              ? `${origin}/auth/callback`
               : 'https://bizcard.simon-gpt.com/auth/v1/callback'
             
             console.debug('[AuthContext] Signing in with provider:', {
@@ -214,7 +214,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               origin,
               isLocalhost,
               hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
-              protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown'
+              protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown',
+              state: Math.random().toString(36).substring(7)
             })
             
             const { data, error } = await supabase.auth.signInWithOAuth({
@@ -224,7 +225,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 queryParams: {
                   access_type: 'offline',
                   prompt: 'consent',
-                  hd: '*'  // Allow any Google domain
+                  hd: '*',  // Allow any Google domain
+                  state: Math.random().toString(36).substring(7)
                 },
                 skipBrowserRedirect: false
               }
