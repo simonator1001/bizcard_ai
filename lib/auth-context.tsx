@@ -206,7 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1')
             const redirectUrl = isLocalhost 
               ? `${origin}/auth/callback`
-              : 'https://bizcard.simon-gpt.com/auth/v1/callback'
+              : 'https://supabase.simon-gpt.com/auth/v1/callback'
             
             console.debug('[AuthContext] Signing in with provider:', {
               provider,
@@ -225,8 +225,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 queryParams: {
                   access_type: 'offline',
                   prompt: 'consent',
-                  hd: '*',  // Allow any Google domain
-                  state: Math.random().toString(36).substring(7)
+                  hd: '*'  // Allow any Google domain
                 },
                 skipBrowserRedirect: false
               }

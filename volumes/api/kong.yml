@@ -69,6 +69,7 @@ services:
           origins:
             - http://localhost:3000
             - https://bizcard.simon-gpt.com
+            - https://supabase.simon-gpt.com
           credentials: true
           methods:
             - GET
@@ -96,6 +97,7 @@ services:
               - X-Debug-PKCE-Verifier:${cookie.sb-pkce-verifier}
               - X-Original-URI:${uri}
               - X-Original-Host:${host}
+              - X-Original-Method:${request_method}
 
   - name: auth-v1-open-token
     url: http://supabase-auth:9999/token
