@@ -35,116 +35,6 @@ basicauth_credentials:
 ###
 services:
   ## Open Auth routes
-  - name: auth-v1-open-token
-    url: http://supabase-auth:9999/token
-    routes:
-      - name: auth-v1-open-token
-        strip_path: true
-        paths:
-          - /auth/v1/token
-        preserve_host: true
-        preserve_query_string: true
-        methods:
-          - GET
-          - POST
-          - OPTIONS
-    plugins:
-      - name: cors
-        config:
-          origins:
-            - https://bizcard.simon-gpt.com
-            - http://localhost:3000
-          credentials: true
-          headers:
-            - Authorization
-            - Content-Type
-            - X-Client-Info
-            - apikey
-            - Cookie
-            - Set-Cookie
-            - Origin
-            - Referer
-            - X-Debug-Token
-            - X-Debug-Flow-State
-          methods:
-            - GET
-            - POST
-            - OPTIONS
-          max_age: 3600
-          preflight_continue: true
-          exposed_headers:
-            - Set-Cookie
-            - X-Debug-Token
-            - X-Debug-Flow-State
-      - name: request-transformer
-        config:
-          add:
-            headers:
-              - X-Forwarded-Proto:https
-              - X-Forwarded-Port:443
-              - X-Forwarded-Host:bizcard.simon-gpt.com
-              - X-Real-IP:${client_ip}
-              - X-Client-Info:${http_x_client_info}
-              - X-Debug-Token:${uri_args.code}
-          preserve_host: true
-          preserve_query_string: true
-          remove:
-            headers:
-              - Origin
-              - Referer
-
-  - name: auth-v1-open-callback
-    url: http://supabase-auth:9999/callback
-    routes:
-      - name: auth-v1-open-callback
-        strip_path: true
-        paths:
-          - /auth/v1/callback
-          - /auth/callback
-        preserve_host: true
-        methods:
-          - GET
-          - POST
-          - OPTIONS
-    plugins:
-      - name: cors
-        config:
-          origins:
-            - https://bizcard.simon-gpt.com
-            - http://localhost:3000
-          credentials: true
-          headers:
-            - Authorization
-            - Content-Type
-            - X-Client-Info
-            - apikey
-            - Cookie
-            - Set-Cookie
-            - Origin
-            - Referer
-          methods:
-            - GET
-            - POST
-            - OPTIONS
-          max_age: 3600
-          preflight_continue: true
-          exposed_headers:
-            - Set-Cookie
-      - name: request-transformer
-        config:
-          add:
-            headers:
-              - X-Forwarded-Proto:https
-              - X-Forwarded-Port:443
-              - X-Forwarded-Host:bizcard.simon-gpt.com
-              - X-Real-IP:${client_ip}
-              - X-Client-Info:${http_x_client_info}
-          preserve_host: true
-          remove:
-            headers:
-              - Origin
-              - Referer
-
   - name: auth-v1-open-health
     url: http://supabase-auth:9999/health
     routes:
@@ -164,6 +54,84 @@ services:
           - /auth/v1/verify
     plugins:
       - name: cors
+
+  - name: auth-v1-open-callback
+    url: http://supabase-auth:9999/callback
+    routes:
+      - name: auth-v1-open-callback
+        strip_path: true
+        paths:
+          - /auth/v1/callback
+          - /auth/callback
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - http://localhost:3000
+            - https://bizcard.simon-gpt.com
+          credentials: true
+          methods:
+            - GET
+            - POST
+            - OPTIONS
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - Origin
+            - X-CSRF-TOKEN
+            - X-Requested-With
+            - X-Client-Info
+            - Cookie
+            - Set-Cookie
+          exposed_headers:
+            - Set-Cookie
+          max_age: 300
+      - name: request-transformer
+        config:
+          add:
+            headers:
+              - X-Debug-Flow-State:${cookie.sb-oauth-state}
+              - X-Debug-PKCE-Verifier:${cookie.sb-pkce-verifier}
+
+  - name: auth-v1-open-token
+    url: http://supabase-auth:9999/token
+    routes:
+      - name: auth-v1-open-token
+        strip_path: true
+        paths:
+          - /auth/v1/token
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - http://localhost:3000
+            - https://bizcard.simon-gpt.com
+          credentials: true
+          methods:
+            - GET
+            - POST
+            - OPTIONS
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - Origin
+            - X-CSRF-TOKEN
+            - X-Requested-With
+            - X-Client-Info
+            - Cookie
+            - Set-Cookie
+          exposed_headers:
+            - Set-Cookie
+          max_age: 300
+      - name: request-transformer
+        config:
+          preserve_host: true
+          add:
+            headers:
+              - X-Debug-Flow-State:${cookie.sb-oauth-state}
+              - X-Debug-PKCE-Verifier:${cookie.sb-pkce-verifier}
 
   - name: auth-v1-open-authorize
     url: http://supabase-auth:9999/authorize
