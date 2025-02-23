@@ -74,13 +74,13 @@ services:
         paths:
           - /auth/v1/callback
           - /auth/callback
-          - /auth/v1/oauth/callback
-          - /oauth/callback
     plugins:
       - name: cors
         config:
           origins:
             - https://bizcard.simon-gpt.com
+            - https://supabase.simon-gpt.com
+            - http://localhost:3000
           credentials: true
           methods:
             - GET
@@ -111,6 +111,7 @@ services:
               - X-Original-Method:${request_method}
             querystring:
               - state:${cookie.sb-oauth-state}
+              - code_verifier:${cookie.sb-pkce-verifier}
 
   - name: auth-v1-open-token
     url: http://supabase-auth:9999/token

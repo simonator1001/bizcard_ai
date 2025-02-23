@@ -431,21 +431,14 @@ services:
         - 'GOTRUE_API_EXTERNAL_URL=https://bizcard.simon-gpt.com'
         - 'GOTRUE_API_ENDPOINT=https://bizcard.simon-gpt.com'
         - 'GOTRUE_PUBLIC_API_ENDPOINT=https://bizcard.simon-gpt.com'
+
+        # Google OAuth Settings
+        - 'GOTRUE_EXTERNAL_GOOGLE_ENABLED=true'
+        - 'GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}'
+        - 'GOTRUE_EXTERNAL_GOOGLE_SECRET=${GOOGLE_CLIENT_SECRET}'
         - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://bizcard.simon-gpt.com/auth/v1/callback'
         - 'GOTRUE_EXTERNAL_GOOGLE_SCOPE=email profile'
-        - 'GOTRUE_URI_ALLOW_LIST=https://bizcard.simon-gpt.com/auth/v1/callback,https://bizcard.simon-gpt.com/auth/callback,https://bizcard.simon-gpt.com/auth/v1/oauth/callback,https://bizcard.simon-gpt.com/oauth/callback'
-        - 'GOTRUE_DISABLE_SIGNUP=false'
-        - 'GOTRUE_OPERATOR_TOKEN=${SERVICE_SUPABASEANON_KEY}'
-        - 'GOTRUE_SECURITY_FLOW_STATE_TOLERANCE=60'
-        - 'GOTRUE_SECURITY_PKCE_ENABLED=true'
-        - 'GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED=true'
-        - 'GOTRUE_SECURITY_REFRESH_TOKEN_REUSE_INTERVAL=10'
-        - 'GOTRUE_SECURITY_MANUAL_LINKING_ENABLED=true'
-        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_NAME=sb-pkce-verifier'
-        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_DOMAIN=simon-gpt.com'
-        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_SECURE=true'
-        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_SAMESITE=lax'
-        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_PATH=/'
+        - 'GOTRUE_URI_ALLOW_LIST=https://bizcard.simon-gpt.com/auth/v1/callback,https://supabase.simon-gpt.com/auth/v1/callback,http://localhost:3000/auth/v1/callback'
 
         # Cookie Settings
         - 'GOTRUE_COOKIE_DOMAIN=simon-gpt.com'
@@ -465,12 +458,17 @@ services:
         - 'GOTRUE_STATE_COOKIE_SAMESITE=lax'
         - 'GOTRUE_STATE_COOKIE_PATH=/'
 
-        # Google OAuth Settings
-        - 'GOTRUE_EXTERNAL_GOOGLE_ENABLED=true'
-        - 'GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}'
-        - 'GOTRUE_EXTERNAL_GOOGLE_SECRET=${GOOGLE_CLIENT_SECRET}'
-        - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://bizcard.simon-gpt.com/auth/v1/callback'
-        - 'GOTRUE_EXTERNAL_GOOGLE_SCOPE=email profile'
+        # Security Settings
+        - 'GOTRUE_SECURITY_PKCE_ENABLED=true'
+        - 'GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED=true'
+        - 'GOTRUE_SECURITY_REFRESH_TOKEN_REUSE_INTERVAL=10'
+        - 'GOTRUE_SECURITY_MANUAL_LINKING_ENABLED=true'
+        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_NAME=sb-pkce-verifier'
+        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_DOMAIN=simon-gpt.com'
+        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_SECURE=true'
+        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_SAMESITE=lax'
+        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_PATH=/'
+        - 'GOTRUE_SECURITY_FLOW_STATE_TOLERANCE=60'
 
         # Debug Settings
         - 'LOG_LEVEL=debug'
@@ -478,7 +476,6 @@ services:
         - 'GOTRUE_SECURITY_CAPTCHA_ENABLED=false'
         - 'GOTRUE_MAILER_AUTOCONFIRM=true'
         - 'GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_REAUTHENTICATION=false'
-        - 'GOTRUE_SECURITY_FLOW_STATE_TOLERANCE=60'
   realtime-dev:
     image: 'supabase/realtime:v2.30.34'
     container_name: realtime-dev.supabase-realtime
