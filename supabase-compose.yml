@@ -17,9 +17,9 @@ services:
       - 'SUPABASE_SERVICE_KEY=${SERVICE_SUPABASESERVICE_KEY}'
       - 'DASHBOARD_USERNAME=${SERVICE_USER_ADMIN}'
       - 'DASHBOARD_PASSWORD=${SERVICE_PASSWORD_ADMIN}'
-    command: >
+    command: |
       sh -c '
-      cat > /home/kong/kong.yml << EOL
+      cat > /home/kong/kong.yml << "EOL"
       _format_version: "2.1"
       _transform: true
 
