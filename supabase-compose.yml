@@ -19,17 +19,18 @@ services:
       - 'DASHBOARD_PASSWORD=${SERVICE_PASSWORD_ADMIN}'
     command: >
       sh -c '
-      echo "_format_version: \"2.1\"
+      cat > /home/kong/kong.yml << EOL
+      _format_version: "2.1"
       _transform: true
 
       consumers:
         - username: DASHBOARD
         - username: anon
           keyauth_credentials:
-            - key: $$SUPABASE_ANON_KEY
+            - key: "${SUPABASE_ANON_KEY}"
         - username: service_role
           keyauth_credentials:
-            - key: $$SUPABASE_SERVICE_KEY
+            - key: "${SUPABASE_SERVICE_KEY}"
 
       acls:
         - consumer: anon
@@ -39,8 +40,8 @@ services:
 
       basicauth_credentials:
         - consumer: DASHBOARD
-          username: $$DASHBOARD_USERNAME
-          password: $$DASHBOARD_PASSWORD
+          username: "${DASHBOARD_USERNAME}"
+          password: "${DASHBOARD_PASSWORD}"
 
       services:
         - name: auth-v1-open
@@ -112,133 +113,16 @@ services:
                 preserve_host: true
                 add:
                   headers:
-                    - X-Debug-Flow-State:$${cookie.sb-oauth-state}
-                    - X-Debug-PKCE-Verifier:$${cookie.sb-pkce-verifier}
-                    - X-Original-URI:$${uri}
-                    - X-Original-Host:$${host}
-                    - X-Original-Method:$${request_method}
+                    - "X-Debug-Flow-State:\${cookie.sb-oauth-state}"
+                    - "X-Debug-PKCE-Verifier:\${cookie.sb-pkce-verifier}"
+                    - "X-Original-URI:\${uri}"
+                    - "X-Original-Host:\${host}"
+                    - "X-Original-Method:\${request_method}"
                   querystring:
-                    - state:$${cookie.sb-oauth-state}
-                    - code_verifier:$${cookie.sb-pkce-verifier}
-
-        - name: auth-v1-open-token
-          url: http://supabase-auth:9999/token
-          routes:
-            - name: auth-v1-open-token
-              strip_path: true
-              paths:
-                - /auth/v1/token
-          plugins:
-            - name: cors
-              config:
-                origins:
-                  - https://bizcard.simon-gpt.com
-                credentials: true
-                methods:
-                  - GET
-                  - POST
-                  - OPTIONS
-                headers:
-                  - Accept
-                  - Authorization
-                  - Content-Type
-                  - Origin
-                  - X-CSRF-TOKEN
-                  - X-Requested-With
-                  - X-Client-Info
-                  - Cookie
-                  - Set-Cookie
-                exposed_headers:
-                  - Set-Cookie
-                max_age: 300
-            - name: request-transformer
-              config:
-                preserve_host: true
-                add:
-                  headers:
-                    - X-Debug-Flow-State:$${cookie.sb-oauth-state}
-                    - X-Debug-PKCE-Verifier:$${cookie.sb-pkce-verifier}
-                    - X-Original-URI:$${uri}
-                    - X-Original-Host:$${host}
-                    - X-Original-Method:$${request_method}
-                  querystring:
-                    - state:$${cookie.sb-oauth-state}
-                    - code_verifier:$${cookie.sb-pkce-verifier}
-
-        - name: auth-v1
-          url: http://supabase-auth:9999/
-          routes:
-            - name: auth-v1-all
-              strip_path: true
-              paths:
-                - /auth/v1/
-          plugins:
-            - name: cors
-            - name: key-auth
-              config:
-                key_names:
-                  - apikey
-                  - Authorization
-                hide_credentials: false
-                anonymous: true
-                key_in_body: false
-                run_on_preflight: false
-            - name: acl
-              config:
-                hide_groups_header: true
-                allow:
-                  - anonymous
-                  - admin
-                  - anon
-
-        - name: rest-v1
-          url: http://supabase-rest:3000/
-          routes:
-            - name: rest-v1-all
-              strip_path: true
-              paths:
-                - /rest/v1/
-          plugins:
-            - name: cors
-            - name: key-auth
-              config:
-                hide_credentials: true
-            - name: acl
-              config:
-                hide_groups_header: true
-                allow:
-                  - admin
-                  - anon
-
-        - name: storage-v1
-          url: http://supabase-storage:5000/
-          routes:
-            - name: storage-v1-all
-              strip_path: true
-              paths:
-                - /storage/v1/
-          plugins:
-            - name: cors
-
-        - name: analytics-v1
-          url: http://supabase-analytics:4000/
-          routes:
-            - name: analytics-v1-all
-              strip_path: true
-              paths:
-                - /analytics/v1/
-                - /api/projects/default/analytics/
-          plugins:
-            - name: cors
-            - name: key-auth
-              config:
-                hide_credentials: false
-            - name: acl
-              config:
-                hide_groups_header: true
-                allow:
-                  - admin
-                  - anon" > /home/kong/kong.yml && /docker-entrypoint.sh kong docker-start'
+                    - "state:\${cookie.sb-oauth-state}"
+                    - "code_verifier:\${cookie.sb-pkce-verifier}"
+EOL
+      /docker-entrypoint.sh kong docker-start'
   supabase-studio:
     image: 'supabase/studio:20240923-2e3e90c'
     healthcheck:
@@ -434,6 +318,9 @@ services:
         - 'GOTRUE_API_EXTERNAL_URL=https://bizcard.simon-gpt.com'
         - 'GOTRUE_API_ENDPOINT=https://bizcard.simon-gpt.com'
         - 'GOTRUE_PUBLIC_API_ENDPOINT=https://bizcard.simon-gpt.com'
+        - 'GOTRUE_JWT_SECRET=${SERVICE_PASSWORD_JWT}'
+        - 'GOTRUE_JWT_EXP=3600'
+        - 'GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated'
 
         # Google OAuth Settings
         - 'GOTRUE_EXTERNAL_GOOGLE_ENABLED=true'
