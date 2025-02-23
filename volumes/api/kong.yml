@@ -74,6 +74,8 @@ services:
         paths:
           - /auth/v1/callback
           - /auth/callback
+          - /auth/v1/oauth/callback
+          - /oauth/callback
     plugins:
       - name: cors
         config:
