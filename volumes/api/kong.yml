@@ -43,6 +43,7 @@ services:
         paths:
           - /auth/v1/token
         preserve_host: true
+        preserve_query_string: true
         methods:
           - GET
           - POST
@@ -63,6 +64,8 @@ services:
             - Set-Cookie
             - Origin
             - Referer
+            - X-Debug-Token
+            - X-Debug-Flow-State
           methods:
             - GET
             - POST
@@ -71,6 +74,8 @@ services:
           preflight_continue: true
           exposed_headers:
             - Set-Cookie
+            - X-Debug-Token
+            - X-Debug-Flow-State
       - name: request-transformer
         config:
           add:
@@ -80,7 +85,9 @@ services:
               - X-Forwarded-Host:bizcard.simon-gpt.com
               - X-Real-IP:${client_ip}
               - X-Client-Info:${http_x_client_info}
+              - X-Debug-Token:${uri_args.code}
           preserve_host: true
+          preserve_query_string: true
           remove:
             headers:
               - Origin
