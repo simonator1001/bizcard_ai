@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase-client';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
+import { ResponseCookie } from 'next/dist/compiled/@edge-runtime/cookies';
 
 export async function GET(request: Request) {
   try {
@@ -12,42 +14,64 @@ export async function GET(request: Request) {
     const state = requestUrl.searchParams.get('state');
     const scope = requestUrl.searchParams.get('scope');
 
-    // Get cookie store
+    // Create Supabase client with cookie handling
     const cookieStore = await cookies();
-    const pkceVerifier = cookieStore.get('sb-pkce-verifier')?.value;
-    const oauthState = cookieStore.get('sb-oauth-state')?.value;
-    const authCookie = cookieStore.get('sb-auth-token')?.value;
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          async get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+          async set(name: string, value: string, options: any) {
+            try {
+              cookieStore.set({ name, value, ...options });
+            } catch (error) {
+              console.error(`Error setting cookie ${name}:`, error);
+            }
+          },
+          async remove(name: string, options: any) {
+            try {
+              cookieStore.delete({ name, ...options });
+            } catch (error) {
+              console.error(`Error removing cookie ${name}:`, error);
+            }
+          }
+        }
+      }
+    );
 
     // Debug: Log full request details with cookie info
     console.debug('[Auth Callback] Full request details:', {
-      NODE_ENV: process.env.NODE_ENV,
-      SITE_URL: process.env.SITE_URL,
-      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-      SUPABASE_AUTH_FLOW_TYPE: process.env.SUPABASE_AUTH_FLOW_TYPE,
-      cookies: {
-        pkceVerifier: pkceVerifier ? 'present' : 'missing',
-        oauthState: oauthState ? 'present' : 'missing',
-        authCookie: authCookie ? 'present' : 'missing',
-        allCookies: request.headers.get('cookie')?.split(';')
-          .map(c => c.trim())
-          .filter(c => c.startsWith('sb-'))
-          .map(c => ({ name: c.split('=')[0] }))
-      },
-      code: code ? `${code.substring(0, 10)}...` : 'none',
-      state: state ? `${state.substring(0, 20)}...` : 'none',
-      scope,
-      error,
-      error_description,
+      url: request.url,
+      method: request.method,
       headers: {
+        cookie: request.headers.get('cookie'),
         host: request.headers.get('host'),
         origin: request.headers.get('origin'),
-        referer: request.headers.get('referer'),
         'user-agent': request.headers.get('user-agent'),
-        'x-forwarded-proto': request.headers.get('x-forwarded-proto'),
-        'x-forwarded-host': request.headers.get('x-forwarded-host'),
       },
-      url: request.url,
-      searchParams: Object.fromEntries(requestUrl.searchParams)
+      params: {
+        code: code ? `${code.substring(0, 10)}...` : null,
+        state: state ? `${state.substring(0, 20)}...` : null,
+        scope,
+        error,
+        error_description
+      },
+      cookies: {
+        allCookies: (await cookieStore.getAll())
+          .filter((c: ResponseCookie) => c.name.startsWith('sb-'))
+          .map((c: ResponseCookie) => ({
+            name: c.name,
+            value: `${c.value.substring(0, 10)}...`
+          }))
+      },
+      env: {
+        NODE_ENV: process.env.NODE_ENV,
+        SITE_URL: process.env.SITE_URL,
+        SUPABASE_AUTH_FLOW_TYPE: process.env.SUPABASE_AUTH_FLOW_TYPE
+      }
     });
 
     // Get the correct host and origin
@@ -56,44 +80,28 @@ export async function GET(request: Request) {
     const protocol = isLocalhost ? 'http' : 'https';
     const origin = `${protocol}://${host}`;
 
-    if (error) {
-      console.error('[Auth Callback] OAuth error:', {
+    if (error || !code) {
+      console.error('[Auth Callback] Error or missing parameters:', {
         error,
-        description: error_description,
+        error_description,
+        hasCode: !!code,
+        hasState: !!state,
         host,
-        origin,
-        state,
-        cookies: {
-          pkceVerifier: pkceVerifier ? 'present' : 'missing',
-          oauthState: oauthState ? 'present' : 'missing'
-        }
+        origin
       });
+      
+      const errorMsg = error_description || error || (!code ? 'No authorization code received' : 'Missing PKCE verifier');
       return NextResponse.redirect(
-        `${origin}/signin?error=${encodeURIComponent(error_description || error)}`
+        `${origin}/signin?error=${encodeURIComponent(errorMsg)}`
       );
     }
 
-    if (!code) {
-      console.error('[Auth Callback] No code received');
-      return NextResponse.redirect(
-        `${origin}/signin?error=No authorization code received`
-      );
-    }
-
-    const supabase = createClient();
-
-    // Debug: Log pre-exchange state with PKCE details
+    // Debug: Log pre-exchange state
     console.debug('[Auth Callback] Pre-exchange state:', {
       code: `${code.substring(0, 10)}...`,
+      state: state ? `${state.substring(0, 20)}...` : null,
       host,
-      origin,
-      state: state ? `${state.substring(0, 20)}...` : 'none',
-      cookies: {
-        pkceVerifier: pkceVerifier ? 'present' : 'missing',
-        oauthState: oauthState ? 'present' : 'missing',
-        authCookie: authCookie ? 'present' : 'missing'
-      },
-      flowType: process.env.SUPABASE_AUTH_FLOW_TYPE
+      origin
     });
 
     const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -102,25 +110,8 @@ export async function GET(request: Request) {
       console.error('[Auth Callback] Session exchange error:', {
         error: exchangeError,
         code: `${code.substring(0, 10)}...`,
-        host,
-        origin,
-        state: state ? `${state.substring(0, 20)}...` : 'none',
-        cookies: {
-          pkceVerifier: pkceVerifier ? 'present' : 'missing',
-          oauthState: oauthState ? 'present' : 'missing',
-          authCookie: authCookie ? 'present' : 'missing'
-        }
+        state: state ? `${state.substring(0, 20)}...` : null
       });
-
-      // Check if the error is related to PKCE
-      if (exchangeError.message.includes('code verifier')) {
-        console.error('[Auth Callback] PKCE verification failed:', {
-          error: exchangeError.message,
-          hasPKCECookie: !!pkceVerifier,
-          hasStateToken: !!oauthState,
-          state
-        });
-      }
 
       return NextResponse.redirect(
         `${origin}/signin?error=${encodeURIComponent(exchangeError.message)}`
@@ -132,17 +123,10 @@ export async function GET(request: Request) {
       success: !!data.session,
       sessionExpiry: data.session?.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : null,
       userId: data.session?.user?.id,
-      userEmail: data.session?.user?.email,
-      host,
-      origin,
-      state: state ? `${state.substring(0, 20)}...` : 'none'
+      userEmail: data.session?.user?.email
     });
 
-    // Create response with redirect
-    const response = NextResponse.redirect(new URL(next, origin));
-
-    // Let the Supabase client handle cookie management
-    return response;
+    return NextResponse.redirect(new URL(next, origin));
   } catch (error) {
     console.error('[Auth Callback] Unexpected error:', error);
     return NextResponse.redirect(
