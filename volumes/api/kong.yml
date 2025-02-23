@@ -35,16 +35,6 @@ basicauth_credentials:
 ###
 services:
   ## Open Auth routes
-  - name: auth-v1-open-health
-    url: http://supabase-auth:9999/health
-    routes:
-      - name: auth-v1-open-health
-        strip_path: true
-        paths:
-          - /auth/v1/health
-    plugins:
-      - name: cors
-
   - name: auth-v1-open
     url: http://supabase-auth:9999/verify
     routes:
@@ -54,6 +44,27 @@ services:
           - /auth/v1/verify
     plugins:
       - name: cors
+        config:
+          origins:
+            - https://bizcard.simon-gpt.com
+          credentials: true
+          methods:
+            - GET
+            - POST
+            - OPTIONS
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - Origin
+            - X-CSRF-TOKEN
+            - X-Requested-With
+            - X-Client-Info
+            - Cookie
+            - Set-Cookie
+          exposed_headers:
+            - Set-Cookie
+          max_age: 300
 
   - name: auth-v1-open-callback
     url: http://supabase-auth:9999/callback
@@ -67,9 +78,7 @@ services:
       - name: cors
         config:
           origins:
-            - http://localhost:3000
             - https://bizcard.simon-gpt.com
-            - https://supabase.simon-gpt.com
           credentials: true
           methods:
             - GET
@@ -98,6 +107,8 @@ services:
               - X-Original-URI:${uri}
               - X-Original-Host:${host}
               - X-Original-Method:${request_method}
+            querystring:
+              - state:${cookie.sb-oauth-state}
 
   - name: auth-v1-open-token
     url: http://supabase-auth:9999/token
@@ -110,7 +121,6 @@ services:
       - name: cors
         config:
           origins:
-            - http://localhost:3000
             - https://bizcard.simon-gpt.com
           credentials: true
           methods:
@@ -139,6 +149,20 @@ services:
               - X-Debug-PKCE-Verifier:${cookie.sb-pkce-verifier}
               - X-Original-URI:${uri}
               - X-Original-Host:${host}
+              - X-Original-Method:${request_method}
+            querystring:
+              - state:${cookie.sb-oauth-state}
+              - code_verifier:${cookie.sb-pkce-verifier}
+
+  - name: auth-v1-open-health
+    url: http://supabase-auth:9999/health
+    routes:
+      - name: auth-v1-open-health
+        strip_path: true
+        paths:
+          - /auth/v1/health
+    plugins:
+      - name: cors
 
   - name: auth-v1-open-authorize
     url: http://supabase-auth:9999/authorize

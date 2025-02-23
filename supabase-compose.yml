@@ -127,14 +127,7 @@ services:
                     preserve_host: true
                     add:
                       headers:
-                        - X-Debug-Flow-State:${cookie.sb-oauth-state}
-                        - X-Debug-PKCE-Verifier:${cookie.sb-pkce-verifier}
-                        - X-Original-URI:${uri}
-                        - X-Original-Host:${host}
-                        - X-Original-Method:${request_method}
-                    append:
-                      querystring:
-                        - state:${cookie.sb-oauth-state}
+                        - "X-Debug-Flow-State:$${cookie.sb-oauth-state}"
 
             - name: auth-v1-open-token
               url: http://supabase-auth:9999/token
@@ -171,14 +164,16 @@ services:
                     preserve_host: true
                     add:
                       headers:
-                        - X-Debug-Flow-State:${cookie.sb-oauth-state}
-                        - X-Debug-PKCE-Verifier:${cookie.sb-pkce-verifier}
-                        - X-Original-URI:${uri}
-                        - X-Original-Host:${host}
-                        - X-Original-Method:${request_method}
+                        - "X-Debug-Flow-State:$${cookie.sb-oauth-state}"
+                        - "X-Debug-PKCE-Verifier:$${cookie.sb-pkce-verifier}"
+                        - "X-Original-URI:$${uri}"
+                        - "X-Original-Host:$${host}"
+                        - "X-Original-Method:$${request_method}"
+                        - "X-PKCE-Verifier:$${cookie.sb-pkce-verifier}"
                     append:
                       querystring:
-                        - state:${cookie.sb-oauth-state}
+                        - "state:$${cookie.sb-oauth-state}"
+                        - "code_verifier:$${cookie.sb-pkce-verifier}"
 
             - name: auth-v1-open-authorize
               url: http://supabase-auth:9999/authorize
@@ -607,9 +602,9 @@ services:
         - 'GOTRUE_API_EXTERNAL_URL=https://bizcard.simon-gpt.com'
         - 'GOTRUE_API_ENDPOINT=https://bizcard.simon-gpt.com'
         - 'GOTRUE_PUBLIC_API_ENDPOINT=https://bizcard.simon-gpt.com'
-        - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://supabase.simon-gpt.com/auth/v1/callback'
+        - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://bizcard.simon-gpt.com/auth/v1/callback'
         - 'GOTRUE_EXTERNAL_GOOGLE_SCOPE=email profile'
-        - 'GOTRUE_URI_ALLOW_LIST=https://bizcard.simon-gpt.com/auth/callback,https://bizcard.simon-gpt.com/auth/v1/callback,https://supabase.simon-gpt.com/auth/v1/callback'
+        - 'GOTRUE_URI_ALLOW_LIST=https://bizcard.simon-gpt.com/auth/v1/callback'
         - 'GOTRUE_DISABLE_SIGNUP=false'
         - 'GOTRUE_OPERATOR_TOKEN=${SERVICE_SUPABASEANON_KEY}'
         - 'GOTRUE_SECURITY_FLOW_STATE_TOLERANCE=60'
@@ -622,10 +617,6 @@ services:
         - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_SECURE=true'
         - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_SAMESITE=lax'
         - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_PATH=/'
-        # JWT Settings
-        - 'GOTRUE_JWT_SECRET=${SERVICE_PASSWORD_JWT}'
-        - 'GOTRUE_JWT_EXP=3600'
-        - 'GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated'
 
         # Cookie Settings
         - 'GOTRUE_COOKIE_DOMAIN=simon-gpt.com'
@@ -645,21 +636,12 @@ services:
         - 'GOTRUE_STATE_COOKIE_SAMESITE=lax'
         - 'GOTRUE_STATE_COOKIE_PATH=/'
 
-        # PKCE Settings
-        - 'GOTRUE_SECURITY_PKCE_ENABLED=true'
-        - 'GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED=true'
-        - 'GOTRUE_SECURITY_REFRESH_TOKEN_REUSE_INTERVAL=10'
-        - 'GOTRUE_SECURITY_MANUAL_LINKING_ENABLED=true'
-
         # Google OAuth Settings
         - 'GOTRUE_EXTERNAL_GOOGLE_ENABLED=true'
         - 'GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}'
         - 'GOTRUE_EXTERNAL_GOOGLE_SECRET=${GOOGLE_CLIENT_SECRET}'
-        - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://supabase.simon-gpt.com/auth/v1/callback'
+        - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://bizcard.simon-gpt.com/auth/v1/callback'
         - 'GOTRUE_EXTERNAL_GOOGLE_SCOPE=email profile'
-        - 'GOTRUE_URI_ALLOW_LIST=https://bizcard.simon-gpt.com/auth/callback,https://bizcard.simon-gpt.com/auth/v1/callback,https://supabase.simon-gpt.com/auth/v1/callback'
-        - 'GOTRUE_DISABLE_SIGNUP=false'
-        - 'GOTRUE_OPERATOR_TOKEN=${SERVICE_SUPABASEANON_KEY}'
 
         # Debug Settings
         - 'LOG_LEVEL=debug'

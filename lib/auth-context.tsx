@@ -203,16 +203,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithProvider: async (provider) => {
           try {
             const origin = typeof window !== 'undefined' ? window.location.origin : ''
-            const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1')
-            const redirectUrl = isLocalhost 
-              ? `${origin}/auth/callback`
-              : 'https://supabase.simon-gpt.com/auth/v1/callback'
+            const redirectUrl = 'https://bizcard.simon-gpt.com/auth/v1/callback'
             
             console.debug('[AuthContext] Signing in with provider:', {
               provider,
               redirectUrl,
               origin,
-              isLocalhost,
               hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
               protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown',
               state: Math.random().toString(36).substring(7)
@@ -225,7 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 queryParams: {
                   access_type: 'offline',
                   prompt: 'consent',
-                  hd: '*'  // Allow any Google domain
+                  hd: '*'
                 },
                 skipBrowserRedirect: false
               }
@@ -235,7 +231,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.error('[AuthContext] Provider sign in error:', {
                 error,
                 provider,
-                isLocalhost,
                 redirectUrl
               })
               throw error
