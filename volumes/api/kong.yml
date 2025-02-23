@@ -35,25 +35,56 @@ basicauth_credentials:
 ###
 services:
   ## Open Auth routes
-  - name: auth-v1-open-health
-    url: http://supabase-auth:9999/health
+  - name: auth-v1-open-token
+    url: http://supabase-auth:9999/token
     routes:
-      - name: auth-v1-open-health
+      - name: auth-v1-open-token
         strip_path: true
         paths:
-          - /auth/v1/health
+          - /auth/v1/token
+        preserve_host: true
+        methods:
+          - GET
+          - POST
+          - OPTIONS
     plugins:
       - name: cors
-
-  - name: auth-v1-open
-    url: http://supabase-auth:9999/verify
-    routes:
-      - name: auth-v1-open
-        strip_path: true
-        paths:
-          - /auth/v1/verify
-    plugins:
-      - name: cors
+        config:
+          origins:
+            - https://bizcard.simon-gpt.com
+            - http://localhost:3000
+          credentials: true
+          headers:
+            - Authorization
+            - Content-Type
+            - X-Client-Info
+            - apikey
+            - Cookie
+            - Set-Cookie
+            - Origin
+            - Referer
+          methods:
+            - GET
+            - POST
+            - OPTIONS
+          max_age: 3600
+          preflight_continue: true
+          exposed_headers:
+            - Set-Cookie
+      - name: request-transformer
+        config:
+          add:
+            headers:
+              - X-Forwarded-Proto:https
+              - X-Forwarded-Port:443
+              - X-Forwarded-Host:bizcard.simon-gpt.com
+              - X-Real-IP:${client_ip}
+              - X-Client-Info:${http_x_client_info}
+          preserve_host: true
+          remove:
+            headers:
+              - Origin
+              - Referer
 
   - name: auth-v1-open-callback
     url: http://supabase-auth:9999/callback
@@ -106,13 +137,26 @@ services:
             headers:
               - Origin
               - Referer
-      - name: acl
-        config:
-          hide_groups_header: true
-          allow:
-            - anonymous
-            - admin
-            - anon
+
+  - name: auth-v1-open-health
+    url: http://supabase-auth:9999/health
+    routes:
+      - name: auth-v1-open-health
+        strip_path: true
+        paths:
+          - /auth/v1/health
+    plugins:
+      - name: cors
+
+  - name: auth-v1-open
+    url: http://supabase-auth:9999/verify
+    routes:
+      - name: auth-v1-open
+        strip_path: true
+        paths:
+          - /auth/v1/verify
+    plugins:
+      - name: cors
 
   - name: auth-v1-open-authorize
     url: http://supabase-auth:9999/authorize
