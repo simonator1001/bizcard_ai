@@ -42,8 +42,8 @@
   "node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js -> ws": {
     "id": 66735,
     "files": [
-      "static/chunks/591.60fb70f327289dbb.js",
-      "static/chunks/735.0efee747fa2d58e7.js"
+      "static/chunks/735.0efee747fa2d58e7.js",
+      "static/chunks/591.60fb70f327289dbb.js"
     ]
   },
   "node_modules/@supabase/storage-js/dist/module/lib/helpers.js -> @supabase/node-fetch": {
