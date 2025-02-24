@@ -27,10 +27,10 @@ services:
         - username: DASHBOARD
         - username: anon
           keyauth_credentials:
-            - key: "${SUPABASE_ANON_KEY}"
+            - key: "$${SUPABASE_ANON_KEY}"
         - username: service_role
           keyauth_credentials:
-            - key: "${SUPABASE_SERVICE_KEY}"
+            - key: "$${SUPABASE_SERVICE_KEY}"
 
       acls:
         - consumer: anon
@@ -40,8 +40,8 @@ services:
 
       basicauth_credentials:
         - consumer: DASHBOARD
-          username: "${DASHBOARD_USERNAME}"
-          password: "${DASHBOARD_PASSWORD}"
+          username: "$${DASHBOARD_USERNAME}"
+          password: "$${DASHBOARD_PASSWORD}"
 
       services:
         - name: auth-v1-open
@@ -121,7 +121,7 @@ services:
                   querystring:
                     - "state:${cookie.sb-oauth-state}"
                     - "code_verifier:${cookie.sb-pkce-verifier}"
-EOL
+      EOL
       /docker-entrypoint.sh kong docker-start'
   supabase-studio:
     image: 'supabase/studio:20240923-2e3e90c'
