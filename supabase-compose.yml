@@ -19,7 +19,7 @@ services:
       - 'DASHBOARD_PASSWORD=${SERVICE_PASSWORD_ADMIN}'
     command: |
       sh -c '
-      cat > /home/kong/kong.yml << EOL
+      cat << EOL > /home/kong/kong.yml
 _format_version: "2.1"
 _transform: true
 
@@ -113,14 +113,14 @@ services:
           preserve_host: true
           add:
             headers:
-              - "X-Debug-Flow-State:${cookie.sb-oauth-state}"
-              - "X-Debug-PKCE-Verifier:${cookie.sb-pkce-verifier}"
-              - "X-Original-URI:${uri}"
-              - "X-Original-Host:${host}"
-              - "X-Original-Method:${request_method}"
+              - "X-Debug-Flow-State:$${cookie.sb-oauth-state}"
+              - "X-Debug-PKCE-Verifier:$${cookie.sb-pkce-verifier}"
+              - "X-Original-URI:$${uri}"
+              - "X-Original-Host:$${host}"
+              - "X-Original-Method:$${request_method}"
             querystring:
-              - "state:${cookie.sb-oauth-state}"
-              - "code_verifier:${cookie.sb-pkce-verifier}"
+              - "state:$${cookie.sb-oauth-state}"
+              - "code_verifier:$${cookie.sb-pkce-verifier}"
 EOL
       /docker-entrypoint.sh kong docker-start'
   supabase-studio:
