@@ -17,6 +17,8 @@ services:
       - 'SUPABASE_SERVICE_KEY=${SERVICE_SUPABASESERVICE_KEY}'
       - 'DASHBOARD_USERNAME=${SERVICE_USER_ADMIN}'
       - 'DASHBOARD_PASSWORD=${SERVICE_PASSWORD_ADMIN}'
+      - KONG_PROXY_LISTEN=0.0.0.0:8000
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001
     command: |
       cat << EOL > /home/kong/kong.yml
       _format_version: '2.1'
@@ -357,17 +359,18 @@ services:
       timeout: 5s
       interval: 5s
       retries: 3
+      start_period: 10s
     environment:
         # Core Settings
         - 'GOTRUE_API_HOST=0.0.0.0'
         - 'GOTRUE_API_PORT=9999'
-        - 'GOTRUE_SITE_URL=https://bizcard.simon-gpt.com'
-        - 'API_EXTERNAL_URL=https://bizcard.simon-gpt.com'
+        - 'GOTRUE_SITE_URL=https://supabase.simon-gpt.com'
+        - 'API_EXTERNAL_URL=https://supabase.simon-gpt.com'
         - 'GOTRUE_DB_DRIVER=postgres'
         - 'GOTRUE_DB_DATABASE_URL=postgres://supabase_auth_admin:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}'
-        - 'GOTRUE_API_EXTERNAL_URL=https://bizcard.simon-gpt.com'
-        - 'GOTRUE_API_ENDPOINT=https://bizcard.simon-gpt.com'
-        - 'GOTRUE_PUBLIC_API_ENDPOINT=https://bizcard.simon-gpt.com'
+        - 'GOTRUE_API_EXTERNAL_URL=https://supabase.simon-gpt.com'
+        - 'GOTRUE_API_ENDPOINT=https://supabase.simon-gpt.com'
+        - 'GOTRUE_PUBLIC_API_ENDPOINT=https://supabase.simon-gpt.com'
         - 'GOTRUE_JWT_SECRET=${SERVICE_PASSWORD_JWT}'
         - 'GOTRUE_JWT_EXP=3600'
         - 'GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated'
@@ -376,12 +379,12 @@ services:
         - 'GOTRUE_EXTERNAL_GOOGLE_ENABLED=true'
         - 'GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}'
         - 'GOTRUE_EXTERNAL_GOOGLE_SECRET=${GOOGLE_CLIENT_SECRET}'
-        - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://bizcard.simon-gpt.com/auth/v1/callback'
+        - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://supabase.simon-gpt.com/auth/v1/callback'
         - 'GOTRUE_EXTERNAL_GOOGLE_SCOPE=email profile'
         - 'GOTRUE_URI_ALLOW_LIST=https://bizcard.simon-gpt.com/auth/v1/callback,https://bizcard.simon-gpt.com/auth/callback,https://supabase.simon-gpt.com/auth/v1/callback,http://localhost:3000/auth/v1/callback'
 
         # Cookie Settings
-        - 'GOTRUE_COOKIE_DOMAIN='
+        - 'GOTRUE_COOKIE_DOMAIN=simon-gpt.com'
         - 'GOTRUE_COOKIE_SECURE=true'
         - 'GOTRUE_COOKIE_SAME_SITE=lax'
         - 'GOTRUE_COOKIE_NAME=sb-auth'
@@ -393,7 +396,7 @@ services:
         - 'GOTRUE_STATE_LIFETIME=300'
         - 'GOTRUE_STATE_SECRET=${SERVICE_PASSWORD_JWT}'
         - 'GOTRUE_STATE_COOKIE_NAME=sb-oauth-state'
-        - 'GOTRUE_STATE_COOKIE_DOMAIN='
+        - 'GOTRUE_STATE_COOKIE_DOMAIN=simon-gpt.com'
         - 'GOTRUE_STATE_COOKIE_SECURE=true'
         - 'GOTRUE_STATE_COOKIE_SAMESITE=lax'
         - 'GOTRUE_STATE_COOKIE_PATH=/'
@@ -404,7 +407,7 @@ services:
         - 'GOTRUE_SECURITY_REFRESH_TOKEN_REUSE_INTERVAL=10'
         - 'GOTRUE_SECURITY_MANUAL_LINKING_ENABLED=true'
         - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_NAME=sb-pkce-verifier'
-        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_DOMAIN='
+        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_DOMAIN=simon-gpt.com'
         - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_SECURE=true'
         - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_SAMESITE=lax'
         - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_PATH=/'
