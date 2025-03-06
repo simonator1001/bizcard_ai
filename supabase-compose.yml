@@ -5,7 +5,7 @@ services:
       supabase-analytics:
         condition: service_healthy
     environment:
-      - SERVICE_FQDN_SUPABASEKONG_8000
+      - SERVICE_FQDN_SUPABASEKONG=https://supabase.simon-gpt.com
       - 'JWT_SECRET=${SERVICE_PASSWORD_JWT}'
       - KONG_DATABASE=off
       - KONG_DECLARATIVE_CONFIG=/home/kong/kong.yml
@@ -55,6 +55,8 @@ services:
               config:
                 origins:
                   - https://bizcard.simon-gpt.com
+                  - https://supabase.simon-gpt.com
+                  - http://localhost:3000
                 credentials: true
                 methods:
                   - GET
@@ -166,6 +168,11 @@ services:
                     - "code_verifier:$${cookie.sb-pkce-verifier}"
       EOL
       /docker-entrypoint.sh kong docker-start
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   supabase-studio:
     image: 'supabase/studio:20240923-2e3e90c'
     healthcheck:
