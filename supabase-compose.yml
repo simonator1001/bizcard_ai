@@ -112,14 +112,58 @@ services:
                 preserve_host: true
                 add:
                   headers:
-                    - X-Debug-Flow-State:$${cookie.sb-oauth-state}
-                    - X-Debug-PKCE-Verifier:$${cookie.sb-pkce-verifier}
-                    - X-Original-URI:$${uri}
-                    - X-Original-Host:$${host}
-                    - X-Original-Method:$${request_method}
+                    - "X-Debug-Flow-State:$${cookie.sb-oauth-state}"
+                    - "X-Debug-PKCE-Verifier:$${cookie.sb-pkce-verifier}"
+                    - "X-Original-URI:$${uri}"
+                    - "X-Original-Host:$${host}"
+                    - "X-Original-Method:$${request_method}"
                   querystring:
-                    - state:$${cookie.sb-oauth-state}
-                    - code_verifier:$${cookie.sb-pkce-verifier}
+                    - "state:$${cookie.sb-oauth-state}"
+                    - "code_verifier:$${cookie.sb-pkce-verifier}"
+
+        - name: auth-v1-open-token
+          url: http://supabase-auth:9999/token
+          routes:
+            - name: auth-v1-open-token
+              strip_path: true
+              paths:
+                - /auth/v1/token
+          plugins:
+            - name: cors
+              config:
+                origins:
+                  - https://bizcard.simon-gpt.com
+                credentials: true
+                methods:
+                  - GET
+                  - POST
+                  - OPTIONS
+                headers:
+                  - Accept
+                  - Authorization
+                  - Content-Type
+                  - Origin
+                  - X-CSRF-TOKEN
+                  - X-Requested-With
+                  - X-Client-Info
+                  - Cookie
+                  - Set-Cookie
+                exposed_headers:
+                  - Set-Cookie
+                max_age: 300
+            - name: request-transformer
+              config:
+                preserve_host: true
+                add:
+                  headers:
+                    - "X-Debug-Flow-State:$${cookie.sb-oauth-state}"
+                    - "X-Debug-PKCE-Verifier:$${cookie.sb-pkce-verifier}"
+                    - "X-Original-URI:$${uri}"
+                    - "X-Original-Host:$${host}"
+                    - "X-Original-Method:$${request_method}"
+                  querystring:
+                    - "state:$${cookie.sb-oauth-state}"
+                    - "code_verifier:$${cookie.sb-pkce-verifier}"
       EOL
       /docker-entrypoint.sh kong docker-start
   supabase-studio:
