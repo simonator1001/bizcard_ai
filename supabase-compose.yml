@@ -18,111 +18,110 @@ services:
       - 'DASHBOARD_USERNAME=${SERVICE_USER_ADMIN}'
       - 'DASHBOARD_PASSWORD=${SERVICE_PASSWORD_ADMIN}'
     command: |
-      sh -c '
       cat << EOL > /home/kong/kong.yml
-_format_version: "2.1"
-_transform: true
+      _format_version: '2.1'
+      _transform: true
 
-consumers:
-  - username: DASHBOARD
-  - username: anon
-    keyauth_credentials:
-      - key: "$$SUPABASE_ANON_KEY"
-  - username: service_role
-    keyauth_credentials:
-      - key: "$$SUPABASE_SERVICE_KEY"
+      consumers:
+        - username: DASHBOARD
+        - username: anon
+          keyauth_credentials:
+            - key: $$SUPABASE_ANON_KEY
+        - username: service_role
+          keyauth_credentials:
+            - key: $$SUPABASE_SERVICE_KEY
 
-acls:
-  - consumer: anon
-    group: anon
-  - consumer: service_role
-    group: admin
+      acls:
+        - consumer: anon
+          group: anon
+        - consumer: service_role
+          group: admin
 
-basicauth_credentials:
-  - consumer: DASHBOARD
-    username: "$$DASHBOARD_USERNAME"
-    password: "$$DASHBOARD_PASSWORD"
+      basicauth_credentials:
+        - consumer: DASHBOARD
+          username: $$DASHBOARD_USERNAME
+          password: $$DASHBOARD_PASSWORD
 
-services:
-  - name: auth-v1-open
-    url: http://supabase-auth:9999/verify
-    routes:
-      - name: auth-v1-open
-        strip_path: true
-        paths:
-          - /auth/v1/verify
-    plugins:
-      - name: cors
-        config:
-          origins:
-            - https://bizcard.simon-gpt.com
-          credentials: true
-          methods:
-            - GET
-            - POST
-            - OPTIONS
-          headers:
-            - Accept
-            - Authorization
-            - Content-Type
-            - Origin
-            - X-CSRF-TOKEN
-            - X-Requested-With
-            - X-Client-Info
-            - Cookie
-            - Set-Cookie
-          exposed_headers:
-            - Set-Cookie
-          max_age: 300
+      services:
+        - name: auth-v1-open
+          url: http://supabase-auth:9999/verify
+          routes:
+            - name: auth-v1-open
+              strip_path: true
+              paths:
+                - /auth/v1/verify
+          plugins:
+            - name: cors
+              config:
+                origins:
+                  - https://bizcard.simon-gpt.com
+                credentials: true
+                methods:
+                  - GET
+                  - POST
+                  - OPTIONS
+                headers:
+                  - Accept
+                  - Authorization
+                  - Content-Type
+                  - Origin
+                  - X-CSRF-TOKEN
+                  - X-Requested-With
+                  - X-Client-Info
+                  - Cookie
+                  - Set-Cookie
+                exposed_headers:
+                  - Set-Cookie
+                max_age: 300
 
-  - name: auth-v1-open-callback
-    url: http://supabase-auth:9999/callback
-    routes:
-      - name: auth-v1-open-callback
-        strip_path: true
-        paths:
-          - /auth/v1/callback
-          - /auth/callback
-    plugins:
-      - name: cors
-        config:
-          origins:
-            - https://bizcard.simon-gpt.com
-            - https://supabase.simon-gpt.com
-            - http://localhost:3000
-          credentials: true
-          methods:
-            - GET
-            - POST
-            - OPTIONS
-          headers:
-            - Accept
-            - Authorization
-            - Content-Type
-            - Origin
-            - X-CSRF-TOKEN
-            - X-Requested-With
-            - X-Client-Info
-            - Cookie
-            - Set-Cookie
-          exposed_headers:
-            - Set-Cookie
-          max_age: 300
-      - name: request-transformer
-        config:
-          preserve_host: true
-          add:
-            headers:
-              - "X-Debug-Flow-State:$${cookie.sb-oauth-state}"
-              - "X-Debug-PKCE-Verifier:$${cookie.sb-pkce-verifier}"
-              - "X-Original-URI:$${uri}"
-              - "X-Original-Host:$${host}"
-              - "X-Original-Method:$${request_method}"
-            querystring:
-              - "state:$${cookie.sb-oauth-state}"
-              - "code_verifier:$${cookie.sb-pkce-verifier}"
-EOL
-      /docker-entrypoint.sh kong docker-start'
+        - name: auth-v1-open-callback
+          url: http://supabase-auth:9999/callback
+          routes:
+            - name: auth-v1-open-callback
+              strip_path: true
+              paths:
+                - /auth/v1/callback
+                - /auth/callback
+          plugins:
+            - name: cors
+              config:
+                origins:
+                  - https://bizcard.simon-gpt.com
+                  - https://supabase.simon-gpt.com
+                  - http://localhost:3000
+                credentials: true
+                methods:
+                  - GET
+                  - POST
+                  - OPTIONS
+                headers:
+                  - Accept
+                  - Authorization
+                  - Content-Type
+                  - Origin
+                  - X-CSRF-TOKEN
+                  - X-Requested-With
+                  - X-Client-Info
+                  - Cookie
+                  - Set-Cookie
+                exposed_headers:
+                  - Set-Cookie
+                max_age: 300
+            - name: request-transformer
+              config:
+                preserve_host: true
+                add:
+                  headers:
+                    - X-Debug-Flow-State:$${cookie.sb-oauth-state}
+                    - X-Debug-PKCE-Verifier:$${cookie.sb-pkce-verifier}
+                    - X-Original-URI:$${uri}
+                    - X-Original-Host:$${host}
+                    - X-Original-Method:$${request_method}
+                  querystring:
+                    - state:$${cookie.sb-oauth-state}
+                    - code_verifier:$${cookie.sb-pkce-verifier}
+      EOL
+      /docker-entrypoint.sh kong docker-start
   supabase-studio:
     image: 'supabase/studio:20240923-2e3e90c'
     healthcheck:
