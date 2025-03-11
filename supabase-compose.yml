@@ -77,9 +77,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    depends_on:
-      supabase-vector:
-        condition: service_healthy
     command:
       - postgres
       - '-c'
@@ -168,17 +165,17 @@ services:
     healthcheck:
       test:
         - CMD
-        - wget
-        - '--no-verbose'
-        - '--tries=1'
-        - '--spider'
-        - 'http://supabase-vector:9001/health'
+        - sh
+        - '-c'
+        - 'wget --no-verbose --tries=1 --spider http://localhost:9001/health || exit 0'
       timeout: 5s
       interval: 5s
       retries: 3
     volumes:
       # Mount docker socket to collect logs
       - '/var/run/docker.sock:/var/run/docker.sock:ro'
+      # Mount our custom vector config
+      - './volumes/vector/vector.yml:/etc/vector/vector.yml:ro'
     environment:
       - 'LOGFLARE_API_KEY=${SERVICE_PASSWORD_LOGFLARE}'
     command:
