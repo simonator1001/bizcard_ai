@@ -29,20 +29,9 @@ services:
       - 'DASHBOARD_PASSWORD=${DASHBOARD_PASS:-admin}'
       - KONG_LOG_LEVEL=debug
     command: >
-      sh -c "cat > /tmp/kong.yml << EOL
-_format_version: '2.1'
-_transform: true
-
-consumers:
-  - username: anon
-    keyauth_credentials:
-      - key: \${SUPABASE_ANON_KEY}
-  - username: service_role
-    keyauth_credentials:
-      - key: \${SUPABASE_SERVICE_KEY}
-EOL
-      && echo 'Kong config created at /tmp/kong.yml' 
-      && /docker-entrypoint.sh kong docker-start"
+      sh -c "echo '{\"_format_version\":\"2.1\",\"_transform\":true,\"consumers\":[{\"username\":\"anon\",\"keyauth_credentials\":[{\"key\":\"${SUPABASE_ANON_KEY}\"}]},{\"username\":\"service_role\",\"keyauth_credentials\":[{\"key\":\"${SUPABASE_SERVICE_KEY}\"}]}]}' > /tmp/kong.yml &&
+      echo 'Kong config created at /tmp/kong.yml' &&
+      /docker-entrypoint.sh kong docker-start"
     ports:
       - ${KONG_PORT_HTTP:-8000}:8000/tcp
       - ${KONG_PORT_HTTPS:-8443}:8443/tcp
@@ -188,18 +177,13 @@ EOL
       interval: 5s
       retries: 3
     volumes:
-      -
-        type: bind
-        source: ./volumes/logs/vector.yml
-        target: /etc/vector/vector.yml
-        read_only: true
-        content: "api:\n  enabled: true\n  address: 0.0.0.0:9001\n\nsources:\n  docker_host:\n    type: docker_logs\n    exclude_containers:\n      - supabase-vector\n\ntransforms:\n  project_logs:\n    type: remap\n    inputs:\n      - docker_host\n    source: |-\n      .project = \"default\"\n      .event_message = del(.message)\n      .appname = del(.container_name)\n      del(.container_created_at)\n      del(.container_id)\n      del(.source_type)\n      del(.stream)\n      del(.label)\n      del(.image)\n      del(.host)\n      del(.stream)\n  router:\n    type: route\n    inputs:\n      - project_logs\n    route:\n      kong: 'starts_with(string!(.appname), \"supabase-kong\")'\n      auth: 'starts_with(string!(.appname), \"supabase-auth\")'\n      rest: 'starts_with(string!(.appname), \"supabase-rest\")'\n      realtime: 'starts_with(string!(.appname), \"realtime-dev\")'\n      storage: 'starts_with(string!(.appname), \"supabase-storage\")'\n      functions: 'starts_with(string!(.appname), \"supabase-functions\")'\n      db: 'starts_with(string!(.appname), \"supabase-db\")'\n  # Ignores non nginx errors since they are related with kong booting up\n  kong_logs:\n    type: remap\n    inputs:\n      - router.kong\n    source: |-\n      req, err = parse_nginx_log(.event_message, \"combined\")\n      if err == null {\n          .timestamp = req.timestamp\n          .metadata.request.headers.referer = req.referer\n          .metadata.request.headers.user_agent = req.agent\n          .metadata.request.headers.cf_connecting_ip = req.client\n          .metadata.request.method = req.method\n          .metadata.request.path = req.path\n          .metadata.request.protocol = req.protocol\n          .metadata.response.status_code = req.status\n      }\n      if err != null {\n        abort\n      }\n  # Ignores non nginx errors since they are related with kong booting up\n  kong_err:\n    type: remap\n    inputs:\n      - router.kong\n    source: |-\n      .metadata.request.method = \"GET\"\n      .metadata.response.status_code = 200\n      parsed, err = parse_nginx_log(.event_message, \"error\")\n      if err == null {\n          .timestamp = parsed.timestamp\n          .severity = parsed.severity\n          .metadata.request.host = parsed.host\n          .metadata.request.headers.cf_connecting_ip = parsed.client\n          url, err = split(parsed.request, \" \")\n          if err == null {\n              .metadata.request.method = url[0]\n              .metadata.request.path = url[1]\n              .metadata.request.protocol = url[2]\n          }\n      }\n      if err != null {\n        abort\n      }\n  # Gotrue logs are structured json strings which frontend parses directly. But we keep metadata for consistency.\n  auth_logs:\n    type: remap\n    inputs:\n      - router.auth\n    source: |-\n      parsed, err = parse_json(.event_message)\n      if err == null {\n          .metadata.timestamp = parsed.time\n          .metadata = merge!(.metadata, parsed)\n      }\n  # PostgREST logs are structured so we separate timestamp from message using regex\n  rest_logs:\n    type: remap\n    inputs:\n      - router.rest\n    source: |-\n      parsed, err = parse_regex(.event_message, r'^(?P<time>.*): (?P<msg>.*)$')\n      if err == null {\n          .event_message = parsed.msg\n          .timestamp = to_timestamp!(parsed.time)\n          .metadata.host = .project\n      }\n  # Realtime logs are structured so we parse the severity level using regex (ignore time because it has no date)\n  realtime_logs:\n    type: remap\n    inputs:\n      - router.realtime\n    source: |-\n      .metadata.project = del(.project)\n      .metadata.external_id = .metadata.project\n      parsed, err = parse_regex(.event_message, r'^(?P<time>\\d+:\\d+:\\d+\\.\\d+) \\[(?P<level>\\w+)\\] (?P<msg>.*)$')\n      if err == null {\n          .event_message = parsed.msg\n          .metadata.level = parsed.level\n      }\n  # Storage logs may contain json objects so we parse them for completeness\n  storage_logs:\n    type: remap\n    inputs:\n      - router.storage\n    source: |-\n      .metadata.project = del(.project)\n      .metadata.tenantId = .metadata.project\n      parsed, err = parse_json(.event_message)\n      if err == null {\n          .event_message = parsed.msg\n          .metadata.level = parsed.level\n          .metadata.timestamp = parsed.time\n          .metadata.context[0].host = parsed.hostname\n          .metadata.context[0].pid = parsed.pid\n      }\n  # Postgres logs some messages to stderr which we map to warning severity level\n  db_logs:\n    type: remap\n    inputs:\n      - router.db\n    source: |-\n      .metadata.host = \"db-default\"\n      .metadata.parsed.timestamp = .timestamp\n\n      parsed, err = parse_regex(.event_message, r'.*(?P<level>INFO|NOTICE|WARNING|ERROR|LOG|FATAL|PANIC?):.*', numeric_groups: true)\n\n      if err != null || parsed == null {\n        .metadata.parsed.error_severity = \"info\"\n      }\n      if parsed != null {\n      .metadata.parsed.error_severity = parsed.level\n      }\n      if .metadata.parsed.error_severity == \"info\" {\n          .metadata.parsed.error_severity = \"log\"\n      }\n      .metadata.parsed.error_severity = upcase!(.metadata.parsed.error_severity)\n\nsinks:\n  logflare_auth:\n    type: 'http'\n    inputs:\n      - auth_logs\n    encoding:\n      codec: 'json'\n    method: 'post'\n    request:\n      retry_max_duration_secs: 10\n    uri: 'http://supabase-analytics:4000/api/logs?source_name=gotrue.logs.prod&api_key=${LOGFLARE_API_KEY?LOGFLARE_API_KEY is required}'\n  logflare_realtime:\n    type: 'http'\n    inputs:\n      - realtime_logs\n    encoding:\n      codec: 'json'\n    method: 'post'\n    request:\n      retry_max_duration_secs: 10\n    uri: 'http://supabase-analytics:4000/api/logs?source_name=realtime.logs.prod&api_key=${LOGFLARE_API_KEY?LOGFLARE_API_KEY is required}'\n  logflare_rest:\n    type: 'http'\n    inputs:\n      - rest_logs\n    encoding:\n      codec: 'json'\n    method: 'post'\n    request:\n      retry_max_duration_secs: 10\n    uri: 'http://supabase-analytics:4000/api/logs?source_name=postgREST.logs.prod&api_key=${LOGFLARE_API_KEY?LOGFLARE_API_KEY is required}'\n  logflare_db:\n    type: 'http'\n    inputs:\n      - db_logs\n    encoding:\n      codec: 'json'\n    method: 'post'\n    request:\n      retry_max_duration_secs: 10\n    # We must route the sink through kong because ingesting logs before logflare is fully initialised will\n    # lead to broken queries from studio. This works by the assumption that containers are started in the\n    # following order: vector > db > logflare > kong\n    uri: 'http://supabase-kong:8000/analytics/v1/api/logs?source_name=postgres.logs&api_key=${LOGFLARE_API_KEY?LOGFLARE_API_KEY is required}'\n  logflare_functions:\n    type: 'http'\n    inputs:\n      - router.functions\n    encoding:\n      codec: 'json'\n    method: 'post'\n    request:\n      retry_max_duration_secs: 10\n    uri: 'http://supabase-analytics:4000/api/logs?source_name=deno-relay-logs&api_key=${LOGFLARE_API_KEY?LOGFLARE_API_KEY is required}'\n  logflare_storage:\n    type: 'http'\n    inputs:\n      - storage_logs\n    encoding:\n      codec: 'json'\n    method: 'post'\n    request:\n      retry_max_duration_secs: 10\n    uri: 'http://supabase-analytics:4000/api/logs?source_name=storage.logs.prod.2&api_key=${LOGFLARE_API_KEY?LOGFLARE_API_KEY is required}'\n  logflare_kong:\n    type: 'http'\n    inputs:\n      - kong_logs\n      - kong_err\n    encoding:\n      codec: 'json'\n    method: 'post'\n    request:\n      retry_max_duration_secs: 10\n    uri: 'http://supabase-analytics:4000/api/logs?source_name=cloudflare.logs.prod&api_key=${LOGFLARE_API_KEY?LOGFLARE_API_KEY is required}'\n"
+      # Mount docker socket to collect logs
       - '/var/run/docker.sock:/var/run/docker.sock:ro'
     environment:
       - 'LOGFLARE_API_KEY=${SERVICE_PASSWORD_LOGFLARE}'
     command:
       - '--config'
-      - etc/vector/vector.yml
+      - /etc/vector/vector.yml
   supabase-rest:
     image: 'postgrest/postgrest:v12.2.0'
     depends_on:
@@ -359,14 +343,10 @@ EOL
     depends_on:
       supabase-minio:
         condition: service_healthy
-    entrypoint:
-      - /entrypoint.sh
-    volumes:
-      -
-        type: bind
-        source: ./entrypoint.sh
-        target: /entrypoint.sh
-        content: "#!/bin/sh\n/usr/bin/mc alias set supabase-minio http://supabase-minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};\n/usr/bin/mc mb --ignore-existing supabase-minio/stub;\nexit 0\n"
+    command: >
+      sh -c "/usr/bin/mc alias set supabase-minio http://supabase-minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} && 
+             /usr/bin/mc mb --ignore-existing supabase-minio/stub && 
+             exit 0"
   supabase-storage:
     image: 'supabase/storage-api:v1.10.1'
     depends_on:
