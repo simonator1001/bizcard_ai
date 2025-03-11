@@ -8,10 +8,10 @@ consumers:
   - username: DASHBOARD
   - username: anon
     keyauth_credentials:
-      - key: ${SUPABASE_ANON_KEY}
+      - key: "${SUPABASE_ANON_KEY}"
   - username: service_role
     keyauth_credentials:
-      - key: ${SUPABASE_SERVICE_KEY}
+      - key: "${SUPABASE_SERVICE_KEY}"
 
 ###
 ### Access Control List
@@ -27,8 +27,8 @@ acls:
 ###
 basicauth_credentials:
   - consumer: DASHBOARD
-    username: ${DASHBOARD_USERNAME}
-    password: ${DASHBOARD_PASSWORD}
+    username: "${DASHBOARD_USERNAME}"
+    password: "${DASHBOARD_PASSWORD}"
 
 ###
 ### API Routes
@@ -106,14 +106,14 @@ services:
           preserve_host: true
           add:
             headers:
-              - "X-Debug-Flow-State:${cookie.sb-oauth-state}"
-              - "X-Debug-PKCE-Verifier:${cookie.sb-pkce-verifier}"
-              - "X-Original-URI:${uri}"
-              - "X-Original-Host:${host}"
-              - "X-Original-Method:${request_method}"
+              - "X-Debug-Flow-State:$${cookie.sb-oauth-state}"
+              - "X-Debug-PKCE-Verifier:$${cookie.sb-pkce-verifier}"
+              - "X-Original-URI:$${uri}"
+              - "X-Original-Host:$${host}"
+              - "X-Original-Method:$${request_method}"
             querystring:
-              - "state:${cookie.sb-oauth-state}"
-              - "code_verifier:${cookie.sb-pkce-verifier}"
+              - "state:$${cookie.sb-oauth-state}"
+              - "code_verifier:$${cookie.sb-pkce-verifier}"
 
   - name: auth-v1-open-token
     url: http://supabase-auth:9999/token
@@ -152,14 +152,14 @@ services:
           preserve_host: true
           add:
             headers:
-              - "X-Debug-Flow-State:${cookie.sb-oauth-state}"
-              - "X-Debug-PKCE-Verifier:${cookie.sb-pkce-verifier}"
-              - "X-Original-URI:${uri}"
-              - "X-Original-Host:${host}"
-              - "X-Original-Method:${request_method}"
+              - "X-Debug-Flow-State:$${cookie.sb-oauth-state}"
+              - "X-Debug-PKCE-Verifier:$${cookie.sb-pkce-verifier}"
+              - "X-Original-URI:$${uri}"
+              - "X-Original-Host:$${host}"
+              - "X-Original-Method:$${request_method}"
             querystring:
-              - "state:${cookie.sb-oauth-state}"
-              - "code_verifier:${cookie.sb-pkce-verifier}"
+              - "state:$${cookie.sb-oauth-state}"
+              - "code_verifier:$${cookie.sb-pkce-verifier}"
 
   - name: auth-v1-open-health
     url: http://supabase-auth:9999/health

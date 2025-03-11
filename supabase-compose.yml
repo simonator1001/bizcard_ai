@@ -1,34 +1,45 @@
 services:
   supabase-kong:
     image: 'kong:2.8.1'
+    container_name: kong.supabase-kong
+    restart: unless-stopped
     depends_on:
-      supabase-analytics:
+      supabase-auth:
         condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - '-f'
+        - 'http://127.0.0.1:8000/auth/v1/health'
+      timeout: 15s
+      interval: 15s
+      retries: 5
+      start_period: 60s
     environment:
-      - SERVICE_FQDN_SUPABASEKONG=https://supabase.simon-gpt.com
-      - 'JWT_SECRET=${SERVICE_PASSWORD_JWT}'
       - KONG_DATABASE=off
-      - KONG_DECLARATIVE_CONFIG=/home/kong/kong.yml
-      - 'KONG_DNS_ORDER=LAST,A,CNAME'
-      - 'KONG_PLUGINS=request-transformer,cors,key-auth,acl,basic-auth'
+      - KONG_DECLARATIVE_CONFIG=/kong/kong.yml
+      - KONG_DNS_ORDER=LAST,A,CNAME
+      - KONG_PLUGINS=request-transformer,cors,key-auth,acl
       - KONG_NGINX_PROXY_PROXY_BUFFER_SIZE=160k
-      - 'KONG_NGINX_PROXY_PROXY_BUFFERS=64 160k'
+      - KONG_NGINX_PROXY_PROXY_BUFFERS=64 160k
+      - 'KONG_JWS_SECRET=${SERVICE_PASSWORD_JWT}'
       - 'SUPABASE_ANON_KEY=${SERVICE_SUPABASEANON_KEY}'
       - 'SUPABASE_SERVICE_KEY=${SERVICE_SUPABASESERVICE_KEY}'
-      - 'DASHBOARD_USERNAME=${SERVICE_USER_ADMIN}'
-      - 'DASHBOARD_PASSWORD=${SERVICE_PASSWORD_ADMIN}'
-      - KONG_PROXY_LISTEN=0.0.0.0:8000
-      - KONG_ADMIN_LISTEN=0.0.0.0:8001
-      - KONG_LOG_LEVEL=debug
+      - 'DASHBOARD_USERNAME=${DASHBOARD_USER:-admin}'
+      - 'DASHBOARD_PASSWORD=${DASHBOARD_PASS:-admin}'
+    command: >
+      sh -c "sleep 10 && /docker-entrypoint.sh kong docker-start"
+    ports:
+      - ${KONG_PORT_HTTP:-8000}:8000/tcp
+      - ${KONG_PORT_HTTPS:-8443}:8443/tcp
     volumes:
-      - './volumes/api/kong.yml:/home/kong/kong.yml'
-    command: "/docker-entrypoint.sh kong docker-start"
-    healthcheck:
-      test: ["CMD", "kong", "health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      - ./volumes/api:/kong
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
   supabase-studio:
     image: 'supabase/studio:20240923-2e3e90c'
     healthcheck:
@@ -196,83 +207,80 @@ services:
     command: postgrest
     exclude_from_hc: true
   supabase-auth:
-    image: 'supabase/gotrue:v2.158.1'
+    image: 'supabase/gotrue:v2.122.1'
+    container_name: auth.supabase-auth
     depends_on:
       supabase-db:
-        condition: service_healthy
-      supabase-analytics:
         condition: service_healthy
     healthcheck:
       test:
         - CMD
         - wget
-        - '--no-verbose'
-        - '--tries=1'
+        - '-q'
         - '--spider'
         - 'http://127.0.0.1:9999/health'
-      timeout: 5s
-      interval: 5s
-      retries: 3
-      start_period: 10s
+      timeout: 15s
+      interval: 15s
+      retries: 5
+      start_period: 60s
     environment:
-        # Core Settings
-        - 'GOTRUE_API_HOST=0.0.0.0'
-        - 'GOTRUE_API_PORT=9999'
-        - 'GOTRUE_SITE_URL=https://supabase.simon-gpt.com'
-        - 'API_EXTERNAL_URL=https://supabase.simon-gpt.com'
-        - 'GOTRUE_DB_DRIVER=postgres'
-        - 'GOTRUE_DB_DATABASE_URL=postgres://supabase_auth_admin:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}'
-        - 'GOTRUE_API_EXTERNAL_URL=https://supabase.simon-gpt.com'
-        - 'GOTRUE_API_ENDPOINT=https://supabase.simon-gpt.com'
-        - 'GOTRUE_PUBLIC_API_ENDPOINT=https://supabase.simon-gpt.com'
-        - 'GOTRUE_JWT_SECRET=${SERVICE_PASSWORD_JWT}'
-        - 'GOTRUE_JWT_EXP=3600'
-        - 'GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated'
-
-        # Google OAuth Settings
-        - 'GOTRUE_EXTERNAL_GOOGLE_ENABLED=true'
-        - 'GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}'
-        - 'GOTRUE_EXTERNAL_GOOGLE_SECRET=${GOOGLE_CLIENT_SECRET}'
-        - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://supabase.simon-gpt.com/auth/v1/callback'
-        - 'GOTRUE_EXTERNAL_GOOGLE_SCOPE=email profile'
-        - 'GOTRUE_URI_ALLOW_LIST=https://bizcard.simon-gpt.com/auth/v1/callback,https://bizcard.simon-gpt.com/auth/callback,https://supabase.simon-gpt.com/auth/v1/callback,http://localhost:3000/auth/v1/callback'
-
-        # Cookie Settings
-        - 'GOTRUE_COOKIE_DOMAIN=simon-gpt.com'
-        - 'GOTRUE_COOKIE_SECURE=true'
-        - 'GOTRUE_COOKIE_SAME_SITE=lax'
-        - 'GOTRUE_COOKIE_NAME=sb-auth'
-        - 'GOTRUE_COOKIE_KEY=${SERVICE_PASSWORD_JWT}'
-        - 'GOTRUE_COOKIE_MAX_AGE=3600'
-        - 'GOTRUE_COOKIE_PATH=/'
-
-        # State Management
-        - 'GOTRUE_STATE_LIFETIME=300'
-        - 'GOTRUE_STATE_SECRET=${SERVICE_PASSWORD_JWT}'
-        - 'GOTRUE_STATE_COOKIE_NAME=sb-oauth-state'
-        - 'GOTRUE_STATE_COOKIE_DOMAIN=simon-gpt.com'
-        - 'GOTRUE_STATE_COOKIE_SECURE=true'
-        - 'GOTRUE_STATE_COOKIE_SAMESITE=lax'
-        - 'GOTRUE_STATE_COOKIE_PATH=/'
-
-        # Security Settings
-        - 'GOTRUE_SECURITY_PKCE_ENABLED=true'
-        - 'GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED=true'
-        - 'GOTRUE_SECURITY_REFRESH_TOKEN_REUSE_INTERVAL=10'
-        - 'GOTRUE_SECURITY_MANUAL_LINKING_ENABLED=true'
-        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_NAME=sb-pkce-verifier'
-        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_DOMAIN=simon-gpt.com'
-        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_SECURE=true'
-        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_SAMESITE=lax'
-        - 'GOTRUE_SECURITY_PKCE_VERIFIER_COOKIE_PATH=/'
-        - 'GOTRUE_SECURITY_FLOW_STATE_TOLERANCE=60'
-
-        # Debug Settings
-        - 'LOG_LEVEL=debug'
-        - 'GOTRUE_LOG_LEVEL=debug'
-        - 'GOTRUE_SECURITY_CAPTCHA_ENABLED=false'
-        - 'GOTRUE_MAILER_AUTOCONFIRM=true'
-        - 'GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_REAUTHENTICATION=false'
+      - PORT=9999
+      - 'GOTRUE_DB_DRIVER=${SERVICE_PASSWORD_DRIVER_GOTRUE:-postgres}'
+      - 'GOTRUE_DB_HOST=${POSTGRES_HOSTNAME:-supabase-db}'
+      - 'GOTRUE_DB_PORT=${POSTGRES_PORT:-5432}'
+      - GOTRUE_DB_USER=supabase_auth_admin
+      - 'GOTRUE_DB_PASSWORD=${SERVICE_PASSWORD_POSTGRES}'
+      - GOTRUE_DB_DATABASE=postgres
+      - 'GOTRUE_DB_NAMESPACE=${POSTGRES_DB_AUTH_NAMESPACE:-auth}'
+      - 'GOTRUE_JWT_ADMIN_ROLES=service_role'
+      - 'GOTRUE_JWT_AUD=authenticated'
+      - 'GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated'
+      - 'GOTRUE_JWT_EXP=3600'
+      - 'GOTRUE_JWT_SECRET=${SERVICE_PASSWORD_JWT}'
+      - 'GOTRUE_API_HOST=${API_HOST:-0.0.0.0}'
+      - 'GOTRUE_MAILER_AUTOCONFIRM=false'
+      - 'GOTRUE_SMTP_ADMIN_EMAIL=${AUTH_EXTERNAL_EMAIL_ADMIN:-admin@email.com}'
+      - 'GOTRUE_SMTP_HOST=${AUTH_SMTP_HOST:-mail}'
+      - 'GOTRUE_SMTP_PORT=${AUTH_SMTP_PORT:-2500}'
+      - 'GOTRUE_SMTP_USER=${AUTH_SMTP_USER:-SMTP_USER}'
+      - 'GOTRUE_SMTP_PASS=${AUTH_SMTP_PASS:-SMTP_PASS}'
+      - 'GOTRUE_SMTP_SENDER_NAME=${AUTH_SMTP_SENDER_NAME:-SMTP_SENDER_NAME}'
+      - 'GOTRUE_EXTERNAL_GITHUB_CLIENT_ID=${AUTH_GITHUB_CLIENT_ID:-GITHUB_CLIENT_ID}'
+      - 'GOTRUE_EXTERNAL_GITHUB_SECRET=${AUTH_GITHUB_SECRET:-GITHUB_SECRET}'
+      - 'GOTRUE_EXTERNAL_GITHUB_REDIRECT_URI=https://supabase.simon-gpt.com/auth/v1/callback'
+      - 'GOTRUE_EXTERNAL_GITHUB_URL=${AUTH_GITHUB_URL:-https://github.com}'
+      - 'GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=${AUTH_GOOGLE_CLIENT_ID:-GOOGLE_CLIENT_ID}'
+      - 'GOTRUE_EXTERNAL_GOOGLE_SECRET=${AUTH_GOOGLE_SECRET:-GOOGLE_SECRET}'
+      - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://supabase.simon-gpt.com/auth/v1/callback'
+      - 'GOTRUE_EXTERNAL_GOOGLE_URL=${AUTH_GOOGLE_URL:-https://accounts.google.com}'
+      - 'GOTRUE_EXTERNAL_APPLE_CLIENT_ID=${AUTH_APPLE_CLIENT_ID:-APPLE_CLIENT_ID}'
+      - 'GOTRUE_EXTERNAL_APPLE_SECRET=${AUTH_APPLE_SECRET:-APPLE_SECRET}'
+      - 'GOTRUE_EXTERNAL_APPLE_REDIRECT_URI=https://supabase.simon-gpt.com/auth/v1/callback'
+      - 'GOTRUE_EXTERNAL_APPLE_URL=${AUTH_APPLE_URL:-https://appleid.apple.com}'
+      - 'GOTRUE_EXTERNAL_AZURE_CLIENT_ID=${AUTH_AZURE_CLIENT_ID:-AZURE_CLIENT_ID}'
+      - 'GOTRUE_EXTERNAL_AZURE_SECRET=${AUTH_AZURE_SECRET:-AZURE_SECRET}'
+      - 'GOTRUE_EXTERNAL_AZURE_REDIRECT_URI=https://supabase.simon-gpt.com/auth/v1/callback'
+      - 'GOTRUE_EXTERNAL_AZURE_URL=${AUTH_AZURE_URL:-https://login.microsoftonline.com}'
+      - 'GOTRUE_EXTERNAL_LINKEDIN_CLIENT_ID=${AUTH_LINKEDIN_CLIENT_ID:-LINKEDIN_CLIENT_ID}'
+      - 'GOTRUE_EXTERNAL_LINKEDIN_SECRET=${AUTH_LINKEDIN_SECRET:-LINKEDIN_SECRET}'
+      - 'GOTRUE_EXTERNAL_LINKEDIN_REDIRECT_URI=https://supabase.simon-gpt.com/auth/v1/callback'
+      - 'GOTRUE_EXTERNAL_LINKEDIN_URL=${AUTH_LINKEDIN_URL:-https://www.linkedin.com}'
+      - 'GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED=true'
+      - 'GOTRUE_MFA_ENABLED=true'
+      - 'GOTRUE_SITE_URL=https://supabase.simon-gpt.com'
+      - 'GOTRUE_SECURITY_COOKIE_DOMAIN=${AUTH_COOKIE_DOMAIN:-.simon-gpt.com}'
+      - 'GOTRUE_SECURITY_ALLOW_EMPTY_COMPANY_LOGO_URL=true'
+      - 'GOTRUE_API_REQUEST_ID_HEADER=cf-ray'
+      - GOTRUE_EXTERNAL_EMAIL_ENABLED=true
+      - GOTRUE_EXTERNAL_PHONE_ENABLED=true
+      - GOTRUE_SMS_AUTOCONFIRM=false
+      - 'GOTRUE_DISABLE_SIGNUPS=${GOTRUE_DISABLE_SIGNUPS:-false}'
+      - GOTRUE_RATE_LIMIT_EMAIL_SENT=10
+      - GOTRUE_RATE_LIMIT_VERIFY_SENT=10
+      - 'GOTRUE_RATE_LIMIT_VERIFY=${AUTH_RATE_LIMIT_VERIFY:-5,60s}'
+      - 'GOTRUE_RATE_LIMIT_TOKEN_REFRESH=${AUTH_RATE_LIMIT_TOKEN_REFRESH:-20,60s}'
+      - GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_REAUTHENTICATION=false
+      - GOTRUE_LOGS_LEVEL=info
   realtime-dev:
     image: 'supabase/realtime:v2.30.34'
     container_name: realtime-dev.supabase-realtime
@@ -292,9 +300,10 @@ services:
         - '-H'
         - 'Authorization: Bearer ${SERVICE_SUPABASEANON_KEY}'
         - 'http://127.0.0.1:4000/api/tenants/realtime-dev/health'
-      timeout: 5s
-      interval: 5s
-      retries: 3
+      timeout: 15s
+      interval: 15s
+      retries: 5
+      start_period: 30s
     environment:
       - PORT=4000
       - 'DB_HOST=${POSTGRES_HOSTNAME:-supabase-db}'
@@ -307,7 +316,7 @@ services:
       - 'API_JWT_SECRET=${SERVICE_PASSWORD_JWT}'
       - FLY_ALLOC_ID=fly123
       - FLY_APP_NAME=realtime
-      - 'SECRET_KEY_BASE=${SECRET_PASSWORD_REALTIME}'
+      - 'SECRET_KEY_BASE=realtime_secret_key_base'
       - 'ERL_AFLAGS=-proto_dist inet_tcp'
       - ENABLE_TAILSCALE=false
       - "DNS_NODES=''"
@@ -448,7 +457,7 @@ services:
         type: bind
         source: ./volumes/functions/main/index.ts
         target: /home/deno/functions/main/index.ts
-        content: "import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'\nimport * as jose from 'https://deno.land/x/jose@v4.14.4/index.ts'\n\nconsole.log('main function started')\n\nconst JWT_SECRET = Deno.env.get('JWT_SECRET')\nconst VERIFY_JWT = Deno.env.get('VERIFY_JWT') === 'true'\n\nfunction getAuthToken(req: Request) {\n  const authHeader = req.headers.get('authorization')\n  if (!authHeader) {\n    throw new Error('Missing authorization header')\n  }\n  const [bearer, token] = authHeader.split(' ')\n  if (bearer !== 'Bearer') {\n    throw new Error(`Auth header is not 'Bearer {token}'`)\n  }\n  return token\n}\n\nasync function verifyJWT(jwt: string): Promise<boolean> {\n  const encoder = new TextEncoder()\n  const secretKey = encoder.encode(JWT_SECRET)\n  try {\n    await jose.jwtVerify(jwt, secretKey)\n  } catch (err) {\n    console.error(err)\n    return false\n  }\n  return true\n}\n\nserve(async (req: Request) => {\n  if (req.method !== 'OPTIONS' && VERIFY_JWT) {\n    try {\n      const token = getAuthToken(req)\n      const isValidJWT = await verifyJWT(token)\n\n      if (!isValidJWT) {\n        return new Response(JSON.stringify({ msg: 'Invalid JWT' }), {\n          status: 401,\n          headers: { 'Content-Type': 'application/json' },\n        })\n      }\n    } catch (e) {\n      console.error(e)\n      return new Response(JSON.stringify({ msg: e.toString() }), {\n        status: 401,\n        headers: { 'Content-Type': 'application/json' },\n      })\n    }\n  }\n\n  const url = new URL(req.url)\n  const { pathname } = url\n  const path_parts = pathname.split('/')\n  const service_name = path_parts[1]\n\n  if (!service_name || service_name === '') {\n    const error = { msg: 'missing function name in request' }\n    return new Response(JSON.stringify(error), {\n      status: 400,\n      headers: { 'Content-Type': 'application/json' },\n    })\n  }\n\n  const servicePath = `/home/deno/functions/${service_name}`\n  console.error(`serving the request with ${servicePath}`)\n\n  const memoryLimitMb = 150\n  const workerTimeoutMs = 1 * 60 * 1000\n  const noModuleCache = false\n  const importMapPath = null\n  const envVarsObj = Deno.env.toObject()\n  const envVars = Object.keys(envVarsObj).map((k) => [k, envVarsObj[k]])\n\n  try {\n    const worker = await EdgeRuntime.userWorkers.create({\n      servicePath,\n      memoryLimitMb,\n      workerTimeoutMs,\n      noModuleCache,\n      importMapPath,\n      envVars,\n    })\n    return await worker.fetch(req)\n  } catch (e) {\n    const error = { msg: e.toString() }\n    return new Response(JSON.stringify(error), {\n      status: 500,\n      headers: { 'Content-Type': 'application/json' },\n    })\n  }\n})\n"
+        content: "import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'\nimport * as jose from 'https://deno.land/x/jose@v4.14.4/index.ts'\n\nconsole.log('main function started')\n\nconst JWT_SECRET = Deno.env.get('JWT_SECRET')\nconst VERIFY_JWT = Deno.env.get('VERIFY_JWT') === 'true'\n\nfunction getAuthToken(req: Request) {\n  const authHeader = req.headers.get('authorization')\n  if (!authHeader) {\n    throw new Error('Missing authorization header')\n  }\n  const [bearer, token] = authHeader.split(' ')\n  if (bearer !== 'Bearer') {\n    throw new Error(`Auth header is not 'Bearer {token}'`)\n  }\n  return token\n}\n\nasync function verifyJWT(jwt: string): Promise<boolean> {\n  const encoder = new TextEncoder()\n  const secretKey = encoder.encode(JWT_SECRET)\n  try {\n    await jose.jwtVerify(jwt, secretKey)\n  } catch (err) {\n    console.error(err)\n    return false\n  }\n  return true\n}\n\nserve(async (req: Request) => {\n  if (req.method !== 'OPTIONS' && VERIFY_JWT) {\n    try {\n      const token = getAuthToken(req)\n      const isValidJWT = await verifyJWT(token)\n\n      if (!isValidJWT) {\n        return new Response(JSON.stringify({ msg: 'Invalid JWT' }), {\n          status: 401,\n          headers: { 'Content-Type': 'application/json' },\n        })\n      }\n    } catch (e) {\n      console.error(e)\n      return new Response(JSON.stringify({ msg: e.toString() }), {\n        status: 401,\n        headers: { 'Content-Type': 'application/json' },\n      }))\n    }\n  }\n\n  const url = new URL(req.url)\n  const { pathname } = url\n  const path_parts = pathname.split('/')\n  const service_name = path_parts[1]\n\n  if (!service_name || service_name === '') {\n    const error = { msg: 'missing function name in request' }\n    return new Response(JSON.stringify(error), {\n      status: 400,\n      headers: { 'Content-Type': 'application/json' },\n    })\n  }\n\n  const servicePath = `/home/deno/functions/${service_name}`\n  console.error(`serving the request with ${servicePath}`)\n\n  const memoryLimitMb = 150\n  const workerTimeoutMs = 1 * 60 * 1000\n  const noModuleCache = false\n  const importMapPath = null\n  const envVarsObj = Deno.env.toObject()\n  const envVars = Object.keys(envVarsObj).map((k) => [k, envVarsObj[k]])\n\n  try {\n    const worker = await EdgeRuntime.userWorkers.create({\n      servicePath,\n      memoryLimitMb,\n      workerTimeoutMs,\n      noModuleCache,\n      importMapPath,\n      envVars,\n    })\n    return await worker.fetch(req)\n  } catch (e) {\n    const error = { msg: e.toString() }\n    return new Response(JSON.stringify(error), {\n      status: 500,\n      headers: { 'Content-Type': 'application/json' },\n    })\n  }\n})\n"
       -
         type: bind
         source: ./volumes/functions/hello/index.ts
