@@ -207,7 +207,7 @@ services:
     command: postgrest
     exclude_from_hc: true
   supabase-auth:
-    image: 'supabase/gotrue:v2.122.1'
+    image: 'supabase/gotrue:v2.158.1'
     container_name: auth.supabase-auth
     depends_on:
       supabase-db:
