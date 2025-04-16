@@ -112,8 +112,13 @@ export default async function handler(
     const userSub = await SubscriptionService.getCurrentSubscription(userData.id);
     console.log('[SCAN-API-DEBUG] Current subscription:', userSub);
     
+    // Check if user can scan
     const canScan = DEBUG_BYPASS_SCAN_LIMIT || await SubscriptionService.canPerformAction(userData.id, 'scan');
     console.log('[SCAN-API-DEBUG] Can user scan?', canScan);
+    
+    // Also check if user can track another company
+    const canTrackCompany = DEBUG_BYPASS_SCAN_LIMIT || await SubscriptionService.canPerformAction(userData.id, 'track_company');
+    console.log('[SCAN-API-DEBUG] Can user track companies?', canTrackCompany);
     
     if (!canScan) {
       console.error('[SCAN-API-DEBUG] User has reached scan limit. Details:', {
@@ -130,7 +135,23 @@ export default async function handler(
         }
       });
     }
-    console.log('[SCAN-API-DEBUG] 7b. User can perform scan, continuing...');
+    
+    if (!canTrackCompany) {
+      console.error('[SCAN-API-DEBUG] User has reached company tracking limit. Details:', {
+        userId: userData.id,
+        usage: userUsage,
+        subscription: userSub
+      });
+      return res.status(403).json({ 
+        error: 'Failed to process business card',
+        message: 'Company tracking limit reached for current subscription tier',
+        details: {
+          usage: userUsage,
+          subscription: userSub
+        }
+      });
+    }
+    console.log('[SCAN-API-DEBUG] 7b. User can perform scan and track company, continuing...');
 
     console.log('[SCAN] Image received, size:', Math.ceil(image.length / 1024), 'KB')
 
@@ -220,7 +241,9 @@ export default async function handler(
       address: extractedInfo.address?.english || '',
       address_zh: extractedInfo.address?.chinese || '',
       image_url: imageUrl,
-      raw_text: ocrResult.raw_text || ''
+      raw_text: ocrResult.raw_text || '',
+      // Add flag to indicate whether this should count as a company
+      increment_company_count: !!(extractedInfo.company?.english || extractedInfo.company?.chinese)
     }
 
     console.log('[SCAN] Prepared card data:', {
