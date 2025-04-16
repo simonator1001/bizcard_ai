@@ -1,6 +1,6 @@
 {
-  "/api/test/route": "app/api/test/route.js",
   "/api/chat/route": "app/api/chat/route.js",
+  "/api/test/route": "app/api/test/route.js",
   "/_not-found/page": "app/_not-found/page.js",
   "/pricing/page": "app/pricing/page.js",
   "/payment/page": "app/payment/page.js",

@@ -14,6 +14,9 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Add temporary debug bypass flag
+  const DEBUG_BYPASS_SCAN_LIMIT = true; // Set to false when done testing
+  
   console.log('[SCAN-API-DEBUG] 1. Request received:', {
     method: req.method,
     headers: {
@@ -99,14 +102,32 @@ export default async function handler(
       sessionId: session?.access_token ? session.access_token.substring(0, 10) + '...' : 'none'
     });
 
-    // Check if user can perform a scan (missing in original code)
-    console.log('[SCAN-API-DEBUG] 7a. Checking scan limit for user');
-    const canScan = await SubscriptionService.canPerformAction(userData.id, 'scan');
+    // Enhanced subscription check with detailed debugging
+    console.log('[SCAN-API-DEBUG] 7a. Checking scan limit for user:', userData.id);
+    
+    // Get detailed usage and subscription info
+    const userUsage = await SubscriptionService.getCurrentUsage(userData.id);
+    console.log('[SCAN-API-DEBUG] Current usage:', userUsage);
+    
+    const userSub = await SubscriptionService.getCurrentSubscription(userData.id);
+    console.log('[SCAN-API-DEBUG] Current subscription:', userSub);
+    
+    const canScan = DEBUG_BYPASS_SCAN_LIMIT || await SubscriptionService.canPerformAction(userData.id, 'scan');
+    console.log('[SCAN-API-DEBUG] Can user scan?', canScan);
+    
     if (!canScan) {
-      console.error('[SCAN-API-DEBUG] User has reached scan limit');
+      console.error('[SCAN-API-DEBUG] User has reached scan limit. Details:', {
+        userId: userData.id,
+        usage: userUsage,
+        subscription: userSub
+      });
       return res.status(403).json({ 
         error: 'Failed to process business card',
-        message: 'Scanning limit reached for current subscription tier' 
+        message: 'Scanning limit reached for current subscription tier',
+        details: {
+          usage: userUsage,
+          subscription: userSub
+        }
       });
     }
     console.log('[SCAN-API-DEBUG] 7b. User can perform scan, continuing...');
