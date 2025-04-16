@@ -99,6 +99,18 @@ export default async function handler(
       sessionId: session?.access_token ? session.access_token.substring(0, 10) + '...' : 'none'
     });
 
+    // Check if user can perform a scan (missing in original code)
+    console.log('[SCAN-API-DEBUG] 7a. Checking scan limit for user');
+    const canScan = await SubscriptionService.canPerformAction(userData.id, 'scan');
+    if (!canScan) {
+      console.error('[SCAN-API-DEBUG] User has reached scan limit');
+      return res.status(403).json({ 
+        error: 'Failed to process business card',
+        message: 'Scanning limit reached for current subscription tier' 
+      });
+    }
+    console.log('[SCAN-API-DEBUG] 7b. User can perform scan, continuing...');
+
     console.log('[SCAN] Image received, size:', Math.ceil(image.length / 1024), 'KB')
 
     // Step 1: Perform OCR
@@ -230,6 +242,16 @@ export default async function handler(
         user_id: savedCard.user_id
       });
 
+      // Increment the user's scan usage count (missing in original code)
+      try {
+        console.log('[SCAN] Incrementing scan usage count for user:', userData.id);
+        await SubscriptionService.incrementUsage(userData.id, 'scan');
+        console.log('[SCAN] Successfully incremented scan usage count');
+      } catch (incError) {
+        console.error('[SCAN] Error incrementing scan usage count:', incError);
+        // Continue anyway as the scan was successful
+      }
+
       return res.status(200).json(savedCard);
     }
 
@@ -255,6 +277,16 @@ export default async function handler(
       id: savedCard.id,
       user_id: savedCard.user_id
     })
+
+    // Increment the user's scan usage count (missing in original code)
+    try {
+      console.log('[SCAN] Incrementing scan usage count for user:', userData.id);
+      await SubscriptionService.incrementUsage(userData.id, 'scan');
+      console.log('[SCAN] Successfully incremented scan usage count');
+    } catch (incError) {
+      console.error('[SCAN] Error incrementing scan usage count:', incError);
+      // Continue anyway as the scan was successful
+    }
 
     // Step 4: Return the saved card data
     console.log('[SCAN] Scan completed successfully')
