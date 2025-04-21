@@ -232,7 +232,7 @@ export default async function handler(
       user_id: userData.id,
       name: extractedInfo.name?.english || '',
       name_zh: extractedInfo.name?.chinese || '',
-      company: extractedInfo.company?.english || '',
+      company: extractedInfo.company?.english || '[No Company]',
       company_zh: extractedInfo.company?.chinese || '',
       title: extractedInfo.title?.english || '',
       title_zh: extractedInfo.title?.chinese || '',
@@ -241,9 +241,9 @@ export default async function handler(
       address: extractedInfo.address?.english || '',
       address_zh: extractedInfo.address?.chinese || '',
       image_url: imageUrl,
-      raw_text: ocrResult.raw_text || '',
-      // Add flag to indicate whether this should count as a company
-      increment_company_count: !!(extractedInfo.company?.english || extractedInfo.company?.chinese)
+      raw_text: ocrResult.raw_text || ''
+      // Removed for local development until migration is applied
+      // increment_company_count: !!(extractedInfo.company?.english || extractedInfo.company?.chinese)
     }
 
     console.log('[SCAN] Prepared card data:', {
