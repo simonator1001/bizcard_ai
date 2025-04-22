@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Search, Grid3X3, List, Table, FileDown, Copy, ChevronDown } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -27,12 +26,10 @@ export default function SearchToolbar({
   onExportCSV,
 }: SearchToolbarProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [searchFocused, setSearchFocused] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  // Handle clicks outside the search area to collapse on mobile
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -57,37 +54,20 @@ export default function SearchToolbar({
     <Card className="border-border bg-card">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between p-4">
         {/* Search Bar */}
-        <div 
-          ref={searchRef}
-          className={`relative flex-grow max-w-2xl ${isExpanded ? 'z-10' : ''}`}
-        >
-          <motion.div
-            animate={{
-              scale: searchFocused ? 1.01 : 1,
-              boxShadow: searchFocused ? "0 4px 20px rgba(0, 0, 0, 0.1)" : "0 0 0 rgba(0, 0, 0, 0)",
-            }}
-            transition={{ duration: 0.2 }}
-            className="relative rounded-lg"
-          >
+        <div ref={searchRef} className="relative flex-grow max-w-2xl">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-5 w-5" />
             <Input
               type="text"
               placeholder="Search cards..."
               value={searchValue}
-              className="w-full pl-10 pr-4 py-2 border-input bg-background focus:ring-2 focus:ring-ring focus:border-transparent"
+              className="w-full pl-10"
               onChange={handleSearchChange}
-              onFocus={() => {
-                setSearchFocused(true);
-                setIsExpanded(true);
-              }}
-              onBlur={() => setSearchFocused(false)}
+              onFocus={() => setIsExpanded(true)}
               aria-label="Search cards"
             />
             {searchValue && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
+              <button
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 onClick={() => {
                   setSearchValue('');
@@ -96,128 +76,61 @@ export default function SearchToolbar({
               >
                 <span className="sr-only">Clear search</span>
                 ×
-              </motion.button>
+              </button>
             )}
-          </motion.div>
+          </div>
         </div>
 
-        {/* Controls - Hidden on mobile when search is expanded */}
-        <AnimatePresence>
-          {(!isExpanded || window.innerWidth >= 640) && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-wrap gap-3 items-center sm:flex-nowrap"
-            >
-              {/* Sort Dropdown */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="gap-2">
-                          <span className="hidden sm:inline">Sort by</span>
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onSortChange('dateAdded')}>
-                          Date Added
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onSortChange('name')}>
-                          Name
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onSortChange('company')}>
-                          Company
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Sort cards</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              {/* View Toggle Buttons */}
-              <div className="flex gap-1 border border-input rounded-lg p-1 bg-muted/30">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-9 w-9 ${viewMode === 'list' ? 'bg-background shadow-sm' : 'hover:bg-background/60'}`}
-                        onClick={() => handleViewModeChange('list')}
-                        aria-label="List view"
-                      >
-                        <List className="h-5 w-5" />
+        {/* Controls */}
+        {(!isExpanded || window.innerWidth >= 640) && (
+          <div className="flex flex-wrap gap-3 items-center sm:flex-nowrap">
+            {/* Sort Dropdown */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="gap-2">
+                        <span className="hidden sm:inline">Sort by</span>
+                        <ChevronDown className="h-4 w-4" />
                       </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>List view</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => onSortChange('dateAdded')}>
+                        Date Added
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onSortChange('name')}>
+                        Name
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onSortChange('company')}>
+                        Company
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Sort cards</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-9 w-9 ${viewMode === 'grid' ? 'bg-background shadow-sm' : 'hover:bg-background/60'}`}
-                        onClick={() => handleViewModeChange('grid')}
-                        aria-label="Grid view"
-                      >
-                        <Grid3X3 className="h-5 w-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Grid view</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-9 w-9 ${viewMode === 'table' ? 'bg-background shadow-sm' : 'hover:bg-background/60'}`}
-                        onClick={() => handleViewModeChange('table')}
-                        aria-label="Table view"
-                      >
-                        <Table className="h-5 w-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Table view</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-
-              {/* Action Buttons */}
+            {/* View Toggle Buttons */}
+            <div className="flex gap-1 border border-input rounded-lg p-1 bg-muted/30">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="icon"
-                      className="h-9 w-9 sm:w-auto sm:px-4"
-                      onClick={onManageDuplicates}
-                      aria-label="Manage duplicates"
+                      className={`h-9 w-9 ${viewMode === 'list' ? 'bg-background shadow-sm' : 'hover:bg-background/60'}`}
+                      onClick={() => handleViewModeChange('list')}
+                      aria-label="List view"
                     >
-                      <Copy className="h-5 w-5" />
-                      <span className="hidden sm:inline ml-2">Manage Duplicates</span>
+                      <List className="h-5 w-5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Manage duplicate cards</p>
+                    <p>List view</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -226,24 +139,83 @@ export default function SearchToolbar({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant="default"
+                      variant="ghost"
                       size="icon"
-                      className="h-9 w-9 sm:w-auto sm:px-4"
-                      onClick={onExportCSV}
-                      aria-label="Export CSV"
+                      className={`h-9 w-9 ${viewMode === 'grid' ? 'bg-background shadow-sm' : 'hover:bg-background/60'}`}
+                      onClick={() => handleViewModeChange('grid')}
+                      aria-label="Grid view"
                     >
-                      <FileDown className="h-5 w-5" />
-                      <span className="hidden sm:inline ml-2">Export CSV</span>
+                      <Grid3X3 className="h-5 w-5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Export cards as CSV</p>
+                    <p>Grid view</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-9 w-9 ${viewMode === 'table' ? 'bg-background shadow-sm' : 'hover:bg-background/60'}`}
+                      onClick={() => handleViewModeChange('table')}
+                      aria-label="Table view"
+                    >
+                      <Table className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Table view</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+
+            {/* Action Buttons */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 sm:w-auto sm:px-4"
+                    onClick={onManageDuplicates}
+                    aria-label="Manage duplicates"
+                  >
+                    <Copy className="h-5 w-5" />
+                    <span className="hidden sm:inline ml-2">Manage Duplicates</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Manage duplicate cards</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="default"
+                    size="icon"
+                    className="h-9 w-9 sm:w-auto sm:px-4"
+                    onClick={onExportCSV}
+                    aria-label="Export CSV"
+                  >
+                    <FileDown className="h-5 w-5" />
+                    <span className="hidden sm:inline ml-2">Export CSV</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Export cards as CSV</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
       </div>
     </Card>
   );
