@@ -297,130 +297,132 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
 
   return (
     <div className="space-y-4 min-h-screen pb-8">
-      <div className="flex justify-center w-full sticky top-0 z-10 bg-background/80">
+      <div className="flex justify-center w-full sticky top-0 z-10 bg-background/80 backdrop-blur-sm">
         <div className="flex items-center w-[80%] max-w-[1200px] py-4">
           <div className="flex items-center gap-2 w-full rounded-full px-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 type="text"
                 placeholder="Search cards..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-9 pl-9 text-sm border-none focus:ring-0 bg-transparent rounded-full"
+                className="w-full h-9 pl-9 text-sm border-none focus:ring-0 bg-white/80 rounded-full"
               />
             </div>
             
-            <Dock 
-              className="bg-red-500 backdrop-blur-sm border-0 rounded-full py-1.5 px-2" 
-              magnification={40}
-              distance={40}
-              panelHeight={40}
-            >
-              <DockItem className="group">
-                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  Date Added
-                </DockLabel>
-                <DockIcon>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-[28px] h-[28px] text-white hover:text-white hover:bg-white/10"
-                  >
-                    <span className="text-xs">Date</span>
-                  </Button>
-                </DockIcon>
-              </DockItem>
+            <div className="bg-red-500 rounded-full">
+              <Dock 
+                className="backdrop-blur-sm border-0 rounded-full py-1.5 px-2" 
+                magnification={40}
+                distance={40}
+                panelHeight={40}
+              >
+                <DockItem className="group">
+                  <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                    Date Added
+                  </DockLabel>
+                  <DockIcon>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-[28px] h-[28px] text-white hover:text-white hover:bg-white/10"
+                    >
+                      <span className="text-xs">Date</span>
+                    </Button>
+                  </DockIcon>
+                </DockItem>
 
-              <DockItem className="group">
-                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  List View
-                </DockLabel>
-                <DockIcon>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "w-[28px] h-[28px] text-white hover:text-white",
-                      viewMode === 'list' ? "bg-white/20" : "hover:bg-white/10"
-                    )}
-                    onClick={() => setViewMode('list')}
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                </DockIcon>
-              </DockItem>
+                <DockItem className="group">
+                  <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                    List View
+                  </DockLabel>
+                  <DockIcon>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "w-[28px] h-[28px] text-white hover:text-white",
+                        viewMode === 'list' ? "bg-white/20" : "hover:bg-white/10"
+                      )}
+                      onClick={() => setViewMode('list')}
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </DockIcon>
+                </DockItem>
 
-              <DockItem className="group">
-                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  Grid View
-                </DockLabel>
-                <DockIcon>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "w-[28px] h-[28px] text-white hover:text-white",
-                      viewMode === 'grid' ? "bg-white/20" : "hover:bg-white/10"
-                    )}
-                    onClick={() => setViewMode('grid')}
-                  >
-                    <Grid className="h-4 w-4" />
-                  </Button>
-                </DockIcon>
-              </DockItem>
+                <DockItem className="group">
+                  <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                    Grid View
+                  </DockLabel>
+                  <DockIcon>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "w-[28px] h-[28px] text-white hover:text-white",
+                        viewMode === 'grid' ? "bg-white/20" : "hover:bg-white/10"
+                      )}
+                      onClick={() => setViewMode('grid')}
+                    >
+                      <Grid className="h-4 w-4" />
+                    </Button>
+                  </DockIcon>
+                </DockItem>
 
-              <DockItem className="group">
-                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  Motion View
-                </DockLabel>
-                <DockIcon>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "w-[28px] h-[28px] text-white hover:text-white",
-                      viewMode === 'grid-motion' ? "bg-white/20" : "hover:bg-white/10"
-                    )}
-                    onClick={() => setViewMode('grid-motion')}
-                  >
-                    <Layout className="h-4 w-4" />
-                  </Button>
-                </DockIcon>
-              </DockItem>
+                <DockItem className="group">
+                  <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                    Motion View
+                  </DockLabel>
+                  <DockIcon>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "w-[28px] h-[28px] text-white hover:text-white",
+                        viewMode === 'grid-motion' ? "bg-white/20" : "hover:bg-white/10"
+                      )}
+                      onClick={() => setViewMode('grid-motion')}
+                    >
+                      <Layout className="h-4 w-4" />
+                    </Button>
+                  </DockIcon>
+                </DockItem>
 
-              <DockItem className="group">
-                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  Manage Duplicates
-                </DockLabel>
-                <DockIcon>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-[28px] h-[28px] text-white hover:text-white hover:bg-white/10"
-                    onClick={handleDuplicateManagerOpen}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </DockIcon>
-              </DockItem>
+                <DockItem className="group">
+                  <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                    Manage Duplicates
+                  </DockLabel>
+                  <DockIcon>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-[28px] h-[28px] text-white hover:text-white hover:bg-white/10"
+                      onClick={handleDuplicateManagerOpen}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </DockIcon>
+                </DockItem>
 
-              <DockItem className="group">
-                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  Export CSV
-                </DockLabel>
-                <DockIcon>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-[28px] h-[28px] text-white hover:text-white hover:bg-white/10"
-                    onClick={handleExportCSV}
-                  >
-                    <FileDown className="h-4 w-4" />
-                  </Button>
-                </DockIcon>
-              </DockItem>
-            </Dock>
+                <DockItem className="group">
+                  <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                    Export CSV
+                  </DockLabel>
+                  <DockIcon>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-[28px] h-[28px] text-white hover:text-white hover:bg-white/10"
+                      onClick={handleExportCSV}
+                    >
+                      <FileDown className="h-4 w-4" />
+                    </Button>
+                  </DockIcon>
+                </DockItem>
+              </Dock>
+            </div>
           </div>
         </div>
       </div>
