@@ -299,19 +299,19 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
     <div className="space-y-4 min-h-screen pb-8">
       <div className="flex justify-center w-full sticky top-0 z-10 bg-background/80 backdrop-blur-sm">
         <div className="flex items-center w-[80%] max-w-[1200px] py-4">
-          <div className="flex items-center gap-2 w-full rounded-full px-2">
+          <div className="flex items-center gap-2 w-full bg-white/80 rounded-full border border-gray-200/50 shadow-sm px-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 type="text"
                 placeholder="Search cards..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-9 pl-9 text-sm border-none focus:ring-0 bg-white/80 rounded-full"
+                className="w-full h-9 pl-9 text-sm border-none focus:ring-0 bg-transparent rounded-full"
               />
             </div>
             
-            <div className="bg-red-500 rounded-full">
+            <div className="border-l border-gray-200/50 pl-2">
               <Dock 
                 className="backdrop-blur-sm border-0 rounded-full py-1.5 px-2" 
                 magnification={40}
@@ -326,7 +326,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="w-[28px] h-[28px] text-white hover:text-white hover:bg-white/10"
+                      className="w-[28px] h-[28px] text-red-500 hover:text-red-700 hover:bg-red-50"
                     >
                       <span className="text-xs">Date</span>
                     </Button>
@@ -342,8 +342,8 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
                       variant="ghost"
                       size="icon"
                       className={cn(
-                        "w-[28px] h-[28px] text-white hover:text-white",
-                        viewMode === 'list' ? "bg-white/20" : "hover:bg-white/10"
+                        "w-[28px] h-[28px] text-red-500 hover:text-red-700",
+                        viewMode === 'list' ? "bg-red-100" : "hover:bg-red-50"
                       )}
                       onClick={() => setViewMode('list')}
                     >
@@ -361,8 +361,8 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
                       variant="ghost"
                       size="icon"
                       className={cn(
-                        "w-[28px] h-[28px] text-white hover:text-white",
-                        viewMode === 'grid' ? "bg-white/20" : "hover:bg-white/10"
+                        "w-[28px] h-[28px] text-red-500 hover:text-red-700",
+                        viewMode === 'grid' ? "bg-red-100" : "hover:bg-red-50"
                       )}
                       onClick={() => setViewMode('grid')}
                     >
@@ -380,8 +380,8 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
                       variant="ghost"
                       size="icon"
                       className={cn(
-                        "w-[28px] h-[28px] text-white hover:text-white",
-                        viewMode === 'grid-motion' ? "bg-white/20" : "hover:bg-white/10"
+                        "w-[28px] h-[28px] text-red-500 hover:text-red-700",
+                        viewMode === 'grid-motion' ? "bg-red-100" : "hover:bg-red-50"
                       )}
                       onClick={() => setViewMode('grid-motion')}
                     >
@@ -398,7 +398,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="w-[28px] h-[28px] text-white hover:text-white hover:bg-white/10"
+                      className="w-[28px] h-[28px] text-red-500 hover:text-red-700 hover:bg-red-50"
                       onClick={handleDuplicateManagerOpen}
                     >
                       <Copy className="h-4 w-4" />
@@ -414,7 +414,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="w-[28px] h-[28px] text-white hover:text-white hover:bg-white/10"
+                      className="w-[28px] h-[28px] text-red-500 hover:text-red-700 hover:bg-red-50"
                       onClick={handleExportCSV}
                     >
                       <FileDown className="h-4 w-4" />
