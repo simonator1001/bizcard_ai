@@ -28,26 +28,26 @@
     ]
   },
   "node_modules/.pnpm/@supabase+auth-js@2.69.1/node_modules/@supabase/auth-js/dist/module/lib/helpers.js -> @supabase/node-fetch": {
-    "id": 98761,
+    "id": 8155,
     "files": []
   },
   "node_modules/.pnpm/@supabase+functions-js@2.4.4/node_modules/@supabase/functions-js/dist/module/helper.js -> @supabase/node-fetch": {
-    "id": 98761,
+    "id": 8155,
     "files": []
   },
   "node_modules/.pnpm/@supabase+realtime-js@2.11.2/node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js -> @supabase/node-fetch": {
-    "id": 98761,
+    "id": 8155,
     "files": []
   },
   "node_modules/.pnpm/@supabase+realtime-js@2.11.2/node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js -> ws": {
-    "id": 91454,
+    "id": 85120,
     "files": [
       "static/chunks/120.13480d7cadcfa082.js",
       "static/chunks/454.b3ee5d86cbf220f9.js"
     ]
   },
   "node_modules/.pnpm/@supabase+storage-js@2.7.1/node_modules/@supabase/storage-js/dist/module/lib/helpers.js -> @supabase/node-fetch": {
-    "id": 98761,
+    "id": 8155,
     "files": []
   }
 }
