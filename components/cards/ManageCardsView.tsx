@@ -297,9 +297,9 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
 
   return (
     <div className="space-y-4 min-h-screen pb-8">
-      <div className="flex justify-center w-full sticky top-0 z-10 bg-background/80 backdrop-blur-sm py-4">
-        <div className="flex items-center w-[80%] max-w-[1200px]">
-          <div className="flex items-center gap-2 w-full bg-white/50 backdrop-blur-sm rounded-full px-2">
+      <div className="flex justify-center w-full sticky top-0 z-10 bg-background/80">
+        <div className="flex items-center w-[80%] max-w-[1200px] py-4">
+          <div className="flex items-center gap-2 w-full rounded-full px-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -307,12 +307,12 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
                 placeholder="Search cards..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-9 pl-9 text-sm border border-gray-200/50 focus:ring-0 bg-transparent rounded-full"
+                className="w-full h-9 pl-9 text-sm border-none focus:ring-0 bg-transparent rounded-full"
               />
             </div>
             
             <Dock 
-              className="bg-neutral-900/90 backdrop-blur-sm border-0 rounded-full py-1.5 px-2" 
+              className="bg-red-500 backdrop-blur-sm border-0 rounded-full py-1.5 px-2" 
               magnification={40}
               distance={40}
               panelHeight={40}
