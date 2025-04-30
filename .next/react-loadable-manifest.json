@@ -2,28 +2,24 @@
   "components/i18n-provider.tsx -> @/src/i18n/locales/en.json": {
     "id": "components/i18n-provider.tsx -> @/src/i18n/locales/en.json",
     "files": [
-      "static/chunks/_app-pages-browser_src_i18n_locales_en_json.js",
       "static/chunks/src_i18n_locales_en_json.js"
     ]
   },
   "components/i18n-provider.tsx -> @/src/i18n/locales/es.json": {
     "id": "components/i18n-provider.tsx -> @/src/i18n/locales/es.json",
     "files": [
-      "static/chunks/_app-pages-browser_src_i18n_locales_es_json.js",
       "static/chunks/src_i18n_locales_es_json.js"
     ]
   },
   "components/i18n-provider.tsx -> @/src/i18n/locales/zh-TW.json": {
     "id": "components/i18n-provider.tsx -> @/src/i18n/locales/zh-TW.json",
     "files": [
-      "static/chunks/_app-pages-browser_src_i18n_locales_zh-TW_json.js",
       "static/chunks/src_i18n_locales_zh-TW_json.js"
     ]
   },
   "components/i18n-provider.tsx -> @/src/i18n/locales/zh.json": {
     "id": "components/i18n-provider.tsx -> @/src/i18n/locales/zh.json",
     "files": [
-      "static/chunks/_app-pages-browser_src_i18n_locales_zh_json.js",
       "static/chunks/src_i18n_locales_zh_json.js"
     ]
   },
@@ -42,7 +38,6 @@
   "node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js -> ws": {
     "id": "node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js -> ws",
     "files": [
-      "static/chunks/_app-pages-browser_node_modules_ws_browser_js.js",
       "static/chunks/node_modules_ws_browser_js.js"
     ]
   },
