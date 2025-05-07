@@ -203,7 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithProvider: async (provider) => {
           try {
             const origin = typeof window !== 'undefined' ? window.location.origin : ''
-            const redirectUrl = 'https://bizcard.simon-gpt.com/auth/v1/callback'
+            const redirectUrl = `${origin}/auth/v1/callback`
             
             console.debug('[AuthContext] Signing in with provider:', {
               provider,

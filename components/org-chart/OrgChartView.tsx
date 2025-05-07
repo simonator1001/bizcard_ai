@@ -8,14 +8,19 @@ import { BusinessCard } from '@/types/business-card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BusinessCardDialog } from '../cards/BusinessCardDialog';
 import { OrgChart } from './OrgChart';
-import { TreeNodeDatum } from 'react-d3-tree';
+import { RawNodeDatum } from 'react-d3-tree';
 
-interface NodeData extends TreeNodeDatum {
+interface NodeData extends RawNodeDatum {
   name: string;
-  position: string;
-  email: string;
+  position?: string;
+  email?: string;
   level?: 'executive' | 'manager' | 'staff';
   children?: NodeData[];
+  __rd3t?: {
+    id: string;
+    depth: number;
+    collapsed: boolean;
+  };
 }
 
 export function OrgChartView() {

@@ -14,6 +14,9 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Add temporary debug bypass flag
+  const DEBUG_BYPASS_SCAN_LIMIT = true; // Set to false when done testing
+  
   console.log('[SCAN-API-DEBUG] 1. Request received:', {
     method: req.method,
     headers: {
@@ -99,6 +102,57 @@ export default async function handler(
       sessionId: session?.access_token ? session.access_token.substring(0, 10) + '...' : 'none'
     });
 
+    // Enhanced subscription check with detailed debugging
+    console.log('[SCAN-API-DEBUG] 7a. Checking scan limit for user:', userData.id);
+    
+    // Get detailed usage and subscription info
+    const userUsage = await SubscriptionService.getCurrentUsage(userData.id);
+    console.log('[SCAN-API-DEBUG] Current usage:', userUsage);
+    
+    const userSub = await SubscriptionService.getCurrentSubscription(userData.id);
+    console.log('[SCAN-API-DEBUG] Current subscription:', userSub);
+    
+    // Check if user can scan
+    const canScan = DEBUG_BYPASS_SCAN_LIMIT || await SubscriptionService.canPerformAction(userData.id, 'scan');
+    console.log('[SCAN-API-DEBUG] Can user scan?', canScan);
+    
+    // Also check if user can track another company
+    const canTrackCompany = DEBUG_BYPASS_SCAN_LIMIT || await SubscriptionService.canPerformAction(userData.id, 'track_company');
+    console.log('[SCAN-API-DEBUG] Can user track companies?', canTrackCompany);
+    
+    if (!canScan) {
+      console.error('[SCAN-API-DEBUG] User has reached scan limit. Details:', {
+        userId: userData.id,
+        usage: userUsage,
+        subscription: userSub
+      });
+      return res.status(403).json({ 
+        error: 'Failed to process business card',
+        message: 'Scanning limit reached for current subscription tier',
+        details: {
+          usage: userUsage,
+          subscription: userSub
+        }
+      });
+    }
+    
+    if (!canTrackCompany) {
+      console.error('[SCAN-API-DEBUG] User has reached company tracking limit. Details:', {
+        userId: userData.id,
+        usage: userUsage,
+        subscription: userSub
+      });
+      return res.status(403).json({ 
+        error: 'Failed to process business card',
+        message: 'Company tracking limit reached for current subscription tier',
+        details: {
+          usage: userUsage,
+          subscription: userSub
+        }
+      });
+    }
+    console.log('[SCAN-API-DEBUG] 7b. User can perform scan and track company, continuing...');
+
     console.log('[SCAN] Image received, size:', Math.ceil(image.length / 1024), 'KB')
 
     // Step 1: Perform OCR
@@ -178,7 +232,7 @@ export default async function handler(
       user_id: userData.id,
       name: extractedInfo.name?.english || '',
       name_zh: extractedInfo.name?.chinese || '',
-      company: extractedInfo.company?.english || '',
+      company: extractedInfo.company?.english || '[No Company]',
       company_zh: extractedInfo.company?.chinese || '',
       title: extractedInfo.title?.english || '',
       title_zh: extractedInfo.title?.chinese || '',
@@ -188,6 +242,8 @@ export default async function handler(
       address_zh: extractedInfo.address?.chinese || '',
       image_url: imageUrl,
       raw_text: ocrResult.raw_text || ''
+      // Removed for local development until migration is applied
+      // increment_company_count: !!(extractedInfo.company?.english || extractedInfo.company?.chinese)
     }
 
     console.log('[SCAN] Prepared card data:', {
@@ -230,6 +286,16 @@ export default async function handler(
         user_id: savedCard.user_id
       });
 
+      // Increment the user's scan usage count (missing in original code)
+      try {
+        console.log('[SCAN] Incrementing scan usage count for user:', userData.id);
+        await SubscriptionService.incrementUsage(userData.id, 'scan');
+        console.log('[SCAN] Successfully incremented scan usage count');
+      } catch (incError) {
+        console.error('[SCAN] Error incrementing scan usage count:', incError);
+        // Continue anyway as the scan was successful
+      }
+
       return res.status(200).json(savedCard);
     }
 
@@ -255,6 +321,16 @@ export default async function handler(
       id: savedCard.id,
       user_id: savedCard.user_id
     })
+
+    // Increment the user's scan usage count (missing in original code)
+    try {
+      console.log('[SCAN] Incrementing scan usage count for user:', userData.id);
+      await SubscriptionService.incrementUsage(userData.id, 'scan');
+      console.log('[SCAN] Successfully incremented scan usage count');
+    } catch (incError) {
+      console.error('[SCAN] Error incrementing scan usage count:', incError);
+      // Continue anyway as the scan was successful
+    }
 
     // Step 4: Return the saved card data
     console.log('[SCAN] Scan completed successfully')

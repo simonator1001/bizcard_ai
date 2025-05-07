@@ -17,7 +17,11 @@ import {
   Layout,
   Search,
   FileDown,
-  Copy
+  Copy,
+  Filter,
+  SlidersHorizontal,
+  LayoutGrid,
+  LayoutList
 } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -32,6 +36,9 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Separator } from "@/components/ui/separator"
+import { motion } from "framer-motion"
 import { CardItem } from './CardItem';
 import { CardDetailView } from './CardDetailView';
 import { DuplicateManager } from './DuplicateManager';
@@ -42,6 +49,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { GridMotion } from '@/components/ui/grid-motion';
 import { Dock, DockIcon, DockItem, DockLabel } from '@/components/ui/dock';
+import Toolbar from "@/components/ui/Toolbar";
 
 type ViewMode = 'list' | 'grid' | 'grid-motion';
 type SortField = 'name' | 'company' | 'title' | 'created_at';
@@ -296,134 +304,22 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
   }
 
   return (
-    <div className="space-y-4 min-h-screen pb-8">
-      <div className="flex justify-center w-full sticky top-0 z-10 bg-background/80 backdrop-blur-sm py-4">
-        <div className="flex items-center w-[80%] max-w-[1200px]">
-          <div className="flex items-center gap-2 w-full bg-white/50 backdrop-blur-sm rounded-full px-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                type="text"
-                placeholder="Search cards..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-9 pl-9 text-sm border border-gray-200/50 focus:ring-0 bg-transparent rounded-full"
-              />
-            </div>
-            
-            <Dock 
-              className="bg-neutral-900/90 backdrop-blur-sm border-0 rounded-full py-1.5 px-2" 
-              magnification={40}
-              distance={40}
-              panelHeight={40}
-            >
-              <DockItem className="group">
-                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  Date Added
-                </DockLabel>
-                <DockIcon>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-[28px] h-[28px] text-white hover:text-white hover:bg-white/10"
-                  >
-                    <span className="text-xs">Date</span>
-                  </Button>
-                </DockIcon>
-              </DockItem>
-
-              <DockItem className="group">
-                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  List View
-                </DockLabel>
-                <DockIcon>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "w-[28px] h-[28px] text-white hover:text-white",
-                      viewMode === 'list' ? "bg-white/20" : "hover:bg-white/10"
-                    )}
-                    onClick={() => setViewMode('list')}
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                </DockIcon>
-              </DockItem>
-
-              <DockItem className="group">
-                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  Grid View
-                </DockLabel>
-                <DockIcon>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "w-[28px] h-[28px] text-white hover:text-white",
-                      viewMode === 'grid' ? "bg-white/20" : "hover:bg-white/10"
-                    )}
-                    onClick={() => setViewMode('grid')}
-                  >
-                    <Grid className="h-4 w-4" />
-                  </Button>
-                </DockIcon>
-              </DockItem>
-
-              <DockItem className="group">
-                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  Motion View
-                </DockLabel>
-                <DockIcon>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "w-[28px] h-[28px] text-white hover:text-white",
-                      viewMode === 'grid-motion' ? "bg-white/20" : "hover:bg-white/10"
-                    )}
-                    onClick={() => setViewMode('grid-motion')}
-                  >
-                    <Layout className="h-4 w-4" />
-                  </Button>
-                </DockIcon>
-              </DockItem>
-
-              <DockItem className="group">
-                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  Manage Duplicates
-                </DockLabel>
-                <DockIcon>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-[28px] h-[28px] text-white hover:text-white hover:bg-white/10"
-                    onClick={handleDuplicateManagerOpen}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </DockIcon>
-              </DockItem>
-
-              <DockItem className="group">
-                <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  Export CSV
-                </DockLabel>
-                <DockIcon>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-[28px] h-[28px] text-white hover:text-white hover:bg-white/10"
-                    onClick={handleExportCSV}
-                  >
-                    <FileDown className="h-4 w-4" />
-                  </Button>
-                </DockIcon>
-              </DockItem>
-            </Dock>
-          </div>
-        </div>
-      </div>
+    <div className="w-full max-w-7xl mx-auto px-4 py-6 space-y-6">
+      {/* Enhanced Search and Toolbar */}
+      <Toolbar
+        onSearch={setSearchTerm}
+        sortField={sortField}
+        sortDirection={sortDirection}
+        onSortChange={(field, direction) => {
+          setSortField(field as SortField);
+          setSortDirection(direction as SortDirection);
+        }}
+        viewMode={viewMode}
+        onViewModeChange={(mode) => setViewMode(mode as ViewMode)}
+        onExport={handleExportCSV}
+        onManageDuplicates={handleDuplicateManagerOpen}
+        className="mb-4"
+      />
 
       {filteredCards.length === 0 ? (
         <div className="text-center py-12">
