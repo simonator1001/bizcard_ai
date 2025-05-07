@@ -49,6 +49,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { GridMotion } from '@/components/ui/grid-motion';
 import { Dock, DockIcon, DockItem, DockLabel } from '@/components/ui/dock';
+import Toolbar from "@/components/ui/Toolbar";
 
 type ViewMode = 'list' | 'grid' | 'grid-motion';
 type SortField = 'name' | 'company' | 'title' | 'created_at';
@@ -305,108 +306,20 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-6 space-y-6">
       {/* Enhanced Search and Toolbar */}
-      <div className="w-full bg-background border border-border rounded-lg p-4 space-y-4">
-        <div className="flex flex-col sm:flex-row items-center gap-4">
-          {/* Search Bar */}
-          <div className="relative w-full sm:w-auto sm:flex-1 max-w-2xl">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search cards..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-10"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 ml-auto">
-            {/* Sort Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-10">
-                  <SlidersHorizontal className="mr-2 h-4 w-4" />
-                  Sort
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuRadioGroup value={`${sortField}-${sortDirection}`} onValueChange={(value) => {
-                  const [field, direction] = value.split('-') as [SortField, SortDirection];
-                  setSortField(field);
-                  setSortDirection(direction);
-                }}>
-                  <DropdownMenuRadioItem value="name-asc">Name (A-Z)</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="name-desc">Name (Z-A)</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="company-asc">Company (A-Z)</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="company-desc">Company (Z-A)</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="created_at-desc">Newest First</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="created_at-asc">Oldest First</DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Actions */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-10"
-              onClick={handleExportCSV}
-            >
-              <FileDown className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-
-            <Separator orientation="vertical" className="h-10 hidden sm:block" />
-
-            {/* View Mode Toggle */}
-            <div className="relative h-10 bg-muted/50 rounded-md p-1">
-              <ToggleGroup type="single" value={viewMode} onValueChange={(value: ViewMode) => value && setViewMode(value)}>
-                <ToggleGroupItem value="list" aria-label="List view" className="relative h-8 w-8 p-0">
-                  <LayoutList className="h-4 w-4" />
-                  {viewMode === "list" && (
-                    <motion.div
-                      layoutId="viewIndicator"
-                      className="absolute inset-0 rounded bg-background border border-border shadow-sm"
-                      transition={{ type: "spring", duration: 0.5 }}
-                      style={{ zIndex: -1 }}
-                    />
-                  )}
-                </ToggleGroupItem>
-                <ToggleGroupItem value="grid" aria-label="Grid view" className="relative h-8 w-8 p-0">
-                  <LayoutGrid className="h-4 w-4" />
-                  {viewMode === "grid" && (
-                    <motion.div
-                      layoutId="viewIndicator"
-                      className="absolute inset-0 rounded bg-background border border-border shadow-sm"
-                      transition={{ type: "spring", duration: 0.5 }}
-                      style={{ zIndex: -1 }}
-                    />
-                  )}
-                </ToggleGroupItem>
-                <ToggleGroupItem value="grid-motion" aria-label="Grid motion view" className="relative h-8 w-8 p-0">
-                  <Grid className="h-4 w-4" />
-                  {viewMode === "grid-motion" && (
-                    <motion.div
-                      layoutId="viewIndicator"
-                      className="absolute inset-0 rounded bg-background border border-border shadow-sm"
-                      transition={{ type: "spring", duration: 0.5 }}
-                      style={{ zIndex: -1 }}
-                    />
-                  )}
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Toolbar
+        onSearch={setSearchTerm}
+        sortField={sortField}
+        sortDirection={sortDirection}
+        onSortChange={(field, direction) => {
+          setSortField(field as SortField);
+          setSortDirection(direction as SortDirection);
+        }}
+        viewMode={viewMode}
+        onViewModeChange={(mode) => setViewMode(mode as ViewMode)}
+        onExport={handleExportCSV}
+        onManageDuplicates={handleDuplicateManagerOpen}
+        className="mb-4"
+      />
 
       {filteredCards.length === 0 ? (
         <div className="text-center py-12">
