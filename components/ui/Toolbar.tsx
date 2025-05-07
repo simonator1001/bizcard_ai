@@ -60,24 +60,24 @@ function Toolbar({
   return (
     <div
       className={cn(
-        "w-full bg-background border border-border rounded-xl flex flex-col sm:flex-row items-center gap-2 p-2",
+        "w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl flex items-center gap-2 p-2",
         className
       )}
       {...props}
     >
       {/* Search Input */}
-      <div className="flex-1 relative w-full sm:w-auto sm:flex-1 max-w-2xl">
+      <div className="flex-1 relative">
         <input
           type="text"
           placeholder="Search cards..."
-          className="w-full h-10 pl-10 pr-4 bg-muted/50 text-sm text-foreground placeholder:text-muted-foreground/70 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20"
+          className="w-full h-9 pl-9 pr-4 bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 rounded-lg focus:outline-none"
           value={searchValue}
           onChange={e => {
             setSearchValue(e.target.value);
             onSearch?.(e.target.value);
           }}
         />
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
         {searchValue && (
           <button
             onClick={() => {
@@ -94,14 +94,13 @@ function Toolbar({
       {/* Filter Button */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            className="h-9 px-3 gap-2"
+          <button
+            className="h-9 px-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center gap-2 text-sm text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors border-none"
           >
             <Filter className="w-4 h-4" />
             <span>Filters</span>
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-          </Button>
+            <ChevronDown className="w-4 h-4 text-zinc-500" />
+          </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuCheckboxItem checked={showAll} onCheckedChange={setShowAll}>
@@ -119,11 +118,11 @@ function Toolbar({
       {/* Sort Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="h-10 gap-2">
-            <LayoutList className="mr-2 h-4 w-4" />
-            Sort
-            <ChevronDown className="ml-2 h-4 w-4" />
-          </Button>
+          <button className="h-9 px-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center gap-2 text-sm text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors border-none">
+            <LayoutList className="w-4 h-4" />
+            <span>Sort</span>
+            <ChevronDown className="w-4 h-4 text-zinc-500" />
+          </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuRadioGroup value={`${sortField}-${sortDirection}`} onValueChange={value => {
@@ -141,30 +140,49 @@ function Toolbar({
       </DropdownMenu>
 
       {/* Export Button */}
-      <Button variant="outline" size="sm" className="h-10" onClick={onExport}>
-        <FileDown className="mr-2 h-4 w-4" />
-        Export
-      </Button>
+      <button className="h-9 px-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center gap-2 text-sm text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors border-none" onClick={onExport}>
+        <FileDown className="w-4 h-4" />
+        <span>Export</span>
+      </button>
 
       {/* Duplicate Manager Button */}
-      <Button variant="outline" size="sm" className="h-10" onClick={onManageDuplicates}>
-        <Copy className="mr-2 h-4 w-4" />
-        Duplicates
-      </Button>
+      <button className="h-9 px-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center gap-2 text-sm text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors border-none" onClick={onManageDuplicates}>
+        <Copy className="w-4 h-4" />
+        <span>Duplicates</span>
+      </button>
 
       {/* View Mode Toggle */}
-      <div className="relative h-10 bg-muted/50 rounded-md p-1">
-        <ToggleGroup type="single" value={viewMode} onValueChange={value => value && onViewModeChange(value)}>
-          <ToggleGroupItem value="list" aria-label="List view" className="relative h-8 w-8 p-0">
-            <LayoutList className="h-4 w-4" />
-          </ToggleGroupItem>
-          <ToggleGroupItem value="grid" aria-label="Grid view" className="relative h-8 w-8 p-0">
-            <LayoutGrid className="h-4 w-4" />
-          </ToggleGroupItem>
-          <ToggleGroupItem value="grid-motion" aria-label="Grid motion view" className="relative h-8 w-8 p-0">
-            <Grid className="h-4 w-4" />
-          </ToggleGroupItem>
-        </ToggleGroup>
+      <div className="flex items-center gap-1">
+        <button
+          className={cn(
+            "h-9 w-9 flex items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border-none",
+            viewMode === "list" ? "bg-fuchsia-100 text-fuchsia-700" : "bg-transparent text-zinc-500"
+          )}
+          onClick={() => onViewModeChange("list")}
+          aria-label="List view"
+        >
+          <LayoutList className="w-4 h-4" />
+        </button>
+        <button
+          className={cn(
+            "h-9 w-9 flex items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border-none",
+            viewMode === "grid" ? "bg-fuchsia-100 text-fuchsia-700" : "bg-transparent text-zinc-500"
+          )}
+          onClick={() => onViewModeChange("grid")}
+          aria-label="Grid view"
+        >
+          <LayoutGrid className="w-4 h-4" />
+        </button>
+        <button
+          className={cn(
+            "h-9 w-9 flex items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border-none",
+            viewMode === "grid-motion" ? "bg-fuchsia-100 text-fuchsia-700" : "bg-transparent text-zinc-500"
+          )}
+          onClick={() => onViewModeChange("grid-motion")}
+          aria-label="Grid motion view"
+        >
+          <Grid className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
