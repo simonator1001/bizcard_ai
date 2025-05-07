@@ -70,6 +70,8 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedCard, setSelectedCard] = useState<BusinessCard | null>(null);
   const { user } = useAuth();
+  const [filterType, setFilterType] = useState<'company' | 'name' | 'title' | null>(null);
+  const [filterValue, setFilterValue] = useState<string | null>(null);
 
   const fetchCards = useCallback(async () => {
     if (!user) {
@@ -253,15 +255,25 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
   // Filter and sort cards
   const filteredCards = cards.filter(card => {
     const searchLower = searchTerm.toLowerCase();
-    return (
+    const matchesSearch =
       card.name?.toLowerCase().includes(searchLower) ||
       card.name_zh?.toLowerCase().includes(searchLower) ||
       card.company?.toLowerCase().includes(searchLower) ||
       card.company_zh?.toLowerCase().includes(searchLower) ||
       card.title?.toLowerCase().includes(searchLower) ||
       card.title_zh?.toLowerCase().includes(searchLower) ||
-      card.email?.toLowerCase().includes(searchLower)
-    );
+      card.email?.toLowerCase().includes(searchLower);
+    let matchesFilter = true;
+    if (filterType && filterValue) {
+      if (filterType === 'company') {
+        matchesFilter = card.company === filterValue || card.company_zh === filterValue;
+      } else if (filterType === 'name') {
+        matchesFilter = card.name === filterValue || card.name_zh === filterValue;
+      } else if (filterType === 'title') {
+        matchesFilter = card.title === filterValue || card.title_zh === filterValue;
+      }
+    }
+    return matchesSearch && matchesFilter;
   });
 
   // Group cards by company
@@ -319,6 +331,13 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
         onExport={handleExportCSV}
         onManageDuplicates={handleDuplicateManagerOpen}
         className="mb-4"
+        cards={cards}
+        filterType={filterType}
+        filterValue={filterValue}
+        onFilterChange={(type, value) => {
+          setFilterType(type);
+          setFilterValue(value);
+        }}
       />
 
       {filteredCards.length === 0 ? (

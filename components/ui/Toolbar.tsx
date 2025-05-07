@@ -38,6 +38,10 @@ interface ToolbarProps extends React.HTMLAttributes<HTMLDivElement> {
   onViewModeChange: (mode: string) => void;
   onExport: () => void;
   onManageDuplicates: () => void;
+  cards: any[];
+  filterType: 'company' | 'name' | 'title' | null;
+  filterValue: string | null;
+  onFilterChange: (type: 'company' | 'name' | 'title', value: string) => void;
 }
 
 function Toolbar({
@@ -50,12 +54,21 @@ function Toolbar({
   onViewModeChange,
   onExport,
   onManageDuplicates,
+  cards = [],
+  filterType,
+  filterValue,
+  onFilterChange,
   ...props
 }: ToolbarProps) {
   const [showAll, setShowAll] = React.useState<DropdownMenuCheckboxItemProps["checked"]>(true);
   const [showActive, setShowActive] = React.useState<DropdownMenuCheckboxItemProps["checked"]>(false);
   const [showArchived, setShowArchived] = React.useState<DropdownMenuCheckboxItemProps["checked"]>(false);
   const [searchValue, setSearchValue] = React.useState("");
+
+  // Extract unique filter options
+  const companies = React.useMemo(() => Array.from(new Set(cards.flatMap(card => [card.company, card.company_zh]).filter(Boolean))), [cards]);
+  const names = React.useMemo(() => Array.from(new Set(cards.flatMap(card => [card.name, card.name_zh]).filter(Boolean))), [cards]);
+  const titles = React.useMemo(() => Array.from(new Set(cards.flatMap(card => [card.title, card.title_zh]).filter(Boolean))), [cards]);
 
   return (
     <div
@@ -102,16 +115,37 @@ function Toolbar({
             <ChevronDown className="w-4 h-4 text-zinc-500" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuCheckboxItem checked={showAll} onCheckedChange={setShowAll}>
-            Show All
-          </DropdownMenuCheckboxItem>
-          <DropdownMenuCheckboxItem checked={showActive} onCheckedChange={setShowActive}>
-            Active Only
-          </DropdownMenuCheckboxItem>
-          <DropdownMenuCheckboxItem checked={showArchived} onCheckedChange={setShowArchived}>
-            Archived
-          </DropdownMenuCheckboxItem>
+        <DropdownMenuContent className="w-56">
+          <div className="px-2 py-1 text-xs font-semibold text-zinc-500">Company</div>
+          {companies.map(company => (
+            <DropdownMenuCheckboxItem
+              key={company}
+              checked={filterType === 'company' && filterValue === company}
+              onCheckedChange={() => onFilterChange('company', company)}
+            >
+              {company}
+            </DropdownMenuCheckboxItem>
+          ))}
+          <div className="px-2 py-1 text-xs font-semibold text-zinc-500 mt-2">Name</div>
+          {names.map(name => (
+            <DropdownMenuCheckboxItem
+              key={name}
+              checked={filterType === 'name' && filterValue === name}
+              onCheckedChange={() => onFilterChange('name', name)}
+            >
+              {name}
+            </DropdownMenuCheckboxItem>
+          ))}
+          <div className="px-2 py-1 text-xs font-semibold text-zinc-500 mt-2">Title</div>
+          {titles.map(title => (
+            <DropdownMenuCheckboxItem
+              key={title}
+              checked={filterType === 'title' && filterValue === title}
+              onCheckedChange={() => onFilterChange('title', title)}
+            >
+              {title}
+            </DropdownMenuCheckboxItem>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
 
