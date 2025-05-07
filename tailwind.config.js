@@ -16,8 +16,13 @@ module.exports = {
       },
     },
     extend: {
-      rotate: {
-        '15': '15deg',
+      fontFamily: {
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
+      borderRadius: {
+        lg: "1rem",
+        md: "0.75rem",
+        sm: "0.5rem",
       },
       colors: {
         border: "hsl(var(--border))",
@@ -54,10 +59,11 @@ module.exports = {
           foreground: "hsl(var(--card-foreground))",
         },
       },
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+      backgroundImage: {
+        'gradient-to-br': 'linear-gradient(135deg, hsl(252,95%,97%) 0%, hsl(291,64%,98%) 100%)',
+      },
+      rotate: {
+        '15': '15deg',
       },
       keyframes: {
         "accordion-down": {
