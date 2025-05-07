@@ -26,6 +26,10 @@ interface NodeData extends RawNodeDatum {
     depth: number;
     collapsed: boolean;
   };
+  cardDetails?: {
+    avatarUrl?: string;
+    photoUrl?: string;
+  };
 }
 
 interface OrgChartProps {
@@ -105,65 +109,43 @@ export const OrgChart: React.FC<OrgChartProps> = ({ data, onNodeClick, zoom = 0.
       const nodeData = nodeDatum as unknown as NodeData;
       const level = nodeData.level || 'staff';
       const isHovered = hoveredNode === nodeData.__rd3t?.id;
-
+      const cardDetails = nodeData.cardDetails || {};
+      const avatarUrl = cardDetails.avatarUrl || cardDetails.photoUrl || null;
+      const initials = nodeData.name
+        ? nodeData.name.split(' ').map(n => n[0]).join('').slice(0, 2)
+        : '';
       return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <g
-                onClick={() => {
-                  toggleNode();
-                  handleNodeClick(nodeData);
-                }}
-                onMouseEnter={() => setHoveredNode(nodeData.__rd3t?.id || null)}
-                onMouseLeave={() => setHoveredNode(null)}
-                className={cn(
-                  "cursor-pointer transition-all duration-300 ease-in-out",
-                  styles.nodeEnter,
-                  isHovered && styles.nodeHover
-                )}
-                transform={`translate(${-30},${-30})`}
-              >
-                <circle
-                  r={30}
-                  className={cn(
-                    'fill-background stroke-2 transition-all duration-300',
-                    'bg-gradient-to-br shadow-lg',
-                    nodeColors[level]
-                  )}
-                />
-                <circle
-                  r={26}
-                  className="fill-white/90 stroke-none"
-                  transform="translate(2, 2)"
-                />
-                <text
-                  dy="-0.5em"
-                  textAnchor="middle"
-                  className="text-sm font-semibold fill-foreground"
-                >
-                  {nodeData.name.split(' ')[0]}
-                </text>
-                <text
-                  dy="1em"
-                  textAnchor="middle"
-                  className="text-xs fill-muted-foreground"
-                >
-                  {nodeData.position?.split(' ')[0]}
-                </text>
-              </g>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="p-3 space-y-1">
-                <p className="font-bold">{nodeData.name}</p>
-                <p className="text-sm text-muted-foreground">{nodeData.position}</p>
-                {nodeData.email && (
-                  <p className="text-xs text-muted-foreground">{nodeData.email}</p>
+        <foreignObject width="180" height="90" x="-90" y="-45">
+          <div
+            className={cn(
+              'rounded-xl shadow-lg border border-border bg-white flex flex-col items-center w-[180px] h-[90px] overflow-visible',
+              isHovered && 'ring-2 ring-primary/60',
+            )}
+            style={{ pointerEvents: 'all' }}
+          >
+            {/* Colored header bar */}
+            <div
+              className={cn(
+                'w-full h-6 rounded-t-xl flex items-center justify-center',
+                level === 'executive' ? 'bg-blue-600' : level === 'manager' ? 'bg-emerald-500' : 'bg-gray-300'
+              )}
+            >
+              {/* Avatar */}
+              <div className="absolute left-2 top-1 w-8 h-8 rounded-full bg-white border-2 border-border flex items-center justify-center overflow-hidden shadow">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={initials} className="w-8 h-8 object-cover rounded-full" />
+                ) : (
+                  <span className="text-xs font-bold text-primary">{initials}</span>
                 )}
               </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+            </div>
+            {/* Name and title */}
+            <div className="flex flex-col items-center justify-center flex-1 mt-2">
+              <span className="font-bold text-base text-foreground leading-tight">{nodeData.name}</span>
+              <span className="text-xs text-muted-foreground leading-tight">{nodeData.position}</span>
+            </div>
+          </div>
+        </foreignObject>
       );
     },
     [hoveredNode, handleNodeClick]
