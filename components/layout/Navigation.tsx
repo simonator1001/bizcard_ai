@@ -73,57 +73,33 @@ export function Navigation() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center px-4">
-        <Link href="/" className="mr-6">
-          <Logo size="sm" />
-        </Link>
-        
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <ExpandableTabs
-            tabs={navigationItems}
-            activeColor="text-primary"
-            onChange={handleNavigationChange}
-            className="mr-4"
-          />
-
-          <div className="flex items-center space-x-4">
-            {user ? (
-              <>
-                {subscription?.tier !== 'enterprise' && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex items-center gap-2"
-                    onClick={handleUpgradeClick}
-                  >
-                    <DollarSign className="w-4 h-4" />
-                    {t('subscription.upgradeNow')}
-                  </Button>
-                )}
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => router.push('/?tab=settings')}
-                >
-                  {t('navigation.settings')}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Link href="/signin">
-                  <Button variant="ghost" size="sm">
-                    {t('auth.signIn')}
-                  </Button>
-                </Link>
-                <Link href="/signup">
-                  <Button size="sm">{t('auth.signUp')}</Button>
-                </Link>
-              </>
-            )}
+    <header className="w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 z-50">
+      <nav className="container mx-auto flex items-center justify-between py-3 px-4">
+        {/* Left: Logo */}
+        <div className="flex items-center gap-2">
+          {/* Replace with your logo/icon */}
+          <span className="inline-flex items-center gap-2 font-bold text-lg">
+            <span className="bg-gradient-to-tr from-primary to-secondary rounded-full w-7 h-7 flex items-center justify-center text-white font-bold">S</span>
+            Simon.AI
+          </span>
+        </div>
+        {/* Center: Navigation Links */}
+        <div className="hidden md:flex items-center gap-6 text-base font-medium text-foreground">
+          <div className="relative group">
+            <button className="flex items-center gap-1 hover:text-primary transition-colors">Launch Pad <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg></button>
+            {/* Dropdown can go here if needed */}
+          </div>
+          <div className="relative group">
+            <button className="flex items-center gap-1 hover:text-primary transition-colors">Community <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg></button>
+            {/* Dropdown can go here if needed */}
           </div>
         </div>
-      </div>
-    </nav>
+        {/* Right: Auth Actions */}
+        <div className="flex items-center gap-3">
+          <button className="text-base font-medium text-foreground hover:text-primary transition-colors">Log In</button>
+          <button className="px-5 py-2 rounded-full bg-foreground text-white font-semibold shadow hover:bg-primary transition-colors">Sign In</button>
+        </div>
+      </nav>
+    </header>
   );
 } 
