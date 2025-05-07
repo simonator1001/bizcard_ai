@@ -73,7 +73,7 @@ function Toolbar({
   return (
     <div
       className={cn(
-        "w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl flex items-center gap-2 p-2",
+        "w-full bg-white/90 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center gap-3 p-4 shadow-md backdrop-blur-md transition-all",
         className
       )}
       {...props}
@@ -83,21 +83,21 @@ function Toolbar({
         <input
           type="text"
           placeholder="Search cards..."
-          className="w-full h-9 pl-9 pr-4 bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 rounded-lg focus:outline-none"
+          className="w-full h-12 pl-12 pr-4 bg-zinc-100 dark:bg-zinc-800 text-base font-medium text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary shadow-sm transition-all"
           value={searchValue}
           onChange={e => {
             setSearchValue(e.target.value);
             onSearch?.(e.target.value);
           }}
         />
-        <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+        <Search className="w-5 h-5 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2" />
         {searchValue && (
           <button
             onClick={() => {
               setSearchValue("");
               onSearch?.("");
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100"
+            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-md opacity-70 ring-offset-background transition-opacity hover:opacity-100 bg-zinc-200 dark:bg-zinc-700 px-2 py-1"
           >
             ×
           </button>
