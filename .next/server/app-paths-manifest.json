@@ -1,11 +1,10 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
-  "/pricing/page": "app/pricing/page.js",
-  "/api/test/route": "app/api/test/route.js",
-  "/payment/page": "app/payment/page.js",
   "/api/chat/route": "app/api/chat/route.js",
+  "/api/test/route": "app/api/test/route.js",
   "/components/page": "app/components/page.js",
-  "/page": "app/page.js",
-  "/(auth)/signup/page": "app/(auth)/signup/page.js",
-  "/(auth)/signin/page": "app/(auth)/signin/page.js"
+  "/pricing/page": "app/pricing/page.js",
+  "/payment/page": "app/payment/page.js",
+  "/(auth)/signin/page": "app/(auth)/signin/page.js",
+  "/(auth)/signup/page": "app/(auth)/signup/page.js"
 }

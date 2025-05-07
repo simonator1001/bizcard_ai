@@ -17,7 +17,11 @@ import {
   Layout,
   Search,
   FileDown,
-  Copy
+  Copy,
+  Filter,
+  SlidersHorizontal,
+  LayoutGrid,
+  LayoutList
 } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -32,6 +36,9 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Separator } from "@/components/ui/separator"
+import { motion } from "framer-motion"
 import { CardItem } from './CardItem';
 import { CardDetailView } from './CardDetailView';
 import { DuplicateManager } from './DuplicateManager';
@@ -296,132 +303,106 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
   }
 
   return (
-    <div className="space-y-4 min-h-screen pb-8">
-      <div className="flex justify-center w-full sticky top-0 z-10 bg-background/80 backdrop-blur-sm">
-        <div className="flex items-center w-[80%] max-w-[1200px] py-4">
-          <div className="flex items-center gap-2 w-full bg-white/80 rounded-full border border-gray-200/50 shadow-sm px-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                type="text"
-                placeholder="Search cards..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-9 pl-9 text-sm border-none focus:ring-0 bg-transparent rounded-full"
-              />
-            </div>
-            
-            <div className="border-l border-gray-200/50 pl-2">
-              <Dock 
-                className="backdrop-blur-sm border-0 rounded-full py-1.5 px-2" 
-                magnification={40}
-                distance={40}
-                panelHeight={40}
+    <div className="w-full max-w-7xl mx-auto px-4 py-6 space-y-6">
+      {/* Enhanced Search and Toolbar */}
+      <div className="w-full bg-background border border-border rounded-lg p-4 space-y-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          {/* Search Bar */}
+          <div className="relative w-full sm:w-auto sm:flex-1 max-w-2xl">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search cards..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-10"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100"
               >
-                <DockItem className="group">
-                  <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                    Date Added
-                  </DockLabel>
-                  <DockIcon>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-[28px] h-[28px] text-red-500 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <span className="text-xs">Date</span>
-                    </Button>
-                  </DockIcon>
-                </DockItem>
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
 
-                <DockItem className="group">
-                  <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                    List View
-                  </DockLabel>
-                  <DockIcon>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        "w-[28px] h-[28px] text-red-500 hover:text-red-700",
-                        viewMode === 'list' ? "bg-red-100" : "hover:bg-red-50"
-                      )}
-                      onClick={() => setViewMode('list')}
-                    >
-                      <List className="h-4 w-4" />
-                    </Button>
-                  </DockIcon>
-                </DockItem>
+          <div className="flex items-center gap-2 ml-auto">
+            {/* Sort Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-10">
+                  <SlidersHorizontal className="mr-2 h-4 w-4" />
+                  Sort
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuRadioGroup value={`${sortField}-${sortDirection}`} onValueChange={(value) => {
+                  const [field, direction] = value.split('-') as [SortField, SortDirection];
+                  setSortField(field);
+                  setSortDirection(direction);
+                }}>
+                  <DropdownMenuRadioItem value="name-asc">Name (A-Z)</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="name-desc">Name (Z-A)</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="company-asc">Company (A-Z)</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="company-desc">Company (Z-A)</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="created_at-desc">Newest First</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="created_at-asc">Oldest First</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-                <DockItem className="group">
-                  <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                    Grid View
-                  </DockLabel>
-                  <DockIcon>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        "w-[28px] h-[28px] text-red-500 hover:text-red-700",
-                        viewMode === 'grid' ? "bg-red-100" : "hover:bg-red-50"
-                      )}
-                      onClick={() => setViewMode('grid')}
-                    >
-                      <Grid className="h-4 w-4" />
-                    </Button>
-                  </DockIcon>
-                </DockItem>
+            {/* Actions */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10"
+              onClick={handleExportCSV}
+            >
+              <FileDown className="mr-2 h-4 w-4" />
+              Export
+            </Button>
 
-                <DockItem className="group">
-                  <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                    Motion View
-                  </DockLabel>
-                  <DockIcon>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        "w-[28px] h-[28px] text-red-500 hover:text-red-700",
-                        viewMode === 'grid-motion' ? "bg-red-100" : "hover:bg-red-50"
-                      )}
-                      onClick={() => setViewMode('grid-motion')}
-                    >
-                      <Layout className="h-4 w-4" />
-                    </Button>
-                  </DockIcon>
-                </DockItem>
+            <Separator orientation="vertical" className="h-10 hidden sm:block" />
 
-                <DockItem className="group">
-                  <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                    Manage Duplicates
-                  </DockLabel>
-                  <DockIcon>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-[28px] h-[28px] text-red-500 hover:text-red-700 hover:bg-red-50"
-                      onClick={handleDuplicateManagerOpen}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </DockIcon>
-                </DockItem>
-
-                <DockItem className="group">
-                  <DockLabel className="bg-neutral-900 border-neutral-800 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                    Export CSV
-                  </DockLabel>
-                  <DockIcon>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-[28px] h-[28px] text-red-500 hover:text-red-700 hover:bg-red-50"
-                      onClick={handleExportCSV}
-                    >
-                      <FileDown className="h-4 w-4" />
-                    </Button>
-                  </DockIcon>
-                </DockItem>
-              </Dock>
+            {/* View Mode Toggle */}
+            <div className="relative h-10 bg-muted/50 rounded-md p-1">
+              <ToggleGroup type="single" value={viewMode} onValueChange={(value: ViewMode) => value && setViewMode(value)}>
+                <ToggleGroupItem value="list" aria-label="List view" className="relative h-8 w-8 p-0">
+                  <LayoutList className="h-4 w-4" />
+                  {viewMode === "list" && (
+                    <motion.div
+                      layoutId="viewIndicator"
+                      className="absolute inset-0 rounded bg-background border border-border shadow-sm"
+                      transition={{ type: "spring", duration: 0.5 }}
+                      style={{ zIndex: -1 }}
+                    />
+                  )}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="grid" aria-label="Grid view" className="relative h-8 w-8 p-0">
+                  <LayoutGrid className="h-4 w-4" />
+                  {viewMode === "grid" && (
+                    <motion.div
+                      layoutId="viewIndicator"
+                      className="absolute inset-0 rounded bg-background border border-border shadow-sm"
+                      transition={{ type: "spring", duration: 0.5 }}
+                      style={{ zIndex: -1 }}
+                    />
+                  )}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="grid-motion" aria-label="Grid motion view" className="relative h-8 w-8 p-0">
+                  <Grid className="h-4 w-4" />
+                  {viewMode === "grid-motion" && (
+                    <motion.div
+                      layoutId="viewIndicator"
+                      className="absolute inset-0 rounded bg-background border border-border shadow-sm"
+                      transition={{ type: "spring", duration: 0.5 }}
+                      style={{ zIndex: -1 }}
+                    />
+                  )}
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
           </div>
         </div>

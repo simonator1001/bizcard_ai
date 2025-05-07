@@ -17,7 +17,7 @@
     "id": 87974,
     "files": [
       "static/chunks/678.cddd385b931097ca.js",
-      "static/chunks/974.41867edf07278e5e.js"
+      "static/chunks/912.c9437dc6d08f7f13.js"
     ]
   },
   "components/i18n-provider.tsx -> @/src/i18n/locales/zh.json": {
@@ -42,8 +42,8 @@
   "node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js -> ws": {
     "id": 55223,
     "files": [
-      "static/chunks/223.66ddc0ec33031ed1.js",
-      "static/chunks/26.c11f85afaea0ee5e.js"
+      "static/chunks/26.c11f85afaea0ee5e.js",
+      "static/chunks/223.66ddc0ec33031ed1.js"
     ]
   },
   "node_modules/@supabase/storage-js/dist/module/lib/helpers.js -> @supabase/node-fetch": {
