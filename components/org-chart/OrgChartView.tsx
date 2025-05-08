@@ -83,10 +83,10 @@ export function OrgChartView() {
         <h2 className="text-3xl font-bold">Organization Chart</h2>
         <div className="flex flex-col gap-2 w-[240px]">
           <Select value={selectedCompany} onValueChange={setSelectedCompany}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full z-[100000]">
               <SelectValue placeholder="Select company" />
             </SelectTrigger>
-            <SelectContent className="max-h-64 p-0">
+            <SelectContent className="max-h-64 overflow-y-auto p-0 z-[100000]">
               <div className="sticky top-0 z-10 bg-background px-2 pt-2 pb-1 border-b border-muted-foreground/10">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -99,17 +99,15 @@ export function OrgChartView() {
                   />
                 </div>
               </div>
-              <ScrollArea className="max-h-48">
-                {filteredCompanies.length === 0 ? (
-                  <div className="px-4 py-2 text-muted-foreground text-sm">No companies found</div>
-                ) : (
-                  filteredCompanies.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))
-                )}
-              </ScrollArea>
+              {filteredCompanies.length === 0 ? (
+                <div className="px-4 py-2 text-muted-foreground text-sm">No companies found</div>
+              ) : (
+                filteredCompanies.map((company) => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
