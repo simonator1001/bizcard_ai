@@ -338,7 +338,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
           setFilterType(type);
           setFilterValue(value);
         }}
-      />
+                    />
 
       {filteredCards.length === 0 ? (
         <div className="text-center py-12">

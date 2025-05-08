@@ -75,20 +75,20 @@ function Footerdemo() {
             <div className="mb-6 flex space-x-3">
               <Button variant="outline" size="icon" className="rounded-full border-primary/20 hover:bg-primary/10">
                 <Facebook className="h-4 w-4 text-primary" />
-                <span className="sr-only">Facebook</span>
-              </Button>
+                      <span className="sr-only">Facebook</span>
+                    </Button>
               <Button variant="outline" size="icon" className="rounded-full border-primary/20 hover:bg-primary/10">
                 <Twitter className="h-4 w-4 text-primary" />
-                <span className="sr-only">Twitter</span>
-              </Button>
+                      <span className="sr-only">Twitter</span>
+                    </Button>
               <Button variant="outline" size="icon" className="rounded-full border-primary/20 hover:bg-primary/10">
                 <Instagram className="h-4 w-4 text-primary" />
-                <span className="sr-only">Instagram</span>
-              </Button>
+                      <span className="sr-only">Instagram</span>
+                    </Button>
               <Button variant="outline" size="icon" className="rounded-full border-primary/20 hover:bg-primary/10">
                 <Linkedin className="h-4 w-4 text-primary" />
-                <span className="sr-only">LinkedIn</span>
-              </Button>
+                      <span className="sr-only">LinkedIn</span>
+                    </Button>
             </div>
           </div>
         </div>

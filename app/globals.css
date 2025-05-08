@@ -65,7 +65,7 @@
     --ring: 252 95% 67%;
   }
 }
-
+ 
 @layer base {
   * {
     @apply border-border;

@@ -82,10 +82,10 @@ export function OrgChartView() {
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Organization Chart</h2>
         <div className="flex flex-col gap-2 w-[240px]">
-          <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+        <Select value={selectedCompany} onValueChange={setSelectedCompany}>
             <SelectTrigger className="w-full z-[100000]">
-              <SelectValue placeholder="Select company" />
-            </SelectTrigger>
+            <SelectValue placeholder="Select company" />
+          </SelectTrigger>
             <SelectContent className="max-h-64 overflow-y-auto p-0 z-[100000]">
               <div className="sticky top-0 z-10 bg-background px-2 pt-2 pb-1 border-b border-muted-foreground/10">
                 <div className="relative">
@@ -103,13 +103,13 @@ export function OrgChartView() {
                 <div className="px-4 py-2 text-muted-foreground text-sm">No companies found</div>
               ) : (
                 filteredCompanies.map((company) => (
-                  <SelectItem key={company.id} value={company.id}>
-                    {company.name}
-                  </SelectItem>
+              <SelectItem key={company.id} value={company.id}>
+                {company.name}
+              </SelectItem>
                 ))
               )}
-            </SelectContent>
-          </Select>
+          </SelectContent>
+        </Select>
         </div>
       </div>
 
@@ -125,14 +125,14 @@ export function OrgChartView() {
                 Loading org chart...
               </div>
             ) : orgChartData ? (
-              <OrgChart
-                data={orgChartData}
-                onNodeClick={handleNodeClick}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-[600px] text-muted-foreground">
-                No organization data available
-              </div>
+                <OrgChart
+                  data={orgChartData}
+                  onNodeClick={handleNodeClick}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-[600px] text-muted-foreground">
+                  No organization data available
+                </div>
             )}
           </CardContent>
         </Card>

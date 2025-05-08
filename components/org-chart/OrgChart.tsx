@@ -117,15 +117,15 @@ export const OrgChart: React.FC<OrgChartProps> = ({ data, onNodeClick, zoom = 0.
       return (
         <foreignObject width="180" height="90" x="-90" y="-45">
           <div
-            className={cn(
+                className={cn(
               'rounded-xl shadow-lg border border-border bg-white flex flex-col items-center w-[180px] h-[90px] overflow-visible',
               isHovered && 'ring-2 ring-primary/60',
-            )}
+                )}
             style={{ pointerEvents: 'all' }}
-          >
+              >
             {/* Colored header bar */}
             <div
-              className={cn(
+                  className={cn(
                 'w-full h-6 rounded-t-xl flex items-center justify-center',
                 level === 'executive' ? 'bg-blue-600' : level === 'manager' ? 'bg-emerald-500' : 'bg-gray-300'
               )}
