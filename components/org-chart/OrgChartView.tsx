@@ -10,6 +10,8 @@ import { BusinessCardDialog } from '../cards/BusinessCardDialog';
 import { OrgChart } from './OrgChart';
 import { RawNodeDatum } from 'react-d3-tree';
 import { OrgChartService } from '@/lib/org-chart-service';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 
 interface NodeData extends RawNodeDatum {
   name: string;
@@ -31,6 +33,7 @@ export function OrgChartView() {
   const [selectedCard, setSelectedCard] = useState<BusinessCard | null>(null);
   const [orgChartData, setOrgChartData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [companySearch, setCompanySearch] = useState('');
 
   // Group cards by company
   const companiesMap = new Map<string, BusinessCard[]>();
@@ -48,6 +51,7 @@ export function OrgChartView() {
     contacts: cards,
   }));
 
+  const filteredCompanies = companies.filter(c => c.name.toLowerCase().includes(companySearch.toLowerCase()));
   const selectedCompanyData = companies.find(c => c.id === selectedCompany);
 
   useEffect(() => {
@@ -77,18 +81,38 @@ export function OrgChartView() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Organization Chart</h2>
-        <Select value={selectedCompany} onValueChange={setSelectedCompany}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Select company" />
-          </SelectTrigger>
-          <SelectContent>
-            {companies.map((company) => (
-              <SelectItem key={company.id} value={company.id}>
-                {company.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col gap-2 w-[240px]">
+          <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select company" />
+            </SelectTrigger>
+            <SelectContent className="max-h-64 p-0">
+              <div className="sticky top-0 z-10 bg-background px-2 pt-2 pb-1 border-b border-muted-foreground/10">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    type="text"
+                    value={companySearch}
+                    onChange={e => setCompanySearch(e.target.value)}
+                    placeholder="Search company..."
+                    className="pl-10 pr-3 py-2 rounded-lg border bg-background text-sm focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+              <ScrollArea className="max-h-48">
+                {filteredCompanies.length === 0 ? (
+                  <div className="px-4 py-2 text-muted-foreground text-sm">No companies found</div>
+                ) : (
+                  filteredCompanies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))
+                )}
+              </ScrollArea>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {selectedCompanyData && (
