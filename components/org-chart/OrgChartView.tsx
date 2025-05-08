@@ -28,13 +28,6 @@ interface NodeData extends RawNodeDatum {
 
 export function OrgChartView() {
   const { cards } = useBusinessCards();
-  const [selectedCompany, setSelectedCompany] = useState<string>('');
-  const [showDetails, setShowDetails] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<BusinessCard | null>(null);
-  const [orgChartData, setOrgChartData] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [companySearch, setCompanySearch] = useState('');
-
   // Group cards by company
   const companiesMap = new Map<string, BusinessCard[]>();
   cards.forEach(card => {
@@ -44,12 +37,19 @@ export function OrgChartView() {
       companiesMap.set(card.company, group);
     }
   });
-
   const companies = Array.from(companiesMap.entries()).map(([name, cards]) => ({
     id: name,
     name,
     contacts: cards,
   }));
+
+  // Initialize selectedCompany to the first company only once
+  const [selectedCompany, setSelectedCompany] = useState<string>(() => companies[0]?.id || '');
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<BusinessCard | null>(null);
+  const [orgChartData, setOrgChartData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [companySearch, setCompanySearch] = useState('');
 
   const filteredCompanies = companies.filter(c => c.name.toLowerCase().includes(companySearch.toLowerCase()));
   const selectedCompanyData = companies.find(c => c.id === selectedCompany);
@@ -67,7 +67,7 @@ export function OrgChartView() {
     OrgChartService.analyzeRelationships(safeContacts)
       .then((tree) => setOrgChartData(tree))
       .finally(() => setLoading(false));
-  }, [selectedCompanyData]);
+  }, [selectedCompany]);
 
   const handleNodeClick = (nodeData: any) => {
     const card = cards.find(c => c.name === nodeData.name && c.title === nodeData.position);
@@ -86,7 +86,7 @@ export function OrgChartView() {
             <SelectTrigger className="w-full z-[100000]">
             <SelectValue placeholder="Select company" />
           </SelectTrigger>
-            <SelectContent className="max-h-64 overflow-y-auto p-0 z-[100000]">
+            <SelectContent className="max-h-72 overflow-y-auto p-0 z-[100000] border border-muted-foreground/10 shadow-lg bg-background">
               <div className="sticky top-0 z-10 bg-background px-2 pt-2 pb-1 border-b border-muted-foreground/10">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -103,7 +103,7 @@ export function OrgChartView() {
                 <div className="px-4 py-2 text-muted-foreground text-sm">No companies found</div>
               ) : (
                 filteredCompanies.map((company) => (
-              <SelectItem key={company.id} value={company.id}>
+              <SelectItem key={company.id} value={company.id} className="truncate">
                 {company.name}
               </SelectItem>
                 ))

@@ -24,7 +24,7 @@ interface OrgChartNode {
 
 export class OrgChartService {
   static async fetchCompanyCards(company: string): Promise<BusinessCard[]> {
-    console.log('Fetching cards for company:', company);
+    // console.log('Fetching cards for company:', company);
     const { data, error } = await supabase
       .from('business_cards')
       .select('*')
@@ -32,12 +32,12 @@ export class OrgChartService {
       .order('title');
 
     if (error) throw new Error('Failed to fetch business cards');
-    console.log('Fetched cards:', data);
+    // console.log('Fetched cards:', data);
     return data || [];
   }
 
   static async analyzeRelationships(cards: BusinessCard[]): Promise<OrgChartNode> {
-    console.log('Analyzing relationships for cards:', cards);
+    // console.log('Analyzing relationships for cards:', cards);
     try {
       // Prepare the prompt for Perplexity AI
       const prompt = `
@@ -70,7 +70,7 @@ export class OrgChartService {
         Return only the JSON object, no additional text.
       `;
 
-      console.log('Sending request to Perplexity AI');
+      // console.log('Sending request to Perplexity AI');
       const response = await fetch('https://api.perplexity.ai/chat/completions', {
         method: 'POST',
         headers: {
@@ -87,20 +87,20 @@ export class OrgChartService {
         }),
       });
 
-      console.log('Perplexity API response status:', response.status);
+      // console.log('Perplexity API response status:', response.status);
       if (!response.ok) {
         throw new Error('Failed to analyze relationships with Perplexity AI');
       }
 
       const result = await response.json();
-      console.log('Perplexity AI result:', result);
+      // console.log('Perplexity AI result:', result);
 
       const orgStructure = JSON.parse(result.choices[0].message.content);
-      console.log('Parsed org structure:', orgStructure);
+      // console.log('Parsed org structure:', orgStructure);
 
       // Add cardDetails to each node
       const addCardDetails = (node: OrgChartNode) => {
-        console.log('Adding card details to node:', node);
+        // console.log('Adding card details to node:', node);
         const card = cards.find(c => c.id === node.id);
         if (card) {
           node.cardDetails = card;
@@ -112,8 +112,8 @@ export class OrgChartService {
       return addCardDetails(orgStructure);
 
     } catch (error) {
-      console.error('Perplexity AI analysis failed:', error);
-      console.log('Falling back to simple hierarchy');
+      // console.error('Perplexity AI analysis failed:', error);
+      // console.log('Falling back to simple hierarchy');
       
       // Fallback: Create a simple hierarchy based on title keywords
       const positionHierarchy = {
@@ -138,11 +138,11 @@ export class OrgChartService {
       const sortedCards = [...cards].sort((a, b) => {
         const levelA = getLevel(a.title);
         const levelB = getLevel(b.title);
-        console.log(`Comparing titles: ${a.title}(${levelA}) vs ${b.title}(${levelB})`);
+        // console.log(`Comparing titles: ${a.title}(${levelA}) vs ${b.title}(${levelB})`);
         return levelA - levelB;
       });
 
-      console.log('Sorted cards:', sortedCards);
+      // console.log('Sorted cards:', sortedCards);
 
       // Create nodes with proper structure
       const createNode = (card: BusinessCard): OrgChartNode => ({
@@ -155,7 +155,7 @@ export class OrgChartService {
       });
 
       if (sortedCards.length === 0) {
-        console.log('No cards found, returning empty structure');
+        // console.log('No cards found, returning empty structure');
         return {
           id: 'root',
           name: 'No Data',
@@ -166,11 +166,11 @@ export class OrgChartService {
       }
 
       const root = createNode(sortedCards[0]);
-      console.log('Created root node:', root);
+      // console.log('Created root node:', root);
 
       // Modified hierarchy building to ensure all cards are included
       const remainingCards = sortedCards.slice(1);
-      console.log('Remaining cards to process:', remainingCards);
+      // console.log('Remaining cards to process:', remainingCards);
 
       // Group cards by level
       const levels: { [key: number]: BusinessCard[] } = {};
@@ -180,13 +180,13 @@ export class OrgChartService {
         levels[level].push(card);
       });
 
-      console.log('Grouped cards by level:', levels);
+      // console.log('Grouped cards by level:', levels);
 
       // Build hierarchy level by level
       Object.keys(levels).sort().forEach(levelStr => {
         const level = parseInt(levelStr);
         const cardsInLevel = levels[level];
-        console.log(`Processing level ${level} with cards:`, cardsInLevel);
+        // console.log(`Processing level ${level} with cards:`, cardsInLevel);
 
         cardsInLevel.forEach(card => {
           const node = createNode(card);
@@ -209,11 +209,11 @@ export class OrgChartService {
             }
           }
           parentNode.children.push(node);
-          console.log(`Added node ${node.name} to parent ${parentNode.name}`);
+          // console.log(`Added node ${node.name} to parent ${parentNode.name}`);
         });
       });
 
-      console.log('Final org structure:', root);
+      // console.log('Final org structure:', root);
       return root;
     }
   }

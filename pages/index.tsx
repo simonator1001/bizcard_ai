@@ -48,6 +48,7 @@ import { NewsArticle } from '@/types/news'
 import { ChatInterface } from '@/components/chat/ChatInterface'
 import { useTranslation } from 'react-i18next'
 import imageCompression from 'browser-image-compression';
+import { OrgChartView } from '@/components/org-chart/OrgChartView';
 
 type ViewMode = 'list' | 'grid' | 'carousel' | 'stack';
 
@@ -302,15 +303,14 @@ export default function Component() {
   const selectedCompanyData = companies.find(c => c.id === selectedCompany)
 
   const handleEdit = (card: BusinessCard) => {
-    // Implement edit functionality
-    console.log('Edit card:', card)
+    // console.log('Edit card:', card)
   }
 
   const handleDelete = async (card: BusinessCard) => {
     try {
       await deleteCard(card.id)
     } catch (error) {
-      console.error('Error deleting card:', error)
+      // console.error('Error deleting card:', error)
     }
   }
 
@@ -323,10 +323,10 @@ export default function Component() {
   }
 
   const compressImage = async (file: File) => {
-    console.log('[DEBUG] Original file:', {
-      size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-      type: file.type
-    });
+    // console.log('[DEBUG] Original file:', {
+    //   size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+    //   type: file.type
+    // });
 
     const options = {
       maxSizeMB: 1,
@@ -337,13 +337,13 @@ export default function Component() {
 
     try {
       const compressedFile = await imageCompression(file, options);
-      console.log('[DEBUG] Compressed file:', {
-        size: `${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`,
-        type: compressedFile.type
-      });
+      // console.log('[DEBUG] Compressed file:', {
+      //   size: `${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`,
+      //   type: compressedFile.type
+      // });
       return compressedFile;
     } catch (error) {
-      console.error('[DEBUG] Compression error:', error);
+      // console.error('[DEBUG] Compression error:', error);
       throw error;
     }
   };
@@ -405,26 +405,26 @@ export default function Component() {
                                   setUploadProgress('Converting to base64...');
                                   
                                   // Debug file info
-                                  console.log('[DEBUG] File details:', {
-                                    name: compressedFile.name,
-                                    type: compressedFile.type,
-                                    size: `${(compressedFile.size / 1024).toFixed(2)} KB`
-                                  });
+                                  // console.log('[DEBUG] File details:', {
+                                  //   name: compressedFile.name,
+                                  //   type: compressedFile.type,
+                                  //   size: `${(compressedFile.size / 1024).toFixed(2)} KB`
+                                  // });
                                   
                                   // Convert to base64
                                   const reader = new FileReader();
                                   const base64Promise = new Promise<string>((resolve, reject) => {
                                     reader.onload = () => {
                                       const result = reader.result as string;
-                                      console.log('[DEBUG] Base64 conversion:', {
-                                        length: result.length,
-                                        preview: result.substring(0, 50) + '...',
-                                        isDataUrl: result.startsWith('data:')
-                                      });
+                                      // console.log('[DEBUG] Base64 conversion:', {
+                                      //   length: result.length,
+                                      //   preview: result.substring(0, 50) + '...',
+                                      //   isDataUrl: result.startsWith('data:')
+                                      // });
                                       resolve(result);
                                     };
                                     reader.onerror = (error) => {
-                                      console.error('[DEBUG] FileReader error:', error);
+                                      // console.error('[DEBUG] FileReader error:', error);
                                       reject(error);
                                     };
                                   });
@@ -437,18 +437,18 @@ export default function Component() {
                                     await supabase.auth.refreshSession();
                                   
                                   if (refreshError || !refreshedSession) {
-                                    console.error('[DEBUG] Auth error:', refreshError);
+                                    // console.error('[DEBUG] Auth error:', refreshError);
                                     throw new Error('Authentication failed');
                                   }
 
                                   const accessToken = refreshedSession.access_token;
 
-                                  console.log('[DEBUG] Session data:', {
-                                    hasSession: !!refreshedSession,
-                                    userId: refreshedSession.user.id,
-                                    tokenLength: accessToken.length,
-                                    expiresAt: new Date(refreshedSession.expires_at! * 1000).toISOString()
-                                  });
+                                  // console.log('[DEBUG] Session data:', {
+                                  //   hasSession: !!refreshedSession,
+                                  //   userId: refreshedSession.user.id,
+                                  //   tokenLength: accessToken.length,
+                                  //   expiresAt: new Date(refreshedSession.expires_at! * 1000).toISOString()
+                                  // });
 
                                   setUploadProgress('Processing card...');
                                   // Call scan API with auth token
@@ -491,24 +491,24 @@ export default function Component() {
 
                                   if (!response.ok) {
                                     const errorText = await response.text();
-                                    console.error('[DEBUG] API Error:', {
-                                      status: response.status,
-                                      statusText: response.statusText,
-                                      headers: Object.fromEntries(response.headers.entries()),
-                                      error: errorText
-                                    });
+                                    // console.error('[DEBUG] API Error:', {
+                                    //   status: response.status,
+                                    //   statusText: response.statusText,
+                                    //   headers: Object.fromEntries(response.headers.entries()),
+                                    //   error: errorText
+                                    // });
                                     throw new Error(`Failed to process image: ${errorText}`);
                                   }
 
                                   const result = await response.json();
-                                  console.log('[DEBUG] API Success:', result);
+                                  // console.log('[DEBUG] API Success:', result);
                                   toast.success(`Card ${i + 1} processed successfully`);
                                 } catch (error: any) {
-                                  console.error('[DEBUG] Error details:', {
-                                    message: error.message,
-                                    stack: error.stack,
-                                    name: error.name
-                                  });
+                                  // console.error('[DEBUG] Error details:', {
+                                  //   message: error.message,
+                                  //   stack: error.stack,
+                                  //   name: error.name
+                                  // });
                                   toast.error(`Failed to process card ${i + 1}: ${error.message}`);
                                 }
                               }
@@ -584,18 +584,18 @@ export default function Component() {
                                   await supabase.auth.refreshSession();
                                 
                                 if (refreshError || !refreshedSession) {
-                                  console.error('[DEBUG] Auth error:', refreshError);
+                                  // console.error('[DEBUG] Auth error:', refreshError);
                                   throw new Error('Authentication failed');
                                 }
 
                                 const accessToken = refreshedSession.access_token;
 
-                                console.log('[DEBUG] Session data:', {
-                                  hasSession: !!refreshedSession,
-                                  userId: refreshedSession.user.id,
-                                  tokenLength: accessToken.length,
-                                  expiresAt: new Date(refreshedSession.expires_at! * 1000).toISOString()
-                                });
+                                // console.log('[DEBUG] Session data:', {
+                                //   hasSession: !!refreshedSession,
+                                //   userId: refreshedSession.user.id,
+                                //   tokenLength: accessToken.length,
+                                //   expiresAt: new Date(refreshedSession.expires_at! * 1000).toISOString()
+                                // });
 
                                 setUploadProgress('Processing card...');
                                 // Call scan API with auth token
@@ -644,7 +644,7 @@ export default function Component() {
                                 const result = await response.json();
                                 toast.success('Card processed successfully');
                               } catch (error: any) {
-                                console.error('Error processing file:', error);
+                                // console.error('Error processing file:', error);
                                 toast.error('Failed to process card');
                               } finally {
                                 setIsUploading(false);
@@ -703,84 +703,7 @@ export default function Component() {
             </TabsContent>
 
             <TabsContent value="network" className="h-full p-8">
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold">Organization Chart</h2>
-                  <div className="flex items-center gap-4">
-                    <Select value={selectedCompany} onValueChange={setSelectedCompany}>
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Select company" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {companies.map((company) => (
-                          <SelectItem key={company.id} value={company.id}>
-                            {company.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Total Contacts</CardTitle>
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{totalContacts}</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Companies</CardTitle>
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{companies.length}</div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {selectedCompanyData && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{selectedCompanyData.name}</CardTitle>
-                      <CardDescription>{selectedCompanyData.contacts.length} contacts</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ScrollArea className="h-[400px]">
-                        <div className="space-y-4">
-                          {selectedCompanyData.contacts.map((contact) => (
-                            <Card key={contact.id}>
-                              <CardContent className="p-4">
-                                <div className="flex items-center gap-4">
-                                  <Avatar>
-                                    <AvatarFallback>
-                                      {contact.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '??'}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <h3 className="font-medium">
-                                      {contact.name || contact.name_zh}
-                                      {contact.name && contact.name_zh && ` (${contact.name_zh})`}
-                                    </h3>
-                                    <p className="text-sm text-gray-500">
-                                      {contact.title || contact.title_zh}
-                                      {contact.title && contact.title_zh && ` (${contact.title_zh})`}
-                                    </p>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+              <OrgChartView />
             </TabsContent>
 
             <TabsContent value="news" className="h-full p-8">
