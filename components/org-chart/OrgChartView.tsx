@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useBusinessCards } from '@/lib/hooks/useBusinessCards';
@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { BusinessCardDialog } from '../cards/BusinessCardDialog';
 import { OrgChart } from './OrgChart';
 import { RawNodeDatum } from 'react-d3-tree';
+import { OrgChartService } from '@/lib/org-chart-service';
 
 interface NodeData extends RawNodeDatum {
   name: string;
@@ -28,6 +29,8 @@ export function OrgChartView() {
   const [selectedCompany, setSelectedCompany] = useState<string>('');
   const [showDetails, setShowDetails] = useState(false);
   const [selectedCard, setSelectedCard] = useState<BusinessCard | null>(null);
+  const [orgChartData, setOrgChartData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
   // Group cards by company
   const companiesMap = new Map<string, BusinessCard[]>();
@@ -47,47 +50,22 @@ export function OrgChartView() {
 
   const selectedCompanyData = companies.find(c => c.id === selectedCompany);
 
-  // Convert BusinessCard[] to NodeData structure
-  const convertToOrgChartData = (contacts: BusinessCard[]): NodeData | null => {
-    // Find the root (CEO/highest position)
-    const root = contacts.find(c => 
-      c.title?.toLowerCase().includes('ceo') ||
-      c.title?.toLowerCase().includes('president') ||
-      c.title?.toLowerCase().includes('founder')
-    ) || contacts[0];
-
-    if (!root) return null;
-
-    const getLevel = (title: string = ''): NodeData['level'] => {
-      title = title.toLowerCase();
-      if (title.includes('ceo') || title.includes('president') || title.includes('founder')) {
-        return 'executive';
-      }
-      if (title.includes('manager') || title.includes('director') || title.includes('head')) {
-        return 'manager';
-      }
-      return 'staff';
-    };
-
-    const buildNode = (card: BusinessCard): NodeData => ({
+  useEffect(() => {
+    if (!selectedCompanyData) return;
+    setLoading(true);
+    const safeContacts = selectedCompanyData.contacts.map(card => ({
+      id: card.id,
       name: card.name || '',
-      position: card.title || '',
+      title: card.title || '',
+      company: card.company || '',
       email: card.email || '',
-      level: getLevel(card.title),
-      children: contacts
-        .filter(c => c.id !== card.id)
-        .map(c => buildNode(c)),
-      __rd3t: {
-        depth: 0,
-        id: card.id,
-        collapsed: false,
-      }
-    });
+    }));
+    OrgChartService.analyzeRelationships(safeContacts)
+      .then((tree) => setOrgChartData(tree))
+      .finally(() => setLoading(false));
+  }, [selectedCompanyData]);
 
-    return buildNode(root);
-  };
-
-  const handleNodeClick = (nodeData: NodeData) => {
+  const handleNodeClick = (nodeData: any) => {
     const card = cards.find(c => c.name === nodeData.name && c.title === nodeData.position);
     if (card) {
       setSelectedCard(card);
@@ -120,19 +98,20 @@ export function OrgChartView() {
             <CardDescription>{selectedCompanyData.contacts.length} members</CardDescription>
           </CardHeader>
           <CardContent>
-            {(() => {
-              const orgChartData = convertToOrgChartData(selectedCompanyData.contacts);
-              return orgChartData ? (
-                <OrgChart
-                  data={orgChartData}
-                  onNodeClick={handleNodeClick}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-[600px] text-muted-foreground">
-                  No organization data available
-                </div>
-              );
-            })()}
+            {loading ? (
+              <div className="flex items-center justify-center h-[600px] text-muted-foreground">
+                Loading org chart...
+              </div>
+            ) : orgChartData ? (
+              <OrgChart
+                data={orgChartData}
+                onNodeClick={handleNodeClick}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-[600px] text-muted-foreground">
+                No organization data available
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -143,11 +122,9 @@ export function OrgChartView() {
           isOpen={showDetails}
           onClose={() => setShowDetails(false)}
           onEdit={(card) => {
-            // Handle edit
             setShowDetails(false);
           }}
           onDelete={(id) => {
-            // Handle delete
             setShowDetails(false);
           }}
         />

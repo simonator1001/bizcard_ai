@@ -8,7 +8,7 @@ const supabase = createClient(
 interface BusinessCard {
   id: string;
   name: string;
-  position: string;
+  title: string;
   company: string;
   email: string;
 }
@@ -16,7 +16,7 @@ interface BusinessCard {
 interface OrgChartNode {
   id: string;
   name: string;
-  position: string;
+  title: string;
   email: string;
   children: OrgChartNode[];
   cardDetails?: BusinessCard;
@@ -29,7 +29,7 @@ export class OrgChartService {
       .from('business_cards')
       .select('*')
       .eq('company', company)
-      .order('position');
+      .order('title');
 
     if (error) throw new Error('Failed to fetch business cards');
     console.log('Fetched cards:', data);
@@ -55,7 +55,7 @@ export class OrgChartService {
         {
           "id": string,
           "name": string,
-          "position": string,
+          "title": string,
           "email": string,
           "children": [] (array of objects with the same structure)
         }
@@ -124,10 +124,10 @@ export class OrgChartService {
         level5: ['associate', 'junior', 'staff'],
       };
 
-      const getLevel = (position: string): number => {
-        position = position.toLowerCase();
+      const getLevel = (title: string): number => {
+        title = title.toLowerCase();
         for (const [level, titles] of Object.entries(positionHierarchy)) {
-          if (titles.some(title => position.includes(title))) {
+          if (titles.some(keyword => title.includes(keyword))) {
             return parseInt(level.replace('level', ''));
           }
         }
@@ -136,9 +136,9 @@ export class OrgChartService {
 
       // Sort cards by hierarchy level
       const sortedCards = [...cards].sort((a, b) => {
-        const levelA = getLevel(a.position);
-        const levelB = getLevel(b.position);
-        console.log(`Comparing positions: ${a.position}(${levelA}) vs ${b.position}(${levelB})`);
+        const levelA = getLevel(a.title);
+        const levelB = getLevel(b.title);
+        console.log(`Comparing titles: ${a.title}(${levelA}) vs ${b.title}(${levelB})`);
         return levelA - levelB;
       });
 
@@ -148,7 +148,7 @@ export class OrgChartService {
       const createNode = (card: BusinessCard): OrgChartNode => ({
         id: card.id,
         name: card.name,
-        position: card.position,
+        title: card.title,
         email: card.email,
         children: [],
         cardDetails: card,
@@ -159,7 +159,7 @@ export class OrgChartService {
         return {
           id: 'root',
           name: 'No Data',
-          position: '',
+          title: '',
           email: '',
           children: [],
         };
@@ -175,7 +175,7 @@ export class OrgChartService {
       // Group cards by level
       const levels: { [key: number]: BusinessCard[] } = {};
       remainingCards.forEach(card => {
-        const level = getLevel(card.position);
+        const level = getLevel(card.title);
         if (!levels[level]) levels[level] = [];
         levels[level].push(card);
       });
