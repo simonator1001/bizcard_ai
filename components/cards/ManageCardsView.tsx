@@ -189,26 +189,39 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
     }
 
     try {
-      const { error } = await supabase
+      // Debug log: show merged card
+      console.log('[Merge] Upserting merged card:', mergedCard);
+      // Remove properties not in the DB schema before upsert
+      const { images, mergedFrom, ...upsertCard } = mergedCard;
+      delete (upsertCard as any).last_modified;
+      const { error, data } = await supabase
         .from('business_cards')
-        .upsert([{
-          ...mergedCard,
-          user_id: user.id,
-          lastModified: new Date().toISOString()
-        }]);
-      
+        .upsert([
+          {
+            ...upsertCard,
+            user_id: user.id,
+            lastModified: upsertCard.lastModified || new Date().toISOString(),
+          } as any
+        ]);
+      // Debug log: upsert response
+      console.log('[Merge] Upsert response:', { error, data });
       if (error) {
         console.error('Error merging card:', error);
         throw error;
       }
-      
-      await fetchCards();
+      // Only delete cards that are not the merged card
+      const deleteIds = (mergedCard.mergedFrom || []).filter(id => id !== mergedCard.id);
+      console.log('[Merge] Deleting cards with IDs:', deleteIds);
+      for (const id of deleteIds) {
+        await supabase.from('business_cards').delete().eq('id', id);
+      }
       toast.success('Cards merged successfully');
-    } catch (error) {
-      console.error('Error merging card:', error);
+      await fetchCards();
+    } catch (err) {
       toast.error('Failed to merge cards');
+      console.error(err);
     }
-  }, [user, fetchCards]);
+  }, [user, supabase, fetchCards]);
 
   const handleDeleteCard = useCallback(async (cardId: string) => {
     if (!user) {

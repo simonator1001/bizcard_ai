@@ -72,8 +72,14 @@ export function mergeCards(cards: BusinessCard[]): BusinessCard {
     if (!baseCard.notes && card.notes) baseCard.notes = card.notes;
   });
 
-  // Update lastModified timestamp
-  baseCard.lastModified = new Date().toISOString();
+  // Set mergedFrom to all card IDs except the base card
+  baseCard.mergedFrom = sortedCards.map(card => card.id).filter(id => id !== baseCard.id);
+
+  // Update lastModified and last_modified timestamps
+  const now = new Date().toISOString();
+  baseCard.lastModified = now;
+  // @ts-ignore
+  baseCard.last_modified = now;
 
   return baseCard;
 } 
