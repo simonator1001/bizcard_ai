@@ -115,7 +115,7 @@ function Toolbar({
             <ChevronDown className="w-4 h-4 text-zinc-500" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56">
+        <DropdownMenuContent className="w-56 z-[100000] max-h-64 overflow-y-auto">
           <div className="px-2 py-1 text-xs font-semibold text-zinc-500">Company</div>
           {companies.map(company => (
             <DropdownMenuCheckboxItem
@@ -158,7 +158,7 @@ function Toolbar({
             <ChevronDown className="w-4 h-4 text-zinc-500" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuContent align="end" className="w-48 z-[100000] max-h-64 overflow-y-auto">
           <DropdownMenuRadioGroup value={`${sortField}-${sortDirection}`} onValueChange={value => {
             const [field, direction] = value.split("-");
             onSortChange(field, direction);
