@@ -86,7 +86,7 @@ export function OrgChartView() {
             <SelectTrigger className="w-full z-[100000]">
             <SelectValue placeholder="Select company" />
           </SelectTrigger>
-            <SelectContent className="max-h-72 overflow-y-auto p-0 z-[100000] border border-muted-foreground/10 shadow-lg bg-background">
+            <SelectContent className="max-h-72 overflow-y-auto p-0 z-[100000] border border-muted-foreground/10 shadow-lg bg-white">
               <div className="sticky top-0 z-10 bg-background px-2 pt-2 pb-1 border-b border-muted-foreground/10">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />

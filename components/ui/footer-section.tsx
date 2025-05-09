@@ -13,6 +13,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Facebook, Instagram, Linkedin, Moon, Send, Sun, Twitter } from "lucide-react"
+import NewsletterForm from "@/components/ui/newsletter-form"
 
 function Footerdemo() {
   const [isDarkMode, setIsDarkMode] = React.useState(true)
@@ -35,21 +36,7 @@ function Footerdemo() {
             <p className="mb-6 text-muted-foreground">
               Join our newsletter for the latest updates and exclusive offers.
             </p>
-            <form className="relative flex items-center bg-white/70 dark:bg-zinc-900/70 rounded-full shadow-sm overflow-hidden">
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 border-0 bg-transparent px-4 py-2 text-sm focus:ring-0"
-              />
-              <Button
-                type="submit"
-                size="icon"
-                className="rounded-full bg-primary text-primary-foreground m-1 shadow-none hover:scale-105 transition-transform"
-              >
-                <Send className="h-4 w-4" />
-                <span className="sr-only">Subscribe</span>
-              </Button>
-            </form>
+            <NewsletterForm />
           </div>
           <div>
             <h3 className="mb-4 text-lg font-semibold text-primary">Quick Links</h3>

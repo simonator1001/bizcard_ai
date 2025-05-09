@@ -669,7 +669,7 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
                             id={key}
                             value={value as string}
                             onChange={(e) => setExtractedInfo({ ...extractedInfo, [key]: e.target.value })}
-                            className="col-span-3"
+                            className={`col-span-3${key === 'email' ? ' bg-white' : ''}`}
                           />
                         </div>
                       )
