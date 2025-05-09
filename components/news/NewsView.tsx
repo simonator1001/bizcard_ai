@@ -16,6 +16,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from '@/lib/supabase-client';
+import { NewsTimeline } from './NewsTab';
 
 function CompanySelect({ companies, selectedCompanies, onSelect }: { 
   companies: string[], 
@@ -563,16 +564,7 @@ export function NewsView() {
             {Array.from(errors.values())[0]}
           </div>
         ) : sortedArticles.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4">
-            {sortedArticles.map((article) => (
-              <NewsItem
-                key={article.id || `${article.company}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`}
-                article={article}
-                onClick={() => {}}
-                showCompany={true}
-              />
-            ))}
-          </div>
+          <NewsTimeline articles={sortedArticles} />
         ) : selectedCompanies.length > 0 ? (
           <div className="rounded-lg border bg-muted p-8 text-center text-muted-foreground">
             {t('news.noArticles')}

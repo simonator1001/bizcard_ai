@@ -8,10 +8,12 @@ import { Badge } from "@/components/ui/badge";
 
 interface NewsArticle {
   title: string;
-  date: string;
+  publishedDate: string;
   source: string;
   summary: string;
   url: string;
+  company?: string;
+  imageUrl?: string;
 }
 
 interface TimelineEntry {
@@ -91,7 +93,7 @@ const NewsArticleCard = ({ article }: { article: NewsArticle }) => {
           <div className="flex flex-wrap gap-2 mt-2">
             <Badge variant="outline" className="flex items-center gap-1 text-xs">
               <Calendar className="h-3 w-3" />
-              {article.date}
+              {article.publishedDate}
             </Badge>
             <Badge variant="outline" className="flex items-center gap-1 text-xs">
               <User className="h-3 w-3" />
@@ -119,7 +121,7 @@ const NewsTimeline = ({ articles }: { articles: NewsArticle[] }) => {
   // Group articles by month/year
   const groupedArticles: Record<string, NewsArticle[]> = {};
   articles.forEach(article => {
-    const date = new Date(article.date);
+    const date = new Date(article.publishedDate);
     const monthYear = `${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`;
     if (!groupedArticles[monthYear]) {
       groupedArticles[monthYear] = [];
@@ -147,14 +149,14 @@ const NewsTab = () => {
   const newsArticles: NewsArticle[] = [
     {
       title: "Watsons Expands Partnership with ClimatePartner on Earth Day",
-      date: "2025-04-22",
+      publishedDate: "2025-04-22",
       source: "AS Watson Group / PARKnSHOP",
       summary: "Watsons, part of the AS Watson Group which also includes ParknShop, has expanded its partnership with ClimatePartner to enhance carbon compensation initiatives. This move aims to offset over 4,000 tons of CO2 emissions from selected sustainable products.",
       url: "https://example.com/article1"
     },
     {
       title: "Hong Kong economy: Can mainland bargain-bin grocery stores push out Hong Kong's dominant chains?",
-      date: "2024-12-10",
+      publishedDate: "2024-12-10",
       source: "South China Morning Post / PARKnSHOP",
       summary: "New entrant HotMaxx is winning customers by offering prices at a fraction of what ParknShop charges, bringing mainland sales tactics to Hong Kong. This competition could potentially challenge the dominance of traditional supermarket chains like ParknShop.",
       url: "https://example.com/article2"
@@ -167,4 +169,5 @@ const NewsTab = () => {
   );
 };
 
-export default NewsTab; 
+export default NewsTab;
+export { NewsTimeline }; 
