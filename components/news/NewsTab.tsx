@@ -5,6 +5,7 @@ import { useScroll, useTransform, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 
 interface NewsArticle {
   title: string;
@@ -85,9 +86,20 @@ export const Timeline = ({ data }: { data: TimelineEntry[] }) => {
 };
 
 const NewsArticleCard = ({ article }: { article: NewsArticle }) => {
+  // Use article.imageUrl or fallback to company logo
+  const imageUrl = article.imageUrl || (article.company ? `https://logo.clearbit.com/${article.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com` : '/placeholder-news.jpg');
   return (
-    <Card className="p-4 mb-4 hover:shadow-md transition-shadow duration-200">
-      <div className="flex flex-col space-y-3">
+    <Card className="p-4 mb-4 hover:shadow-md transition-shadow duration-200 flex gap-4 items-start">
+      <div className="flex-shrink-0 w-20 h-20 relative rounded-lg overflow-hidden bg-muted">
+        <Image
+          src={imageUrl}
+          alt={article.title}
+          fill
+          className="object-cover rounded-lg"
+          sizes="80px"
+        />
+      </div>
+      <div className="flex flex-col flex-1 space-y-3">
         <div>
           <h4 className="text-lg font-semibold text-foreground">{article.title}</h4>
           <div className="flex flex-wrap gap-2 mt-2">
