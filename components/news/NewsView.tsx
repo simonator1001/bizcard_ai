@@ -10,13 +10,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { Search, RefreshCw } from 'lucide-react';
+import { Search, RefreshCw, Calendar, SlidersHorizontal, ArrowUpAZ, ArrowDownAZ } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from '@/lib/supabase-client';
 import { NewsTimeline } from './NewsTab';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function CompanySelect({ companies, selectedCompanies, onSelect }: { 
   companies: string[], 
@@ -81,6 +82,16 @@ function CompanySelect({ companies, selectedCompanies, onSelect }: {
     </Dialog>
   );
 }
+
+// Glass effect component for cyber UI styling
+const GlassPanel = ({ children, className }: { children: React.ReactNode, className?: string }) => {
+  return (
+    <div className={`relative backdrop-blur-md bg-background/30 border border-border/40 shadow-lg rounded-xl overflow-hidden ${className}`}>
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-background/10 pointer-events-none" />
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+};
 
 export function NewsView() {
   const { t } = useTranslation();
@@ -457,100 +468,124 @@ export function NewsView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b">
-          <div>
-            <h2 className="text-3xl font-bold">{t('news.title')}</h2>
-            <p className="text-muted-foreground mt-1">
-              Stay updated with news about your network
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <CompanySelect 
-            companies={uniqueCompanies}
-            selectedCompanies={selectedCompanies}
-            onSelect={handleCompanySelect}
-          />
-
-          <Button 
-            onClick={selectRandomCompanies} 
-            variant="outline"
-            className="gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Random
-          </Button>
-
-          <Select 
-            value={articlesPerCompany.toString()} 
-            onValueChange={(value) => setArticlesPerCompany(Number(value))}
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Articles" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="3">3 articles</SelectItem>
-              <SelectItem value="5">5 articles</SelectItem>
-              <SelectItem value="10">10 articles</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={sortBy}
-            onValueChange={(value: 'date' | 'company') => setSortBy(value)}
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="date">Sort by Date</SelectItem>
-              <SelectItem value="company">Sort by Company</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button 
-            variant="outline" 
-            onClick={() => setSortOrder(order => order === 'asc' ? 'desc' : 'asc')}
-            size="icon"
-            className="w-10 h-10"
-          >
-            {sortOrder === 'asc' ? '↑' : '↓'}
-          </Button>
-        </div>
-
-        {selectedCompanies.length > 0 && (
-          <div className="flex flex-wrap gap-2 items-center">
-            <div className="text-sm text-muted-foreground">
-              Selected:
+      <GlassPanel className="p-6">
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">
+                {t('news.title')}
+              </h2>
+              <p className="text-muted-foreground mt-1">
+                Stay updated with news about your network
+              </p>
             </div>
-            {selectedCompanies.map(company => (
-              <Badge
-                key={company}
-                variant="secondary"
-                className="px-3 py-1"
-              >
-                {company}
-                <button
-                  className="ml-2 hover:text-destructive"
-                  onClick={() => handleCompanySelect(company)}
-                >
-                  ×
-                </button>
-              </Badge>
-            ))}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedCompanies([])}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              Clear all
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+              <span className="text-xs text-muted-foreground">Live Updates</span>
+            </div>
           </div>
-        )}
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <CompanySelect 
+                companies={uniqueCompanies}
+                selectedCompanies={selectedCompanies}
+                onSelect={handleCompanySelect}
+              />
+              <Button 
+                onClick={selectRandomCompanies} 
+                variant="outline"
+                className="gap-2 bg-background/40 backdrop-blur-sm border-primary/20 hover:bg-primary/10 hover:border-primary/40 text-foreground shadow-[0_0_15px_rgba(0,0,0,0.1)] transition-all duration-300"
+              >
+                <RefreshCw className="h-4 w-4 text-primary/80" />
+                Random
+              </Button>
+              <Select 
+                value={articlesPerCompany.toString()} 
+                onValueChange={(value) => setArticlesPerCompany(Number(value))}
+              >
+                <SelectTrigger className="w-[140px] bg-background/40 backdrop-blur-sm border-primary/20 hover:bg-primary/10 hover:border-primary/40 text-foreground shadow-[0_0_15px_rgba(0,0,0,0.1)]">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary/80" />
+                    <SelectValue placeholder="Articles" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="bg-background/95 backdrop-blur-xl border-primary/20">
+                  <SelectItem value="3">3 articles</SelectItem>
+                  <SelectItem value="5">5 articles</SelectItem>
+                  <SelectItem value="10">10 articles</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={sortBy}
+                onValueChange={(value: 'date' | 'company') => setSortBy(value)}
+              >
+                <SelectTrigger className="w-[140px] bg-background/40 backdrop-blur-sm border-primary/20 hover:bg-primary/10 hover:border-primary/40 text-foreground shadow-[0_0_15px_rgba(0,0,0,0.1)]">
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal className="h-4 w-4 text-primary/80" />
+                    <SelectValue placeholder="Sort by" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="bg-background/95 backdrop-blur-xl border-primary/20">
+                  <SelectItem value="date">Sort by Date</SelectItem>
+                  <SelectItem value="company">Sort by Company</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button 
+                variant="outline" 
+                onClick={() => setSortOrder(order => order === 'asc' ? 'desc' : 'asc')}
+                size="icon"
+                className="w-10 h-10 bg-background/40 backdrop-blur-sm border-primary/20 hover:bg-primary/10 hover:border-primary/40 text-foreground shadow-[0_0_15px_rgba(0,0,0,0.1)] transition-all duration-300"
+              >
+                {sortOrder === 'asc' ? 
+                  <ArrowUpAZ className="h-4 w-4 text-primary/80" /> : 
+                  <ArrowDownAZ className="h-4 w-4 text-primary/80" />
+                }
+              </Button>
+            </div>
+            {selectedCompanies.length > 0 && (
+              <div className="flex flex-wrap gap-2 items-center">
+                <div className="text-sm text-muted-foreground">
+                  Selected:
+                </div>
+                <AnimatePresence>
+                  {selectedCompanies.map(company => (
+                    <motion.div
+                      key={company}
+                      initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Badge
+                        variant="secondary"
+                        className="px-3 py-1 bg-primary/10 hover:bg-primary/20 text-foreground border border-primary/20 shadow-[0_0_10px_rgba(0,0,0,0.05)] transition-all duration-300"
+                      >
+                        {company}
+                        <button
+                          className="ml-2 text-muted-foreground hover:text-primary transition-colors"
+                          onClick={() => handleCompanySelect(company)}
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+                {selectedCompanies.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedCompanies([])}
+                    className="text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                  >
+                    Clear all
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </GlassPanel>
 
       <div className="space-y-4">
         {loading || loadingCompanies.size > 0 ? (
