@@ -32,45 +32,35 @@ function Pricing() {
                   </span>
                 </CardTitle>
                 <CardDescription>
-                  Our goal is to streamline SMB trade, making it easier and faster
-                  than ever for everyone and everywhere.
+                  For individuals and small teams getting started with digital business card management.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-8 justify-start">
                   <p className="flex flex-row  items-center gap-2 text-xl">
-                    <span className="text-4xl">$40</span>
-                    <span className="text-sm text-muted-foreground">
-                      {" "}
-                      / month
-                    </span>
+                    <span className="text-4xl">$0</span>
+                    <span className="text-sm text-muted-foreground"> / month</span>
                   </p>
                   <div className="flex flex-col gap-4 justify-start">
                     <div className="flex flex-row gap-4">
                       <Check className="w-4 h-4 mt-2 text-primary" />
                       <div className="flex flex-col">
-                        <p>Fast and reliable</p>
-                        <p className="text-muted-foreground text-sm">
-                          We&apos;ve made it fast and reliable.
-                        </p>
+                        <p>Scan up to 10 cards/month</p>
+                        <p className="text-muted-foreground text-sm">Basic OCR (English only)</p>
                       </div>
                     </div>
                     <div className="flex flex-row gap-4">
                       <Check className="w-4 h-4 mt-2 text-primary" />
                       <div className="flex flex-col">
-                        <p>Fast and reliable</p>
-                        <p className="text-muted-foreground text-sm">
-                          We&apos;ve made it fast and reliable.
-                        </p>
+                        <p>Basic card management</p>
+                        <p className="text-muted-foreground text-sm">Add, edit, and delete cards</p>
                       </div>
                     </div>
                     <div className="flex flex-row gap-4">
                       <Check className="w-4 h-4 mt-2 text-primary" />
                       <div className="flex flex-col">
-                        <p>Fast and reliable</p>
-                        <p className="text-muted-foreground text-sm">
-                          We&apos;ve made it fast and reliable.
-                        </p>
+                        <p>Limited news feed</p>
+                        <p className="text-muted-foreground text-sm">See updates from your contacts</p>
                       </div>
                     </div>
                   </div>
@@ -88,45 +78,35 @@ function Pricing() {
                   </span>
                 </CardTitle>
                 <CardDescription>
-                  Our goal is to streamline SMB trade, making it easier and faster
-                  than ever for everyone and everywhere.
+                  For professionals and growing teams who need more power and flexibility.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-8 justify-start">
                   <p className="flex flex-row  items-center gap-2 text-xl">
-                    <span className="text-4xl">$40</span>
-                    <span className="text-sm text-muted-foreground">
-                      {" "}
-                      / month
-                    </span>
+                    <span className="text-4xl">$9.99</span>
+                    <span className="text-sm text-muted-foreground"> / month</span>
                   </p>
                   <div className="flex flex-col gap-4 justify-start">
                     <div className="flex flex-row gap-4">
                       <Check className="w-4 h-4 mt-2 text-primary" />
                       <div className="flex flex-col">
-                        <p>Fast and reliable</p>
-                        <p className="text-muted-foreground text-sm">
-                          We&apos;ve made it fast and reliable.
-                        </p>
+                        <p>Unlimited card scans</p>
+                        <p className="text-muted-foreground text-sm">Advanced OCR (multi-language)</p>
                       </div>
                     </div>
                     <div className="flex flex-row gap-4">
                       <Check className="w-4 h-4 mt-2 text-primary" />
                       <div className="flex flex-col">
-                        <p>Fast and reliable</p>
-                        <p className="text-muted-foreground text-sm">
-                          We&apos;ve made it fast and reliable.
-                        </p>
+                        <p>AI-powered categorization</p>
+                        <p className="text-muted-foreground text-sm">Smart tags and filters</p>
                       </div>
                     </div>
                     <div className="flex flex-row gap-4">
                       <Check className="w-4 h-4 mt-2 text-primary" />
                       <div className="flex flex-col">
-                        <p>Fast and reliable</p>
-                        <p className="text-muted-foreground text-sm">
-                          We&apos;ve made it fast and reliable.
-                        </p>
+                        <p>Team collaboration</p>
+                        <p className="text-muted-foreground text-sm">Share cards and notes with your team</p>
                       </div>
                     </div>
                   </div>
