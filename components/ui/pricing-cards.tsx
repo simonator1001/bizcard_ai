@@ -32,44 +32,48 @@ function Pricing() {
                   </span>
                 </CardTitle>
                 <CardDescription>
-                  Our goal is to streamline SMB trade, making it easier and faster
-                  than ever for everyone and everywhere.
+                  Get started with essential features for individuals and small teams.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-8 justify-start">
                   <p className="flex flex-row  items-center gap-2 text-xl">
-                    <span className="text-4xl">$40</span>
-                    <span className="text-sm text-muted-foreground">
-                      {" "}
-                      / month
-                    </span>
+                    <span className="text-4xl">Free</span>
                   </p>
                   <div className="flex flex-col gap-4 justify-start">
                     <div className="flex flex-row gap-4">
                       <Check className="w-4 h-4 mt-2 text-primary" />
                       <div className="flex flex-col">
-                        <p>Fast and reliable</p>
+                        <p>Scan up to 10 business cards/month</p>
                         <p className="text-muted-foreground text-sm">
-                          We&apos;ve made it fast and reliable.
+                          Basic OCR (English only)
                         </p>
                       </div>
                     </div>
                     <div className="flex flex-row gap-4">
                       <Check className="w-4 h-4 mt-2 text-primary" />
                       <div className="flex flex-col">
-                        <p>Fast and reliable</p>
+                        <p>Limited news feed (3 articles/day)</p>
                         <p className="text-muted-foreground text-sm">
-                          We&apos;ve made it fast and reliable.
+                          Stay updated with curated news
                         </p>
                       </div>
                     </div>
                     <div className="flex flex-row gap-4">
                       <Check className="w-4 h-4 mt-2 text-primary" />
                       <div className="flex flex-col">
-                        <p>Fast and reliable</p>
+                        <p>Manual contact management</p>
                         <p className="text-muted-foreground text-sm">
-                          We&apos;ve made it fast and reliable.
+                          Add, edit, and export contacts as CSV
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-row gap-4">
+                      <Check className="w-4 h-4 mt-2 text-primary" />
+                      <div className="flex flex-col">
+                        <p>Basic AI assistant (limited queries)</p>
+                        <p className="text-muted-foreground text-sm">
+                          Get help with simple tasks
                         </p>
                       </div>
                     </div>
@@ -88,44 +92,94 @@ function Pricing() {
                   </span>
                 </CardTitle>
                 <CardDescription>
-                  Our goal is to streamline SMB trade, making it easier and faster
-                  than ever for everyone and everywhere.
+                  Unlock advanced features for growing teams and professionals.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-8 justify-start">
                   <p className="flex flex-row  items-center gap-2 text-xl">
-                    <span className="text-4xl">$40</span>
-                    <span className="text-sm text-muted-foreground">
-                      {" "}
-                      / month
-                    </span>
+                    <span className="text-4xl">$19</span>
+                    <span className="text-sm text-muted-foreground"> / month</span>
                   </p>
                   <div className="flex flex-col gap-4 justify-start">
                     <div className="flex flex-row gap-4">
                       <Check className="w-4 h-4 mt-2 text-primary" />
                       <div className="flex flex-col">
-                        <p>Fast and reliable</p>
+                        <p>Unlimited business card scans</p>
                         <p className="text-muted-foreground text-sm">
-                          We&apos;ve made it fast and reliable.
+                          No monthly limits, scan as much as you need
                         </p>
                       </div>
                     </div>
                     <div className="flex flex-row gap-4">
                       <Check className="w-4 h-4 mt-2 text-primary" />
                       <div className="flex flex-col">
-                        <p>Fast and reliable</p>
+                        <p>Advanced OCR (multi-language, logo detection)</p>
                         <p className="text-muted-foreground text-sm">
-                          We&apos;ve made it fast and reliable.
+                          Extract more details from cards
                         </p>
                       </div>
                     </div>
                     <div className="flex flex-row gap-4">
                       <Check className="w-4 h-4 mt-2 text-primary" />
                       <div className="flex flex-col">
-                        <p>Fast and reliable</p>
+                        <p>Full news feed access (unlimited articles)</p>
                         <p className="text-muted-foreground text-sm">
-                          We&apos;ve made it fast and reliable.
+                          Get all the latest business news
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-row gap-4">
+                      <Check className="w-4 h-4 mt-2 text-primary" />
+                      <div className="flex flex-col">
+                        <p>Organization chart view & editing</p>
+                        <p className="text-muted-foreground text-sm">
+                          Visualize and manage your org structure
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-row gap-4">
+                      <Check className="w-4 h-4 mt-2 text-primary" />
+                      <div className="flex flex-col">
+                        <p>Smart contact deduplication</p>
+                        <p className="text-muted-foreground text-sm">
+                          Keep your contacts clean and organized
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-row gap-4">
+                      <Check className="w-4 h-4 mt-2 text-primary" />
+                      <div className="flex flex-col">
+                        <p>AI assistant (unlimited queries, smart search)</p>
+                        <p className="text-muted-foreground text-sm">
+                          Get advanced help and insights
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-row gap-4">
+                      <Check className="w-4 h-4 mt-2 text-primary" />
+                      <div className="flex flex-col">
+                        <p>Team workspace (up to 5 users)</p>
+                        <p className="text-muted-foreground text-sm">
+                          Collaborate with your team
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-row gap-4">
+                      <Check className="w-4 h-4 mt-2 text-primary" />
+                      <div className="flex flex-col">
+                        <p>Export to CRM (HubSpot, Salesforce, etc.)</p>
+                        <p className="text-muted-foreground text-sm">
+                          Integrate with your favorite tools
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-row gap-4">
+                      <Check className="w-4 h-4 mt-2 text-primary" />
+                      <div className="flex flex-col">
+                        <p>Priority email support</p>
+                        <p className="text-muted-foreground text-sm">
+                          Get help when you need it
                         </p>
                       </div>
                     </div>
@@ -144,44 +198,93 @@ function Pricing() {
                   </span>
                 </CardTitle>
                 <CardDescription>
-                  Our goal is to streamline SMB trade, making it easier and faster
-                  than ever for everyone and everywhere.
+                  The complete solution for large teams and organizations.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-8 justify-start">
                   <p className="flex flex-row  items-center gap-2 text-xl">
-                    <span className="text-4xl">$40</span>
-                    <span className="text-sm text-muted-foreground">
-                      {" "}
-                      / month
-                    </span>
+                    <span className="text-4xl">Custom</span>
                   </p>
                   <div className="flex flex-col gap-4 justify-start">
                     <div className="flex flex-row gap-4">
                       <Check className="w-4 h-4 mt-2 text-primary" />
                       <div className="flex flex-col">
-                        <p>Fast and reliable</p>
+                        <p>All Pro features</p>
                         <p className="text-muted-foreground text-sm">
-                          We&apos;ve made it fast and reliable.
+                          Everything in Growth, plus more
                         </p>
                       </div>
                     </div>
                     <div className="flex flex-row gap-4">
                       <Check className="w-4 h-4 mt-2 text-primary" />
                       <div className="flex flex-col">
-                        <p>Fast and reliable</p>
+                        <p>Custom branding (logo, colors)</p>
                         <p className="text-muted-foreground text-sm">
-                          We&apos;ve made it fast and reliable.
+                          Make the app yours
                         </p>
                       </div>
                     </div>
                     <div className="flex flex-row gap-4">
                       <Check className="w-4 h-4 mt-2 text-primary" />
                       <div className="flex flex-col">
-                        <p>Fast and reliable</p>
+                        <p>API access for integrations</p>
                         <p className="text-muted-foreground text-sm">
-                          We&apos;ve made it fast and reliable.
+                          Connect with your internal systems
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-row gap-4">
+                      <Check className="w-4 h-4 mt-2 text-primary" />
+                      <div className="flex flex-col">
+                        <p>Advanced analytics & reporting</p>
+                        <p className="text-muted-foreground text-sm">
+                          Gain insights into your data
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-row gap-4">
+                      <Check className="w-4 h-4 mt-2 text-primary" />
+                      <div className="flex flex-col">
+                        <p>SSO (Single Sign-On)</p>
+                        <p className="text-muted-foreground text-sm">
+                          Enterprise-grade security
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-row gap-4">
+                      <Check className="w-4 h-4 mt-2 text-primary" />
+                      <div className="flex flex-col">
+                        <p>Dedicated account manager</p>
+                        <p className="text-muted-foreground text-sm">
+                          Personalized onboarding & support
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-row gap-4">
+                      <Check className="w-4 h-4 mt-2 text-primary" />
+                      <div className="flex flex-col">
+                        <p>Team management (unlimited users)</p>
+                        <p className="text-muted-foreground text-sm">
+                          Manage large teams with ease
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-row gap-4">
+                      <Check className="w-4 h-4 mt-2 text-primary" />
+                      <div className="flex flex-col">
+                        <p>Custom onboarding & training</p>
+                        <p className="text-muted-foreground text-sm">
+                          Tailored to your organization
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-row gap-4">
+                      <Check className="w-4 h-4 mt-2 text-primary" />
+                      <div className="flex flex-col">
+                        <p>SLA & priority support</p>
+                        <p className="text-muted-foreground text-sm">
+                          Fastest response times
                         </p>
                       </div>
                     </div>
