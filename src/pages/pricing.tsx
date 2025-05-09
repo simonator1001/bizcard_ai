@@ -1,8 +1,13 @@
 import { Layout } from '@/components/layout/layout';
 import { PricingPlans } from '@/components/subscription/PricingPlans';
 import { Typography, Container, Box, Button } from '@mui/material';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function PricingPage() {
+  const router = useRouter();
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const returnUrl = searchParams?.get('return');
+
   return (
     <Layout>
       <Box 
@@ -45,6 +50,17 @@ export default function PricingPage() {
       </Box>
       <Container maxWidth="lg">
         <PricingPlans />
+        {returnUrl && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={() => router.push(returnUrl)}
+            >
+              Return to Previous Page
+            </Button>
+          </Box>
+        )}
       </Container>
     </Layout>
   );
