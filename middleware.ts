@@ -15,7 +15,8 @@ const PUBLIC_ROUTES = [
   '/api/ocr',
   '/api/extract-info',
   '/images',
-  '/assets'
+  '/assets',
+  '/pricing'
 ]
 
 export const config = {
