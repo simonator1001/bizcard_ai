@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { PricingCard } from "@/components/ui/pricing-card"
+import { Pricing } from "@/components/ui/pricing-cards"
 
 interface Plan {
   name: string;
@@ -77,57 +78,7 @@ export function SubscriptionPage() {
     }
   ]
 
-  return (
-    <div className="flex flex-col items-center gap-8 py-12 bg-gradient-to-br from-slate-800 to-slate-900 min-h-screen">
-      <h2 className="text-4xl font-bold text-white mb-8">Choose Your Plan</h2>
-      <div className="flex flex-wrap gap-8 justify-center">
-        <PricingCard
-          heading="Free"
-          description="For individuals getting started"
-          price={0}
-          buttonText="Get Started"
-          list={[
-            "Scan up to 5 cards/month",
-            "Basic OCR (English only)",
-            "Limited news feed",
-            "Basic card management",
-          ]}
-          onButtonClick={() => window.location.href = "/signup"}
-        />
-        <PricingCard
-          heading="Pro"
-          description="For professionals and teams"
-          price={9.99}
-          buttonText="Upgrade to Pro"
-          discount={20}
-          listHeading="Everything in Free, plus:"
-          list={[
-            "Unlimited card scans",
-            "Advanced OCR (multi-language)",
-            "Full news feed access",
-            "Organization chart view",
-            "Priority support",
-          ]}
-          onButtonClick={() => window.open('https://buy.stripe.com/test_dR6aHf41X51fbe07su', '_blank')}
-        />
-        <PricingCard
-          heading="Enterprise"
-          description="For large organizations"
-          price={49.99}
-          buttonText="Contact Sales"
-          listHeading="Everything in Pro, plus:"
-          list={[
-            "Custom branding",
-            "API access",
-            "Advanced analytics",
-            "Dedicated support",
-            "Team management",
-          ]}
-          onButtonClick={() => window.location.href = "mailto:support@simon-gpt.com?subject=Enterprise%20Plan%20Inquiry"}
-        />
-      </div>
-    </div>
-  )
+  return <Pricing />;
 }
 
 export default SubscriptionPage
