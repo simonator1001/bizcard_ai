@@ -49,6 +49,7 @@ import { ChatInterface } from '@/components/chat/ChatInterface'
 import { useTranslation } from 'react-i18next'
 import imageCompression from 'browser-image-compression';
 import { OrgChartView } from '@/components/org-chart/OrgChartView';
+import PricingTab from '@/components/PricingTab';
 
 type ViewMode = 'list' | 'grid' | 'carousel' | 'stack';
 
@@ -252,9 +253,10 @@ export default function Component() {
     router.push(`/?tab=${tab}`);
   };
 
+  const allTabs = [...navigationItems, { title: 'Pricing', icon: Star }];
   const handleNavigationChange = (index: number | null) => {
     if (index === null) return;
-    const item = navigationItems[index];
+    const item = allTabs[index];
     if (!item.type && item.title) {
       handleTabChange(item.title.toLowerCase());
     }
@@ -355,7 +357,7 @@ export default function Component() {
           <div className="border-b sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-16 items-center">
               <ExpandableTabs
-                tabs={navigationItems}
+                tabs={allTabs}
                 activeColor="text-primary"
                 onChange={handleNavigationChange}
                 className="mr-4"
@@ -712,6 +714,10 @@ export default function Component() {
 
             <TabsContent value="settings" className="h-full p-8">
               <SettingsTab />
+            </TabsContent>
+
+            <TabsContent value="pricing" className="h-full p-8">
+              <PricingTab />
             </TabsContent>
           </div>
         </Tabs>
