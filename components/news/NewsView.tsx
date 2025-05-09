@@ -83,12 +83,17 @@ function CompanySelect({ companies, selectedCompanies, onSelect }: {
   );
 }
 
-// Glass effect component for cyber UI styling
-const GlassPanel = ({ children, className }: { children: React.ReactNode, className?: string }) => {
+// Holographic/3D Glass effect component
+const HoloGlassPanel = ({ children, className }: { children: React.ReactNode, className?: string }) => {
   return (
-    <div className={`relative backdrop-blur-md bg-background/30 border border-border/40 shadow-lg rounded-xl overflow-hidden ${className}`}>
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-background/10 pointer-events-none" />
-      <div className="relative z-10">{children}</div>
+    <div className={`relative rounded-2xl overflow-hidden shadow-2xl border-2 border-transparent bg-gradient-to-br from-[#a1c4fd]/60 via-[#c2e9fb]/40 to-[#fbc2eb]/60 p-1 ${className}`} style={{ boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)' }}>
+      <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-white/10 to-white/5 pointer-events-none" style={{ mixBlendMode: 'overlay' }} />
+      <div className="relative z-10 backdrop-blur-2xl bg-white/40 rounded-2xl p-6">
+        {children}
+      </div>
+      {/* Glass reflection */}
+      <div className="absolute left-0 top-0 w-1/2 h-1/4 bg-white/30 rounded-tl-2xl blur-lg opacity-60 pointer-events-none" />
+      <div className="absolute right-0 bottom-0 w-1/3 h-1/6 bg-white/20 rounded-br-2xl blur-md opacity-40 pointer-events-none" />
     </div>
   );
 };
@@ -468,20 +473,24 @@ export function NewsView() {
 
   return (
     <div className="space-y-6">
-      <GlassPanel className="p-6">
+      <HoloGlassPanel>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-[#a1c4fd] via-[#c2e9fb] to-[#fbc2eb] bg-clip-text text-transparent drop-shadow-[0_2px_8px_rgba(161,196,253,0.5)]">
                 {t('news.title')}
               </h2>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-lg font-medium">
                 Stay updated with news about your network
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-xs text-muted-foreground">Live Updates</span>
+              <span className="relative flex items-center">
+                <span className="absolute inline-flex h-6 w-6 rounded-full bg-gradient-to-br from-[#a1c4fd] via-[#fbc2eb] to-[#c2e9fb] opacity-70 animate-pulse" />
+                <span className="relative z-10 px-3 py-1 rounded-full bg-white/60 text-xs font-bold text-[#7f53ac] shadow-md border border-white/40 animate-holo-shimmer" style={{ background: 'linear-gradient(90deg, #a1c4fd 0%, #fbc2eb 100%)', boxShadow: '0 0 16px #a1c4fd55' }}>
+                  Live Updates
+                </span>
+              </span>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-4">
@@ -494,22 +503,22 @@ export function NewsView() {
               <Button 
                 onClick={selectRandomCompanies} 
                 variant="outline"
-                className="gap-2 bg-background/40 backdrop-blur-sm border-primary/20 hover:bg-primary/10 hover:border-primary/40 text-foreground shadow-[0_0_15px_rgba(0,0,0,0.1)] transition-all duration-300"
+                className="gap-2 rounded-xl bg-white/60 shadow-lg border-2 border-transparent hover:border-[#a1c4fd] hover:bg-gradient-to-br hover:from-[#a1c4fd]/30 hover:to-[#fbc2eb]/30 text-[#7f53ac] font-semibold transition-all duration-300"
               >
-                <RefreshCw className="h-4 w-4 text-primary/80" />
+                <RefreshCw className="h-4 w-4 text-[#a1c4fd]" />
                 Random
               </Button>
               <Select 
                 value={articlesPerCompany.toString()} 
                 onValueChange={(value) => setArticlesPerCompany(Number(value))}
               >
-                <SelectTrigger className="w-[140px] bg-background/40 backdrop-blur-sm border-primary/20 hover:bg-primary/10 hover:border-primary/40 text-foreground shadow-[0_0_15px_rgba(0,0,0,0.1)]">
+                <SelectTrigger className="w-[140px] rounded-xl bg-white/60 shadow-lg border-2 border-transparent hover:border-[#a1c4fd] hover:bg-gradient-to-br hover:from-[#a1c4fd]/30 hover:to-[#fbc2eb]/30 text-[#7f53ac] font-semibold transition-all duration-300">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-primary/80" />
+                    <Calendar className="h-4 w-4 text-[#a1c4fd]" />
                     <SelectValue placeholder="Articles" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="bg-background/95 backdrop-blur-xl border-primary/20">
+                <SelectContent className="bg-white/90 rounded-xl border-2 border-[#a1c4fd]/30 shadow-xl">
                   <SelectItem value="3">3 articles</SelectItem>
                   <SelectItem value="5">5 articles</SelectItem>
                   <SelectItem value="10">10 articles</SelectItem>
@@ -519,13 +528,13 @@ export function NewsView() {
                 value={sortBy}
                 onValueChange={(value: 'date' | 'company') => setSortBy(value)}
               >
-                <SelectTrigger className="w-[140px] bg-background/40 backdrop-blur-sm border-primary/20 hover:bg-primary/10 hover:border-primary/40 text-foreground shadow-[0_0_15px_rgba(0,0,0,0.1)]">
+                <SelectTrigger className="w-[140px] rounded-xl bg-white/60 shadow-lg border-2 border-transparent hover:border-[#a1c4fd] hover:bg-gradient-to-br hover:from-[#a1c4fd]/30 hover:to-[#fbc2eb]/30 text-[#7f53ac] font-semibold transition-all duration-300">
                   <div className="flex items-center gap-2">
-                    <SlidersHorizontal className="h-4 w-4 text-primary/80" />
+                    <SlidersHorizontal className="h-4 w-4 text-[#a1c4fd]" />
                     <SelectValue placeholder="Sort by" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="bg-background/95 backdrop-blur-xl border-primary/20">
+                <SelectContent className="bg-white/90 rounded-xl border-2 border-[#a1c4fd]/30 shadow-xl">
                   <SelectItem value="date">Sort by Date</SelectItem>
                   <SelectItem value="company">Sort by Company</SelectItem>
                 </SelectContent>
@@ -534,11 +543,11 @@ export function NewsView() {
                 variant="outline" 
                 onClick={() => setSortOrder(order => order === 'asc' ? 'desc' : 'asc')}
                 size="icon"
-                className="w-10 h-10 bg-background/40 backdrop-blur-sm border-primary/20 hover:bg-primary/10 hover:border-primary/40 text-foreground shadow-[0_0_15px_rgba(0,0,0,0.1)] transition-all duration-300"
+                className="w-10 h-10 rounded-xl bg-white/60 shadow-lg border-2 border-transparent hover:border-[#a1c4fd] hover:bg-gradient-to-br hover:from-[#a1c4fd]/30 hover:to-[#fbc2eb]/30 text-[#7f53ac] font-semibold transition-all duration-300"
               >
                 {sortOrder === 'asc' ? 
-                  <ArrowUpAZ className="h-4 w-4 text-primary/80" /> : 
-                  <ArrowDownAZ className="h-4 w-4 text-primary/80" />
+                  <ArrowUpAZ className="h-4 w-4 text-[#a1c4fd]" /> : 
+                  <ArrowDownAZ className="h-4 w-4 text-[#a1c4fd]" />
                 }
               </Button>
             </div>
@@ -558,11 +567,11 @@ export function NewsView() {
                     >
                       <Badge
                         variant="secondary"
-                        className="px-3 py-1 bg-primary/10 hover:bg-primary/20 text-foreground border border-primary/20 shadow-[0_0_10px_rgba(0,0,0,0.05)] transition-all duration-300"
+                        className="px-3 py-1 rounded-xl bg-gradient-to-r from-[#a1c4fd]/30 to-[#fbc2eb]/30 text-[#7f53ac] border border-[#a1c4fd]/30 shadow-md font-semibold transition-all duration-300"
                       >
                         {company}
                         <button
-                          className="ml-2 text-muted-foreground hover:text-primary transition-colors"
+                          className="ml-2 text-[#a1c4fd] hover:text-[#fbc2eb] transition-colors"
                           onClick={() => handleCompanySelect(company)}
                         >
                           ×
@@ -576,7 +585,7 @@ export function NewsView() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setSelectedCompanies([])}
-                    className="text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    className="text-[#a1c4fd] hover:text-[#fbc2eb] hover:bg-gradient-to-r hover:from-[#a1c4fd]/10 hover:to-[#fbc2eb]/10 rounded-xl font-semibold transition-colors"
                   >
                     Clear all
                   </Button>
@@ -585,7 +594,7 @@ export function NewsView() {
             )}
           </div>
         </div>
-      </GlassPanel>
+      </HoloGlassPanel>
 
       <div className="space-y-4">
         {loading || loadingCompanies.size > 0 ? (

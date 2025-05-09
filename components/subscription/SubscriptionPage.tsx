@@ -6,6 +6,7 @@ import { Check } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
+import { PricingCard } from "@/components/ui/pricing-card"
 
 interface Plan {
   name: string;
@@ -77,91 +78,53 @@ export function SubscriptionPage() {
   ]
 
   return (
-    <div className="w-full flex flex-col items-center p-4">
-      <motion.div
-        className="fixed inset-0 w-full h-full blur-[120px] opacity-30 pointer-events-none -z-10"
-        style={{
-          background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, rgba(59,130,246,0.15) 100%)',
-        }}
-        animate={{
-          scale: [1, 1.1, 1],
-          rotate: [0, 180, 360],
-        }}
-        transition={{
-          duration: 30,
-          repeat: Infinity,
-          ease: "linear",
-        }}
-      />
-      
-      <div className="w-full max-w-6xl space-y-8">
-        <div className="flex items-center justify-center bg-white/50 backdrop-blur-md rounded-full p-1 w-fit mx-auto">
-          <span className={`mr-3 text-sm ${!isYearly ? 'text-purple-900' : 'text-purple-600'}`}>Monthly</span>
-          <Switch
-            checked={isYearly}
-            onCheckedChange={setIsYearly}
-            className="data-[state=checked]:bg-purple-500"
-          />
-          <span className={`ml-3 text-sm ${isYearly ? 'text-purple-900' : 'text-purple-600'}`}>
-            Yearly <span className="text-purple-600 font-bold">(20% off)</span>
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-24">
-          {plans.map((plan, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-            >
-              <Card className={`bg-white/70 backdrop-blur-md border-purple-100 overflow-hidden relative group hover:shadow-lg transition-all duration-300 ${
-                index === 1 ? 'border-purple-300 shadow-md' : ''
-              }`}>
-                <CardHeader className="pb-4">
-                  <CardTitle className={`text-2xl ${index === 1 ? 'text-purple-600' : 'text-purple-800'}`}>
-                    {plan.name}
-                  </CardTitle>
-                  <div className={`text-4xl font-bold mb-4 ${index === 1 ? 'text-purple-600' : 'text-purple-900'}`}>
-                    ${isYearly ? plan.yearlyPrice.toFixed(2) : plan.monthlyPrice.toFixed(2)}
-                    <span className="text-sm font-normal text-purple-600">/{isYearly ? 'year' : 'month'}</span>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {Object.entries(plan.features).map(([key, value], featureIndex) => (
-                      <li key={featureIndex} className="flex items-center text-sm text-purple-700">
-                        <Check className={`h-4 w-4 mr-2 ${index === 1 ? 'text-purple-500' : 'text-purple-400'}`} />
-                        <span className="font-medium">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                        <span className="ml-2">{value}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    className={`w-full ${
-                      index === 1 
-                        ? 'bg-purple-500 hover:bg-purple-600' 
-                        : 'bg-purple-400 hover:bg-purple-500'
-                    } text-white transition-colors duration-300`}
-                  >
-                    {index === 0 ? 'Current Plan' : 'Upgrade Now'}
-                  </Button>
-                </CardFooter>
-                {plan.popular && (
-                  <motion.div
-                    className="absolute top-0 right-0 bg-purple-500 text-white text-xs py-1 px-3 rounded-bl-lg"
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                  >
-                    Popular
-                  </motion.div>
-                )}
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+    <div className="flex flex-col items-center gap-8 py-12 bg-gradient-to-br from-slate-800 to-slate-900 min-h-screen">
+      <h2 className="text-4xl font-bold text-white mb-8">Choose Your Plan</h2>
+      <div className="flex flex-wrap gap-8 justify-center">
+        <PricingCard
+          heading="Free"
+          description="For individuals getting started"
+          price={0}
+          buttonText="Get Started"
+          list={[
+            "Scan up to 5 cards/month",
+            "Basic OCR (English only)",
+            "Limited news feed",
+            "Basic card management",
+          ]}
+          onButtonClick={() => window.location.href = "/signup"}
+        />
+        <PricingCard
+          heading="Pro"
+          description="For professionals and teams"
+          price={9.99}
+          buttonText="Upgrade to Pro"
+          discount={20}
+          listHeading="Everything in Free, plus:"
+          list={[
+            "Unlimited card scans",
+            "Advanced OCR (multi-language)",
+            "Full news feed access",
+            "Organization chart view",
+            "Priority support",
+          ]}
+          onButtonClick={() => window.open('https://buy.stripe.com/test_dR6aHf41X51fbe07su', '_blank')}
+        />
+        <PricingCard
+          heading="Enterprise"
+          description="For large organizations"
+          price={49.99}
+          buttonText="Contact Sales"
+          listHeading="Everything in Pro, plus:"
+          list={[
+            "Custom branding",
+            "API access",
+            "Advanced analytics",
+            "Dedicated support",
+            "Team management",
+          ]}
+          onButtonClick={() => window.location.href = "mailto:support@simon-gpt.com?subject=Enterprise%20Plan%20Inquiry"}
+        />
       </div>
     </div>
   )

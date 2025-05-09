@@ -1,5 +1,4 @@
 import { Footerdemo } from "@/components/ui/footer-section";
-import { PricingCreative } from "@/components/ui/pricing-creative"
 import { Button } from "@/components/ui/button"
 import { AIInputWithSearch } from "@/components/ui/ai-input-with-search";
 
@@ -9,10 +8,6 @@ function Footer() {
       <Footerdemo />
     </div>
   );
-}
-
-function PricingCreativeDemo() {
-    return <PricingCreative />
 }
 
 export function AIInputWithSearchDemo() {
@@ -33,4 +28,4 @@ export function AIInputWithSearchDemo() {
   );
 }
 
-export { Footer, PricingCreativeDemo } 
+export { Footer } 

@@ -49,7 +49,7 @@ import { ChatInterface } from '@/components/chat/ChatInterface'
 import { useTranslation } from 'react-i18next'
 import imageCompression from 'browser-image-compression';
 import { OrgChartView } from '@/components/org-chart/OrgChartView';
-import PricingTab from '@/components/PricingTab';
+import { SubscriptionPage } from '@/components/subscription/SubscriptionPage';
 
 type ViewMode = 'list' | 'grid' | 'carousel' | 'stack';
 
@@ -717,7 +717,7 @@ export default function Component() {
             </TabsContent>
 
             <TabsContent value="pricing" className="h-full p-8">
-              <PricingTab />
+              <SubscriptionPage />
             </TabsContent>
           </div>
         </Tabs>
