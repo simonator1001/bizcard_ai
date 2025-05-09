@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import { Container, Box } from '@mui/material';
-import { TabDemo } from '@/components/ui/pricing-tab';
+import { Pricing } from '@/components/ui/pricing-cards';
 
 const plans = [
   {
@@ -46,5 +46,5 @@ const plans = [
 ];
 
 export default function PricingTab() {
-  return <TabDemo />;
+  return <Pricing />;
 } 
