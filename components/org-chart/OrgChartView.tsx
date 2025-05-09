@@ -12,6 +12,7 @@ import { RawNodeDatum } from 'react-d3-tree';
 import { OrgChartService } from '@/lib/org-chart-service';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
+import { CompanySearch } from './CompanySearch';
 
 interface NodeData extends RawNodeDatum {
   name: string;
@@ -82,34 +83,14 @@ export function OrgChartView() {
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Organization Chart</h2>
         <div className="flex flex-col gap-2 w-[240px]">
-        <Select value={selectedCompany} onValueChange={setSelectedCompany}>
-            <SelectTrigger className="w-full z-[100000]">
-            <SelectValue placeholder="Select company" />
-          </SelectTrigger>
-            <SelectContent className="max-h-72 overflow-y-auto p-0 z-[100000] border border-muted-foreground/10 shadow-lg bg-white">
-              <div className="sticky top-0 z-10 bg-background px-2 pt-2 pb-1 border-b border-muted-foreground/10">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    type="text"
-                    value={companySearch}
-                    onChange={e => setCompanySearch(e.target.value)}
-                    placeholder="Search company..."
-                    className="pl-10 pr-3 py-2 rounded-lg border bg-background text-sm focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-              </div>
-              {filteredCompanies.length === 0 ? (
-                <div className="px-4 py-2 text-muted-foreground text-sm">No companies found</div>
-              ) : (
-                filteredCompanies.map((company) => (
-              <SelectItem key={company.id} value={company.id} className="truncate">
-                {company.name}
-              </SelectItem>
-                ))
-              )}
-          </SelectContent>
-        </Select>
+          <CompanySearch
+            label="Company"
+            placeholder="Search and select company..."
+            className="w-full"
+            companies={companies.map(c => ({ value: c.id, label: c.name }))}
+            value={selectedCompany}
+            onChange={setSelectedCompany}
+          />
         </div>
       </div>
 

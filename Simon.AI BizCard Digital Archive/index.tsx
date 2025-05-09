@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import NewsTab from "@/components/news/NewsTab"
 
 interface NewsArticle {
   id: string
@@ -821,69 +822,7 @@ export default function Component() {
           </TabsContent>
 
           <TabsContent value="news" className="h-full p-8 overflow-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-3xl font-bold">Related News</CardTitle>
-                <CardDescription className="text-lg">
-                  Stay updated with news about companies and people in your network
-                </CardDescription>
-                <div className="flex flex-col sm:flex-row gap-4 mt-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <Input
-                      type="search"
-                      placeholder="Search news..."
-                      className="pl-10"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                  <Select value={newsFilter} onValueChange={setNewsFilter}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Filter by" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All News</SelectItem>
-                      <SelectGroup>
-                        <SelectLabel>Companies</SelectLabel>
-                        {Array.from(new Set(mockNewsArticles.flatMap(article => article.relatedCompanies))).map(company => (
-                          <SelectItem key={company} value={`company:${company}`}>{company}</SelectItem>
-                        ))}
-                      </SelectGroup>
-                      <SelectGroup>
-                        <SelectLabel>People</SelectLabel>
-                        {Array.from(new Set(mockNewsArticles.flatMap(article => article.relatedPeople))).map(person => (
-                          <SelectItem key={person} value={`person:${person}`}>{person}</SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[600px] pr-4">
-                  <AnimatePresence>
-                    {filteredNews.map((article) => (
-                      <motion.div
-                        key={article.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <NewsItem article={article} onClick={() => setSelectedArticle(article)} />
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-            {selectedArticle && (
-              <ArticleDetailView
-                article={selectedArticle}
-                onClose={() => setSelectedArticle(null)}
-              />
-            )}
+            <NewsTab />
           </TabsContent>
 
           <TabsContent value="pro" className="h-full p-8 overflow-auto">

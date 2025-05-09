@@ -185,27 +185,27 @@ function getFallbackImageUrl(company: string) {
 
 async function cleanJsonString(content: string): Promise<string> {
   try {
-    // Extract JSON array from the response
-    const jsonMatch = content.match(/```json\s*(\[[\s\S]*?\])\s*```/);
+    // Try to extract JSON array from a code block first
+    let jsonMatch = content.match(/```json\s*(\[[\s\S]*?\])\s*```/);
+    if (!jsonMatch) {
+      // Fallback: extract the first JSON array in the string
+      jsonMatch = content.match(/(\[[\s\S]*?\])/);
+    }
     if (!jsonMatch) {
       console.error('[DEBUG] No JSON array found in content');
       throw new Error('No JSON array found in content');
     }
-    
     let cleaned = jsonMatch[1];
-    
     // Handle special characters in URLs and text
     cleaned = cleaned.replace(/[\u2018\u2019]/g, "'")
       .replace(/[\u201C\u201D]/g, '"')
       .replace(/&/g, 'and')
       .replace(/\n/g, ' ')
       .replace(/\s+/g, ' ');
-    
     // Escape special characters in URLs
     cleaned = cleaned.replace(/(https?:\/\/[^\s"]+)/g, (url) => {
       return url.replace(/[&]/g, '%26');
     });
-
     console.log('[DEBUG] Cleaned JSON:', cleaned);
     return cleaned;
   } catch (e) {
