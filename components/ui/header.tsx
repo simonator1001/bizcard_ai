@@ -13,6 +13,8 @@ import {
   Sun, 
   Moon 
 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useAuth } from '@/lib/auth-context'
 
 interface NavItem {
   text: string
@@ -110,6 +112,8 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
+  const router = useRouter();
+  const { user, signOut } = useAuth();
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -148,10 +152,17 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-x-4">
             {rightContent}
             
-            <Button variant="outline" size="sm">
-              <LogIn className="mr-2 h-4 w-4" />
-              Sign In
-            </Button>
+            {user ? (
+              <Button variant="outline" size="sm" onClick={signOut}>
+                <User className="mr-2 h-4 w-4" />
+                Sign Out
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => router.push('/signin')}>
+                <LogIn className="mr-2 h-4 w-4" />
+                Sign In
+              </Button>
+            )}
             
             <Button size="sm">
               Get Started
@@ -212,10 +223,17 @@ export const Header: React.FC<HeaderProps> = ({
                   ))}
                   
                   <div className="flex flex-col gap-3 pt-6">
-                    <Button variant="outline" className="w-full">
-                      <LogIn className="mr-2 h-4 w-4" />
-                      Sign In
-                    </Button>
+                    {user ? (
+                      <Button variant="outline" className="w-full" onClick={signOut}>
+                        <User className="mr-2 h-4 w-4" />
+                        Sign Out
+                      </Button>
+                    ) : (
+                      <Button variant="outline" className="w-full" onClick={() => router.push('/signin')}>
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Sign In
+                      </Button>
+                    )}
                     <Button className="w-full">
                       Get Started
                     </Button>
