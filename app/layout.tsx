@@ -29,7 +29,7 @@ export default function RootLayout({
               </aside>
               <div className="flex-1 flex flex-col min-w-0">
                 {/* Topbar */}
-                <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                <header className="sticky top-0 z-30 w-full border-b bg-green-500">
                   <div className="container flex h-16 items-center px-4">
                     <span className="font-bold text-xl">Simon.AI BizCard</span>
                   </div>

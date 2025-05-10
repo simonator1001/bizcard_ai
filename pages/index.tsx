@@ -50,6 +50,7 @@ import { useTranslation } from 'react-i18next'
 import imageCompression from 'browser-image-compression';
 import { OrgChartView } from '@/components/org-chart/OrgChartView';
 import { SubscriptionPage } from '@/components/subscription/SubscriptionPage';
+import { Header } from "@/components/ui/header";
 
 type ViewMode = 'list' | 'grid' | 'carousel' | 'stack';
 
@@ -262,6 +263,13 @@ export default function Component() {
     }
   };
 
+  // Compute selectedIndex from activeTab
+  const selectedIndex = allTabs.findIndex(
+    (tab) =>
+      tab.type !== "separator" &&
+      tab.title.toLowerCase() === activeTab.toLowerCase()
+  );
+
   const [isYearly, setIsYearly] = useState(false)
   const [newsFilter, setNewsFilter] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
@@ -352,19 +360,19 @@ export default function Component() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <Header
+        logo={<span className="text-xl font-bold">BizCard</span>}
+        menuItems={[
+          { text: "Scan", to: "/" },
+          { text: "Manage", to: "/?tab=manage" },
+          { text: "Network", to: "/?tab=network" },
+          { text: "News", to: "/?tab=news" },
+          { text: "Settings", to: "/?tab=settings" },
+          { text: "Pricing", to: "/pricing" },
+        ]}
+      />
       <main className="flex-1 flex flex-col">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <div className="border-b sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-16 items-center">
-              <ExpandableTabs
-                tabs={allTabs}
-                activeColor="text-primary"
-                onChange={handleNavigationChange}
-                className="mr-4"
-              />
-            </div>
-          </div>
-
           <div className="flex-1 overflow-y-auto pb-16">
             <TabsContent value="scan" className="h-full p-8">
               <div className="grid grid-cols-2 gap-8 h-[calc(100vh-200px)]">

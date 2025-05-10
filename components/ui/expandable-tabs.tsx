@@ -25,6 +25,7 @@ interface ExpandableTabsProps {
   className?: string;
   activeColor?: string;
   onChange?: (index: number | null) => void;
+  selectedIndex?: number | null;
 }
 
 const buttonVariants = {
@@ -53,17 +54,15 @@ export function ExpandableTabs({
   className,
   activeColor = "text-primary",
   onChange,
+  selectedIndex = null,
 }: ExpandableTabsProps) {
-  const [selected, setSelected] = React.useState<number | null>(null);
   const outsideClickRef = React.useRef(null);
 
   useOnClickOutside(outsideClickRef, () => {
-    setSelected(null);
     onChange?.(null);
   });
 
   const handleSelect = (index: number) => {
-    setSelected(index);
     onChange?.(index);
   };
 
@@ -75,7 +74,7 @@ export function ExpandableTabs({
     <div
       ref={outsideClickRef}
       className={cn(
-        "flex flex-wrap items-center gap-2 rounded-2xl border bg-background p-1 shadow-sm",
+        "flex items-center gap-2 px-6 py-2 rounded-[2.5rem] bg-[#292929] shadow-2xl",
         className
       )}
     >
@@ -86,38 +85,30 @@ export function ExpandableTabs({
 
         const Icon = tab.icon;
         if (!Icon) return null;
-        
+        const isSelected = selectedIndex === index;
         return (
           <motion.button
             key={tab.title}
             variants={buttonVariants}
             initial={false}
             animate="animate"
-            custom={selected === index}
+            custom={isSelected}
             onClick={() => handleSelect(index)}
             transition={transition}
             className={cn(
-              "relative flex items-center rounded-xl px-4 py-2 text-sm font-medium transition-colors duration-300",
-              selected === index
-                ? cn("bg-muted", activeColor)
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              "flex items-center justify-center px-2 py-1 rounded-2xl transition-all duration-300 focus:outline-none",
+              isSelected
+                ? "bg-gradient-to-r from-[#a259c6] to-[#d946ef] shadow-lg px-6 py-3"
+                : "bg-transparent"
             )}
+            style={{ minWidth: isSelected ? 120 : 56, minHeight: 56 }}
           >
-            <Icon size={20} />
-            <AnimatePresence initial={false}>
-              {selected === index && (
-                <motion.span
-                  variants={spanVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  transition={transition}
-                  className="overflow-hidden"
-                >
-                  {tab.title}
-                </motion.span>
-              )}
-            </AnimatePresence>
+            <Icon size={32} className={isSelected ? "text-white" : "text-[#cbd5e1]"} />
+            {isSelected && (
+              <span className="ml-3 text-2xl font-extrabold text-black select-none">
+                {tab.title}
+              </span>
+            )}
           </motion.button>
         );
       })}

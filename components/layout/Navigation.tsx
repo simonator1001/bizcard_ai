@@ -4,7 +4,7 @@ import React from "react";
 
 export function Navigation() {
   return (
-    <header className="w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 z-50">
+    <header className="w-full border-b bg-green-500 z-50">
       <nav className="container mx-auto flex items-center justify-between py-3 px-4">
         {/* Left: Logo */}
         <div className="flex items-center gap-2">
