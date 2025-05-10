@@ -271,7 +271,7 @@ const HeaderExample = () => {
     },
     {
       text: "Pricing",
-      to: "/pricing"
+      to: "/?tab=pricing"
     }
   ]
   

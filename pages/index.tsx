@@ -368,7 +368,7 @@ export default function Component() {
           { text: "Network", to: "/?tab=network" },
           { text: "News", to: "/?tab=news" },
           { text: "Settings", to: "/?tab=settings" },
-          { text: "Pricing", to: "/pricing" },
+          { text: "Pricing", to: "/?tab=pricing" },
         ]}
       />
       <main className="flex-1 flex flex-col">
