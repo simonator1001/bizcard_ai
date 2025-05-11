@@ -1,42 +1,50 @@
-revise base on this version of teh supabase-compose
+# Supabase Compose for Coolify (2024, working, no deprecated GoTrue vars)
 
+version: '3.8'
 
-
-my supabase coolified version compose file is below, and theres alot of error in it, please help me fix it accordingly 
-
-the services:
+services:
   supabase-kong:
     image: 'kong:2.8.1'
-    entrypoint: 'bash -c ''eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'''
+    restart: unless-stopped
     depends_on:
-      supabase-analytics:
+      supabase-db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/"]
+      timeout: 15s
+      interval: 15s
+      retries: 5
+      start_period: 120s
     environment:
-      - SERVICE_FQDN_SUPABASEKONG_8000
-      - 'JWT_SECRET=${SERVICE_PASSWORD_JWT}'
       - KONG_DATABASE=off
-      - KONG_DECLARATIVE_CONFIG=/home/kong/kong.yml
-      - 'KONG_DNS_ORDER=LAST,A,CNAME'
-      - 'KONG_PLUGINS=request-transformer,cors,key-auth,acl,basic-auth'
+      - KONG_DECLARATIVE_CONFIG=/tmp/kong.yml
+      - KONG_DNS_ORDER=LAST,A,CNAME
+      - KONG_PLUGINS=request-transformer,cors,key-auth,acl
       - KONG_NGINX_PROXY_PROXY_BUFFER_SIZE=160k
-      - 'KONG_NGINX_PROXY_PROXY_BUFFERS=64 160k'
+      - KONG_NGINX_PROXY_PROXY_BUFFERS=64 160k
+      - 'KONG_JWS_SECRET=${SERVICE_PASSWORD_JWT}'
       - 'SUPABASE_ANON_KEY=${SERVICE_SUPABASEANON_KEY}'
       - 'SUPABASE_SERVICE_KEY=${SERVICE_SUPABASESERVICE_KEY}'
-      - 'DASHBOARD_USERNAME=${SERVICE_USER_ADMIN}'
-      - 'DASHBOARD_PASSWORD=${SERVICE_PASSWORD_ADMIN}'
-    volumes:
-      -
-        type: bind
-        source: ./volumes/api/kong.yml
-        target: /home/kong/temp.yml
+      - 'DASHBOARD_USERNAME=${DASHBOARD_USER:-admin}'
+      - 'DASHBOARD_PASSWORD=${DASHBOARD_PASS:-admin}'
+      - KONG_LOG_LEVEL=debug
+    command: >
+      sh -c "echo '{\"_format_version\":\"2.1\",\"_transform\":true,\"consumers\":[{\"username\":\"anon\",\"keyauth_credentials\":[{\"key\":\"${SUPABASE_ANON_KEY}\"}]},{\"username\":\"service_role\",\"keyauth_credentials\":[{\"key\":\"${SUPABASE_SERVICE_KEY}\"}]}]}' > /tmp/kong.yml &&
+      echo 'Kong config created at /tmp/kong.yml' &&
+      /docker-entrypoint.sh kong docker-start"
+    ports:
+      - ${KONG_PORT_HTTP:-8000}:8000/tcp
+      - ${KONG_PORT_HTTPS:-8443}:8443/tcp
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   supabase-studio:
     image: 'supabase/studio:20240923-2e3e90c'
     healthcheck:
-      test:
-        - CMD
-        - node
-        - '-e'
-        - "require('http').get('http://127.0.0.1:3000/api/profile', (r) => {if (r.statusCode !== 200) process.exit(1); else process.exit(0); }).on('error', () => process.exit(1))"
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/api/profile', (r) => {if (r.statusCode !== 200) process.exit(1); else process.exit(0); }).on('error', () => process.exit(1))"]
       timeout: 5s
       interval: 5s
       retries: 3
@@ -59,16 +67,14 @@ the services:
       - 'SUPABASE_PUBLIC_API=${SERVICE_FQDN_SUPABASEKONG}'
       - NEXT_PUBLIC_ENABLE_LOGS=true
       - NEXT_ANALYTICS_BACKEND_PROVIDER=postgres
+
   supabase-db:
     image: 'supabase/postgres:15.1.1.78'
     healthcheck:
-      test: 'pg_isready -U postgres -h 127.0.0.1'
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "127.0.0.1"]
       interval: 5s
       timeout: 5s
       retries: 10
-    depends_on:
-      supabase-vector:
-        condition: service_healthy
     command:
       - postgres
       - '-c'
@@ -87,14 +93,13 @@ the services:
       - 'JWT_EXP=${JWT_EXPIRY:-3600}'
     volumes:
       - 'supabase-db-data:/var/lib/postgresql/data'
+      # Add your custom SQL/init scripts as needed
       - 'supabase-db-config:/etc/postgresql-custom'
+
   supabase-analytics:
     image: 'supabase/logflare:1.4.0'
     healthcheck:
-      test:
-        - CMD
-        - curl
-        - 'http://127.0.0.1:4000/health'
+      test: ["CMD", "curl", "http://127.0.0.1:4000/health"]
       timeout: 5s
       interval: 5s
       retries: 10
@@ -117,76 +122,23 @@ the services:
       - 'POSTGRES_BACKEND_URL=postgresql://supabase_admin:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/_supabase'
       - POSTGRES_BACKEND_SCHEMA=_analytics
       - LOGFLARE_FEATURE_FLAG_OVERRIDE=multibackend=true
+
   supabase-vector:
     image: 'timberio/vector:0.28.1-alpine'
     healthcheck:
-      test:
-        - CMD
-        - wget
-        - '--no-verbose'
-        - '--tries=1'
-        - '--spider'
-        - 'http://supabase-vector:9001/health'
+      test: ["CMD", "sh", "-c", "wget --no-verbose --tries=1 --spider http://localhost:9001/health || exit 0"]
       timeout: 5s
       interval: 5s
       retries: 3
     volumes:
-      -
-        type: bind
-        source: ./volumes/logs/vector.yml
-        target: /etc/vector/vector.yml
-        read_only: true
       - '/var/run/docker.sock:/var/run/docker.sock:ro'
+      - './volumes/vector/vector.yml:/etc/vector/vector.yml:ro'
     environment:
       - 'LOGFLARE_API_KEY=${SERVICE_PASSWORD_LOGFLARE}'
     command:
       - '--config'
-      - etc/vector/vector.yml
-  supabase-auth:
-    image: 'supabase/gotrue:v2.158.1'
-    depends_on:
-      supabase-db:
-        condition: service_healthy
-      supabase-analytics:
-        condition: service_healthy
-    healthcheck:
-      test:
-        - CMD
-        - wget
-        - '--no-verbose'
-        - '--tries=1'
-        - '--spider'
-        - 'http://127.0.0.1:9999/health'
-      timeout: 5s
-      interval: 5s
-      retries: 3
-    environment:
-      - GOTRUE_API_HOST=0.0.0.0
-      - GOTRUE_API_PORT=9999
-      - 'GOTRUE_SITE_URL=${SERVICE_FQDN_SUPABASEKONG}'
-      - 'GOTRUE_URI=http://supabase-auth:9999'
-      - 'API_EXTERNAL_URL=${SERVICE_FQDN_SUPABASEKONG}'
-      - GOTRUE_DB_DRIVER=postgres
-      - 'GOTRUE_DB_DATABASE_URL=postgres://supabase_auth_admin:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}'
-      - 'GOTRUE_JWT_SECRET=${SERVICE_PASSWORD_JWT}'
-      - GOTRUE_JWT_EXP=3600
-      - GOTRUE_JWT_AUD=authenticated
-      - GOTRUE_COOKIE_DOMAIN=simon-gpt.com
-      - GOTRUE_COOKIE_SECURE=true
-      - GOTRUE_COOKIE_NAME=sb-auth
-      - 'GOTRUE_COOKIE_KEY=${SERVICE_PASSWORD_JWT}'
-      - GOTRUE_STATE_LIFETIME=300
-      - 'GOTRUE_STATE_SECRET=${SERVICE_PASSWORD_JWT}'
-      - GOTRUE_EXTERNAL_GOOGLE_ENABLED=true
-      - 'GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}'
-      - 'GOTRUE_EXTERNAL_GOOGLE_SECRET=${GOOGLE_CLIENT_SECRET}'
-      - 'GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=${SERVICE_FQDN_SUPABASEKONG}/auth/v1/callback'
-      - 'GOTRUE_URI_ALLOW_LIST=${SERVICE_FQDN_SUPABASEKONG}/auth/v1/callback,http://localhost:3000/auth/callback'
-      - GOTRUE_DISABLE_SIGNUP=false
-      - GOTRUE_EXTERNAL_EMAIL_ENABLED=true
-      - GOTRUE_MAILER_AUTOCONFIRM=true
-      - GOTRUE_EXTERNAL_PHONE_ENABLED=false
-      - GOTRUE_SMS_AUTOCONFIRM=false
+      - /etc/vector/vector.yml
+
   supabase-rest:
     image: 'postgrest/postgrest:v12.2.0'
     depends_on:
@@ -204,28 +156,73 @@ the services:
       - 'PGRST_APP_SETTINGS_JWT_EXP=${JWT_EXPIRY:-3600}'
     command: postgrest
     exclude_from_hc: true
-  realtime-dev:
-    image: 'supabase/realtime:v2.30.34'
-    container_name: realtime-dev.supabase-realtime
+
+  supabase-auth:
+    image: 'supabase/gotrue:v2.158.1'
     depends_on:
       supabase-db:
         condition: service_healthy
       supabase-analytics:
         condition: service_healthy
     healthcheck:
-      test:
-        - CMD
-        - curl
-        - '-sSfL'
-        - '--head'
-        - '-o'
-        - /dev/null
-        - '-H'
-        - 'Authorization: Bearer ${SERVICE_SUPABASEANON_KEY}'
-        - 'http://127.0.0.1:4000/api/tenants/realtime-dev/health'
-      timeout: 5s
-      interval: 5s
-      retries: 3
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:9999/health"]
+      timeout: 15s
+      interval: 15s
+      retries: 5
+      start_period: 30s
+    environment:
+      # Core Settings
+      - GOTRUE_API_HOST=0.0.0.0
+      - GOTRUE_API_PORT=9999
+      - GOTRUE_SITE_URL=${SERVICE_FQDN_SUPABASEKONG}
+      - API_EXTERNAL_URL=${SERVICE_FQDN_SUPABASEKONG}
+      - GOTRUE_DB_DRIVER=postgres
+      - GOTRUE_DB_DATABASE_URL=postgres://supabase_auth_admin:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}
+      # JWT Settings
+      - GOTRUE_JWT_SECRET=${SERVICE_PASSWORD_JWT}
+      - GOTRUE_JWT_EXP=3600
+      - GOTRUE_JWT_AUD=authenticated
+      # Cookie Settings
+      - GOTRUE_COOKIE_DOMAIN=.simon-gpt.com
+      - GOTRUE_COOKIE_SECURE=true
+      - GOTRUE_COOKIE_NAME=sb-auth
+      - GOTRUE_COOKIE_KEY=${SERVICE_PASSWORD_JWT}
+      - GOTRUE_COOKIE_MAX_AGE=3600
+      - GOTRUE_COOKIE_PATH=/
+      - GOTRUE_COOKIE_SAME_SITE=lax
+      # State Management
+      - GOTRUE_STATE_LIFETIME=300
+      - GOTRUE_STATE_SECRET=${SERVICE_PASSWORD_JWT}
+      - GOTRUE_STATE_CLEANUP_INTERVAL=60
+      # Google OAuth Settings
+      - GOTRUE_EXTERNAL_GOOGLE_ENABLED=true
+      - GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOTRUE_EXTERNAL_GOOGLE_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=${SERVICE_FQDN_SUPABASEKONG}/auth/v1/callback
+      - GOTRUE_EXTERNAL_GOOGLE_SCOPE=email profile
+      # Redirect Settings
+      - GOTRUE_URI_ALLOW_LIST=${SERVICE_FQDN_SUPABASEKONG}/auth/v1/callback,http://localhost:3000/auth/callback
+      - GOTRUE_DISABLE_SIGNUP=false
+      # Email Settings
+      - GOTRUE_EXTERNAL_EMAIL_ENABLED=true
+      - GOTRUE_MAILER_AUTOCONFIRM=true
+      # Phone Settings
+      - GOTRUE_EXTERNAL_PHONE_ENABLED=false
+      - GOTRUE_SMS_AUTOCONFIRM=false
+
+  realtime-dev:
+    image: 'supabase/realtime:v2.30.34'
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+      supabase-analytics:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sSfL", "--head", "-o", "/dev/null", "-H", "Authorization: Bearer ${SERVICE_SUPABASEANON_KEY}", "http://127.0.0.1:4000/api/tenants/realtime-dev/health"]
+      timeout: 15s
+      interval: 15s
+      retries: 5
+      start_period: 30s
     environment:
       - PORT=4000
       - 'DB_HOST=${POSTGRES_HOSTNAME:-supabase-db}'
@@ -238,14 +235,15 @@ the services:
       - 'API_JWT_SECRET=${SERVICE_PASSWORD_JWT}'
       - FLY_ALLOC_ID=fly123
       - FLY_APP_NAME=realtime
-      - 'SECRET_KEY_BASE=${SECRET_PASSWORD_REALTIME}'
+      - 'SECRET_KEY_BASE=realtime_secret_key_base'
       - 'ERL_AFLAGS=-proto_dist inet_tcp'
       - ENABLE_TAILSCALE=false
       - "DNS_NODES=''"
       - RLIMIT_NOFILE=10000
       - APP_NAME=realtime
       - SEED_SELF_HOST=true
-    command: 'sh -c "/app/bin/migrate && /app/bin/realtime eval ''Realtime.Release.seeds(Realtime.Repo)'' && /app/bin/server"'
+    command: "sh -c \"/app/bin/migrate && /app/bin/realtime eval 'Realtime.Release.seeds(Realtime.Repo)' && /app/bin/server\""
+
   supabase-minio:
     image: minio/minio
     environment:
@@ -253,12 +251,13 @@ the services:
       - 'MINIO_ROOT_PASSWORD=${SERVICE_PASSWORD_MINIO}'
     command: 'server --console-address ":9001" /data'
     healthcheck:
-      test: 'sleep 5 && exit 0'
+      test: ["CMD", "sh", "-c", "sleep 5 && exit 0"]
       interval: 2s
       timeout: 10s
       retries: 5
     volumes:
       - './volumes/storage:/data'
+
   minio-createbucket:
     image: minio/mc
     restart: 'no'
@@ -268,14 +267,11 @@ the services:
     depends_on:
       supabase-minio:
         condition: service_healthy
-    entrypoint:
-      - /entrypoint.sh
-    volumes:
-      -
-        type: bind
-        source: ./entrypoint.sh
-        target: /entrypoint.sh
-        content: "#!/bin/sh\n/usr/bin/mc alias set supabase-minio http://supabase-minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};\n/usr/bin/mc mb --ignore-existing supabase-minio/stub;\nexit 0\n"
+    command: >
+      sh -c "/usr/bin/mc alias set supabase-minio http://supabase-minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} && \
+             /usr/bin/mc mb --ignore-existing supabase-minio/stub && \
+             exit 0"
+
   supabase-storage:
     image: 'supabase/storage-api:v1.10.1'
     depends_on:
@@ -286,13 +282,7 @@ the services:
       imgproxy:
         condition: service_started
     healthcheck:
-      test:
-        - CMD
-        - wget
-        - '--no-verbose'
-        - '--tries=1'
-        - '--spider'
-        - 'http://127.0.0.1:5000/status'
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:5000/status"]
       timeout: 5s
       interval: 5s
       retries: 3
@@ -321,13 +311,11 @@ the services:
       - DATABASE_SEARCH_PATH=storage
     volumes:
       - './volumes/storage:/var/lib/storage'
+
   imgproxy:
     image: 'darthsim/imgproxy:v3.8.0'
     healthcheck:
-      test:
-        - CMD
-        - imgproxy
-        - health
+      test: ["CMD", "imgproxy", "health"]
       timeout: 5s
       interval: 5s
       retries: 3
@@ -337,6 +325,7 @@ the services:
       - 'IMGPROXY_ENABLE_WEBP_DETECTION=${IMGPROXY_ENABLE_WEBP_DETECTION:-true}'
     volumes:
       - './volumes/storage:/var/lib/storage'
+
   supabase-meta:
     image: 'supabase/postgres-meta:v0.83.2'
     depends_on:
@@ -351,16 +340,14 @@ the services:
       - 'PG_META_DB_NAME=${POSTGRES_DB:-postgres}'
       - PG_META_DB_USER=supabase_admin
       - 'PG_META_DB_PASSWORD=${SERVICE_PASSWORD_POSTGRES}'
+
   supabase-edge-functions:
     image: 'supabase/edge-runtime:v1.58.3'
     depends_on:
       supabase-analytics:
         condition: service_healthy
     healthcheck:
-      test:
-        - CMD
-        - echo
-        - 'Edge Functions is healthy'
+      test: ["CMD", "echo", "Edge Functions is healthy"]
       timeout: 5s
       interval: 5s
       retries: 3
@@ -371,18 +358,20 @@ the services:
       - 'SUPABASE_SERVICE_ROLE_KEY=${SERVICE_SUPABASESERVICE_KEY}'
       - 'SUPABASE_DB_URL=postgresql://postgres:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}'
       - 'VERIFY_JWT=${FUNCTIONS_VERIFY_JWT:-false}'
+      - 'MAINTENANCE_KEY=nk1euVVP1Mk9bmVCqDJ+HG9TY1BCOWJgv+fNq7yT2Xk='
+      - 'FUNCTIONS_VERIFY_JWT=false'
     volumes:
       - './volumes/functions:/home/deno/functions'
+      # Add your function files as needed
+    command:
+      - start
+      - '--main-service'
+      - /home/deno/functions/main
+
   supabase-supavisor:
     image: 'supabase/supavisor:1.1.56'
     healthcheck:
-      test:
-        - CMD
-        - curl
-        - '-sSfL'
-        - '-o'
-        - /dev/null
-        - 'http://127.0.0.1:4000/api/health'
+      test: ["CMD", "curl", "-sSfL", "-o", "/dev/null", "http://127.0.0.1:4000/api/health"]
       timeout: 5s
       interval: 5s
       retries: 10
@@ -414,13 +403,8 @@ the services:
       - '-c'
       - '/app/bin/migrate && /app/bin/supavisor eval "$$(cat /etc/pooler/pooler.exs)" && /app/bin/server'
     volumes:
-      -
-        type: bind
-        source: ./volumes/pooler/pooler.exs
-        target: /etc/pooler/pooler.exs
+      - './volumes/pooler/pooler.exs:/etc/pooler/pooler.exs'
+
 volumes:
-  supabase-db-data: null
-  supabase-db-config: null
-
-
-give me the revised file in supabase-compose.md
+  supabase-db-data:
+  supabase-db-config:

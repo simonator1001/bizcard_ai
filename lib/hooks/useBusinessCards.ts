@@ -26,12 +26,15 @@ export function useBusinessCards() {
       // First, try to get the total count of cards
       const { count, error: countError } = await supabase
         .from('business_cards')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('user_id', user.id);
 
       if (countError) {
         console.error('Error getting card count:', countError);
         throw countError;
+      }
+      if (typeof count !== 'number') {
+        console.error('Count is undefined when fetching business cards');
       }
 
       console.log('Total cards in database for user:', count);
