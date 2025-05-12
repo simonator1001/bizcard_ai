@@ -219,6 +219,25 @@ export function getSupabaseAdmin() {
 // Export admin client for server-side use
 export const supabaseAdmin = getSupabaseAdmin();
 
+/**
+ * Update a user's app_metadata to include role: 'authenticated' using the admin API.
+ * @param userId The user's UUID
+ * @param role The role to set (default: 'authenticated')
+ */
+export async function updateUserRole(userId: string, role: string = 'authenticated') {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin client not available');
+  }
+  const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+    app_metadata: { role }
+  });
+  if (error) {
+    console.error('[Supabase] Error updating user role:', error);
+    throw error;
+  }
+  return data;
+}
+
 // Test connection and log result
 supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
   console.debug('[Supabase] Auth state changed:', {
