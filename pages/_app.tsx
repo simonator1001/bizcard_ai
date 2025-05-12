@@ -4,8 +4,21 @@ import type { AppProps } from 'next/app'
 import { AuthProvider } from '@/lib/auth-context'
 import { I18nProvider } from '@/components/i18n-provider'
 import { Toaster } from 'sonner'
+import { testConnection } from '@/lib/supabase-client'
+import React from 'react'
 
 export default function App({ Component, pageProps }: AppProps) {
+  React.useEffect(() => {
+    console.log('[Supabase] useEffect running');
+    testConnection()
+      .then((result) => {
+        console.log('[Supabase] testConnection result:', result);
+      })
+      .catch((err) => {
+        console.error('[Supabase] testConnection error:', err);
+      });
+  }, []);
+
   return (
     <AuthProvider>
       <I18nProvider>
