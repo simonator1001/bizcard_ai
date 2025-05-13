@@ -457,54 +457,43 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     setProcessingStage('Scanning business card...');
 
     try {
-      // Get the session token
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('[Scan] Starting image processing...');
       
-      if (sessionError || !session) {
-        throw new Error('No valid session found');
-      }
-
-      // Call our scan API endpoint with the session token
+      // Upload the image directly to our API
       const response = await fetch('/api/scan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ image: base64Image })
+        body: JSON.stringify({ 
+          imageData: base64Image 
+        }),
+        credentials: 'include' // Important: include cookies for auth
       });
 
-      let errorData;
-      let errorText;
-      try {
-        // Try to get JSON response
-        errorData = await response.json();
-      } catch (e) {
-        // If JSON parsing fails, get text response
-        errorText = await response.text();
-        console.error('[Scan] Non-JSON response:', errorText);
-      }
-
+      // Check response
       if (!response.ok) {
-        console.error('[Scan] API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorData,
-          errorText
-        });
-        throw new Error(
-          errorData?.message || 
-          errorData?.error || 
-          'Failed to scan business card'
-        );
+        let errorMessage = 'Failed to scan business card';
+        
+        try {
+          const errorData = await response.json();
+          console.error('[Scan] API error:', errorData);
+          errorMessage = errorData.details || errorData.error || errorMessage;
+        } catch (parseError) {
+          console.error('[Scan] Failed to parse error response:', await response.text());
+        }
+        
+        throw new Error(errorMessage);
       }
 
-      if (!errorData) {
-        throw new Error('No response data received from scan endpoint');
-      }
+      // Parse successful response
+      const result = await response.json();
+      console.log('[Scan] Card scanned successfully:', result);
 
-      const savedCard = errorData; // We already parsed the JSON above
-      console.log('[Scan] Card saved:', savedCard);
+      if (result.imageUrl) {
+        // Create a business card record with the OCR results
+        await recognizeBusinessCard(result.imageUrl);
+      }
 
       // Update UI state
       setProcessingStatus('success');
@@ -516,14 +505,14 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       // Clear form
       setFile(null);
       setPreview(null);
-      setExtractedInfo(null);
-
-      toast.success('Business card scanned and saved successfully!');
-    } catch (error: any) {
-      console.error('[Scan] Error:', error);
+      
+      return result;
+    } catch (error) {
+      console.error('[Scan] Process image error:', error);
       setProcessingStatus('error');
-      setProcessingStage('Failed to scan card');
-      toast.error(error.message || 'Failed to scan business card');
+      setProcessingStage('Error scanning card');
+      toast.error(error instanceof Error ? error.message : 'Failed to scan business card');
+      throw error;
     } finally {
       setIsProcessing(false);
     }

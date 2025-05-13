@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { subscriptionMiddleware } from './middleware/subscription'
 
+// Define all public routes that don't require authentication
 const PUBLIC_ROUTES = [
   '/', // Allow the root path entirely
   '/signin',
@@ -18,12 +19,23 @@ const PUBLIC_ROUTES = [
   '/images',
   '/assets',
   '/pricing',
-  '/manage'
+  '/manage',
+  '/forgot-password'
 ]
 
+// Configure matcher to exclude static files
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
   runtime: 'experimental-edge'
+}
+
+// Helper function to check if a path should bypass auth
+function isPublicPath(path: string, search: string = ''): boolean {
+  // Allow the root path with any query parameters
+  if (path === '/') return true;
+  
+  // Allow public routes
+  return PUBLIC_ROUTES.some(route => path === route || path.startsWith(route + '/'));
 }
 
 export async function middleware(request: NextRequest) {
@@ -40,7 +52,7 @@ export async function middleware(request: NextRequest) {
   // Skip middleware for public routes and static files
   const path = url.pathname
   
-  if (PUBLIC_ROUTES.some(route => path === route || path.startsWith(route + '/')) || 
+  if (isPublicPath(path, url.search) || 
       path.match(/\.(ico|png|jpg|jpeg|svg|css|js|woff|woff2)$/)) {
     console.debug('[Middleware] Skipping auth check for route:', path + url.search)
     return NextResponse.next()
@@ -49,6 +61,9 @@ export async function middleware(request: NextRequest) {
   try {
     // Create a response object that we can return
     let response = NextResponse.next()
+
+    // Get the auth cookie name from the supabase URL
+    const COOKIE_NAME = `sb-rzmqepriffysavamtxzg-auth-token`;
 
     // Create a Supabase client with the correct URL
     const supabase = createServerClient(
@@ -70,7 +85,9 @@ export async function middleware(request: NextRequest) {
               value,
               ...options,
               sameSite: 'lax',
-              secure: process.env.NODE_ENV === 'production'
+              secure: process.env.NODE_ENV === 'production',
+              path: '/',
+              domain: process.env.NODE_ENV === 'production' ? 'simon-gpt.com' : undefined
             })
           },
           remove(name: string, options: CookieOptions) {
@@ -101,9 +118,10 @@ export async function middleware(request: NextRequest) {
       console.error('[Middleware] Session error:', error)
       // Clear the auth cookie if there's an error
       response.cookies.set({
-        name: 'sb-rzmqepriffysavamtxzg-auth-token',
+        name: COOKIE_NAME,
         value: '',
-        maxAge: 0
+        maxAge: 0,
+        path: '/'
       })
       return NextResponse.redirect(new URL('/signin', request.url))
     }
@@ -114,6 +132,10 @@ export async function middleware(request: NextRequest) {
       searchParams.set('returnUrl', request.url)
       return NextResponse.redirect(new URL(`/signin?${searchParams.toString()}`, request.url))
     }
+
+    // Pass user info to the request headers
+    response.headers.set('x-user-id', session.user.id);
+    response.headers.set('x-user-email', session.user.email || '');
 
     // Call subscription middleware
     const subscriptionResponse = await subscriptionMiddleware(request)
