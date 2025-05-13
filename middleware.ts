@@ -80,6 +80,12 @@ export async function middleware(request: NextRequest) {
     
     if (error) {
       console.error('[Middleware] Session error:', error)
+      // Clear the auth cookie if there's an error
+      response.cookies.set({
+        name: 'sb-supabase-auth-token',
+        value: '',
+        maxAge: 0
+      })
       return NextResponse.redirect(new URL('/signin', request.url))
     }
 

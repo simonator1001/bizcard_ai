@@ -1,7 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Initialize Supabase client with service role key for debugging
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://rzmqepriffysavamtxzg.supabase.co'
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_URL is required');
+}
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
 const supabase = createClient(supabaseUrl, supabaseKey)
