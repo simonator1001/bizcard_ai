@@ -32,8 +32,8 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
   throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is required');
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Create a single instance of the Supabase client
 let _supabase: SupabaseClient | null = null;
@@ -181,6 +181,9 @@ export function getSupabaseClient() {
 
 // Export initialized client
 export const supabase = getSupabaseClient();
+
+// Call the getSupabase function during initialization to check for URL mismatches in cookies
+getSupabase();
 
 // Create service role client only on server-side and only if key is available
 export function getSupabaseAdmin() {
@@ -382,3 +385,72 @@ export const debugAuth = async () => {
     return { error };
   }
 };
+
+export function getSupabase() {
+  console.debug('[Supabase] Environment debug:', {
+    context: typeof window === 'undefined' ? 'server' : 'client',
+    NODE_ENV: process.env.NODE_ENV,
+    env_keys: Object.keys(process.env).filter(key => key.includes('SUPABASE')),
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 8) + '...',
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '(exists)' : '(missing)',
+  });
+
+  // Debug environment variables
+  const envCheck = {
+    hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    isServer: typeof window === 'undefined',
+  };
+  console.debug('[Supabase] Environment check:', envCheck);
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL is required');
+  }
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is required');
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Check if we're in a browser context
+  const isClient = typeof window !== 'undefined';
+  
+  // If we're in the browser, check for URL mismatch in cookies
+  if (isClient) {
+    try {
+      // Read the 'sb-supabase-auth-token' cookie
+      const cookies = document.cookie.split(';')
+        .map(cookie => cookie.trim())
+        .reduce((acc, cookie) => {
+          const [name, value] = cookie.split('=');
+          acc[name] = value;
+          return acc;
+        }, {} as Record<string, string>);
+      
+      const authToken = cookies['sb-supabase-auth-token'];
+      
+      if (authToken && authToken.includes('supabase.simon-gpt.com')) {
+        console.warn('[Supabase] Detected auth token with old URL, clearing cookie');
+        // Clear the cookie by setting it to expire in the past
+        document.cookie = 'sb-supabase-auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=lax';
+        
+        // Also clear any provider token
+        document.cookie = 'sb-provider-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=lax';
+        
+        // And localStorage backup
+        localStorage.removeItem('supabase.auth.token');
+        localStorage.removeItem('supabase.auth.refreshToken');
+        
+        // Force reload the page to get a clean state
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('[Supabase] Error checking/clearing auth token:', error);
+    }
+  }
+}
