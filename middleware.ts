@@ -16,7 +16,8 @@ const PUBLIC_ROUTES = [
   '/api/extract-info',
   '/images',
   '/assets',
-  '/pricing'
+  '/pricing',
+  '/manage' // Temporarily add /manage to public routes for testing
 ]
 
 export const config = {
@@ -28,7 +29,8 @@ export async function middleware(request: NextRequest) {
   console.debug('[Middleware] Processing request:', {
     url: request.url,
     method: request.method,
-    headers: Object.fromEntries(request.headers)
+    pathname: new URL(request.url).pathname,
+    cookies: Object.fromEntries(request.cookies.getAll().map(c => [c.name, c.value.substring(0, 10) + '...']))
   })
 
   // Skip middleware for public routes and static files
@@ -51,9 +53,12 @@ export async function middleware(request: NextRequest) {
       {
         cookies: {
           get(name: string) {
-            return request.cookies.get(name)?.value
+            const cookie = request.cookies.get(name)?.value;
+            console.debug(`[Middleware] Getting cookie ${name}:`, cookie ? `${cookie.substring(0, 10)}...` : 'null');
+            return cookie;
           },
           set(name: string, value: string, options: CookieOptions) {
+            console.debug(`[Middleware] Setting cookie ${name}:`, value ? `${value.substring(0, 10)}...` : 'empty');
             // If the cookie is updated, update the response
             response.cookies.set({
               name,
@@ -64,6 +69,7 @@ export async function middleware(request: NextRequest) {
             })
           },
           remove(name: string, options: CookieOptions) {
+            console.debug(`[Middleware] Removing cookie ${name}`);
             // If the cookie is removed, update the response
             response.cookies.set({
               name,
@@ -79,11 +85,18 @@ export async function middleware(request: NextRequest) {
     // Refresh the session if it exists
     const { data: { session }, error } = await supabase.auth.getSession()
     
+    console.debug('[Middleware] Session check result:', {
+      hasSession: !!session,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      error: error ? { message: error.message, code: error.code } : null
+    });
+    
     if (error) {
       console.error('[Middleware] Session error:', error)
       // Clear the auth cookie if there's an error
       response.cookies.set({
-        name: 'sb-supabase-auth-token',
+        name: 'sb-rzmqepriffysavamtxzg-auth-token',
         value: '',
         maxAge: 0
       })
@@ -100,9 +113,11 @@ export async function middleware(request: NextRequest) {
     // Call subscription middleware
     const subscriptionResponse = await subscriptionMiddleware(request)
     if (subscriptionResponse) {
+      console.debug('[Middleware] Subscription middleware returned a response, using it');
       return subscriptionResponse
     }
 
+    console.debug('[Middleware] Authentication successful, proceeding with request');
     return response
   } catch (e) {
     console.error('[Middleware] Unexpected error:', e)
