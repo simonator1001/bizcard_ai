@@ -458,12 +458,19 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
 
     try {
       console.log('[Scan] Starting image processing...');
+
+      // Get the authentication token
+      const { data: { session }, error: authError } = await supabase.auth.getSession();
+      if (authError || !session) {
+        throw new Error('Authentication failed. Please sign in again.');
+      }
       
       // Upload the image directly to our API
       const response = await fetch('/api/scan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({ 
           imageData: base64Image 
@@ -479,7 +486,15 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
           const errorData = await response.json();
           console.error('[Scan] API error:', errorData);
           errorMessage = errorData.details || errorData.error || errorMessage;
+          
+          // Handle specific error types
+          if (errorMessage.includes('Authentication failed') || errorMessage.includes('No valid authentication')) {
+            throw new Error('Session expired. Please sign in again.');
+          }
         } catch (parseError) {
+          if (parseError instanceof Error && parseError.message.includes('Session expired')) {
+            throw parseError;
+          }
           console.error('[Scan] Failed to parse error response:', await response.text());
         }
         
@@ -511,7 +526,18 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       console.error('[Scan] Process image error:', error);
       setProcessingStatus('error');
       setProcessingStage('Error scanning card');
-      toast.error(error instanceof Error ? error.message : 'Failed to scan business card');
+      
+      // Show appropriate error message based on error type
+      if (error instanceof Error && error.message.includes('Session expired')) {
+        toast.error('Your session has expired. Please sign in again.');
+        // Redirect to sign in page
+        setTimeout(() => {
+          router.push('/signin');
+        }, 2000);
+      } else {
+        toast.error(error instanceof Error ? error.message : 'Failed to scan business card');
+      }
+      
       throw error;
     } finally {
       setIsProcessing(false);

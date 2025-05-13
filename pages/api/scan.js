@@ -15,19 +15,71 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Check for authentication
-    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    // Get the auth cookie from the request
+    const authCookie = req.cookies['sb-rzmqepriffysavamtxzg-auth-token'];
+    console.log('[API] Auth cookie present:', !!authCookie);
 
-    if (authError || !session) {
-      console.error('[API] Authentication error:', authError || 'No session found');
-      return res.status(401).json({ 
-        error: 'Authentication required',
-        details: authError?.message || 'No active session found'
-      });
+    // Also check for Authorization header
+    const authHeader = req.headers.authorization;
+    console.log('[API] Auth header present:', !!authHeader);
+
+    // Try to get user from cookie first
+    let userId = null;
+    let authError = null;
+
+    if (authCookie) {
+      // Parse the cookie value if it exists
+      try {
+        // The cookie value is base64 encoded JSON
+        const parsedCookie = JSON.parse(Buffer.from(authCookie.replace('base64-', ''), 'base64').toString());
+        // If the access_token exists in the cookie
+        if (parsedCookie.access_token) {
+          console.log('[API] Extracted token from cookie');
+          // Get the user from the token
+          const { data: { user }, error } = await supabase.auth.getUser(parsedCookie.access_token);
+          if (user) {
+            userId = user.id;
+            console.log('[API] User authenticated from cookie:', userId);
+          } else {
+            authError = error;
+          }
+        }
+      } catch (e) {
+        console.error('[API] Error parsing auth cookie:', e);
+      }
     }
 
-    const userId = session.user.id;
-    console.log('[API] User authenticated:', userId);
+    // If no user found from cookie, try header
+    if (!userId && authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+      if (user) {
+        userId = user.id;
+        console.log('[API] User authenticated from header:', userId);
+      } else {
+        authError = error;
+      }
+    }
+
+    // If still no user, try the session API
+    if (!userId) {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (session?.user) {
+        userId = session.user.id;
+        console.log('[API] User authenticated from session API:', userId);
+      } else {
+        authError = error || authError;
+      }
+    }
+
+    // If no user found through any method, return authentication error
+    if (!userId) {
+      console.error('[API] Authentication failed:', authError);
+      return res.status(401).json({ 
+        error: 'Authentication failed',
+        details: authError?.message || 'No valid authentication provided'
+      });
+    }
 
     // Check if the user has scans available
     try {
