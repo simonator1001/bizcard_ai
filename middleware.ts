@@ -43,9 +43,10 @@ export async function middleware(request: NextRequest) {
     // Create a response object that we can return
     let response = NextResponse.next()
 
-    // Create a Supabase client
+    // Create a Supabase client with the correct URL
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      // Use the hardcoded URL to ensure we're connecting to the correct instance
+      'https://rzmqepriffysavamtxzg.supabase.co',
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {

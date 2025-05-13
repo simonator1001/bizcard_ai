@@ -6,6 +6,7 @@ import { I18nProvider } from '@/components/i18n-provider'
 import { Toaster } from 'sonner'
 import { testConnection } from '@/lib/supabase-client'
 import React from 'react'
+import Script from 'next/script'
 
 export default function App({ Component, pageProps }: AppProps) {
   React.useEffect(() => {
@@ -21,6 +22,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <AuthProvider>
+      <Script src="/clear-cache.js" strategy="afterInteractive" />
       <I18nProvider>
         <Component {...pageProps} />
         <Toaster />

@@ -3,13 +3,16 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { SubscriptionService } from '@/lib/subscription';
 
+// Use hardcoded URL for consistency
+const SUPABASE_URL = 'https://rzmqepriffysavamtxzg.supabase.co';
+
 export async function subscriptionMiddleware(request: NextRequest) {
   const res = NextResponse.next();
 
   try {
     // Create Supabase client specifically for middleware
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {

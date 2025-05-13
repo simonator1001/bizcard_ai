@@ -7,35 +7,13 @@ import { BusinessCard } from '@/types/business-card'
 const SUPABASE_URL = 'https://rzmqepriffysavamtxzg.supabase.co';
 
 // Debug environment variables in detail
-console.log('[Supabase] Environment debug:', {
+console.log('[Supabase New Client] Environment debug:', {
   context: typeof window === 'undefined' ? 'server' : 'client',
   NODE_ENV: process.env.NODE_ENV,
   SUPABASE_URL: SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   URL_MATCH: process.env.NEXT_PUBLIC_SUPABASE_URL === SUPABASE_URL
 });
-
-// Debug environment variables
-const envCheck = {
-  hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-  hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-  url: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  isServer: typeof window === 'undefined'
-};
-
-console.log('[Supabase] Environment check:', envCheck);
-
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL is required');
-}
-
-if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is required');
-}
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Create a single instance of the Supabase client
 let _supabase: SupabaseClient | null = null;
@@ -46,7 +24,7 @@ const clearAllSupabaseCookies = () => {
   if (typeof window === 'undefined') return;
   
   const allCookies = document.cookie.split(';');
-  console.warn('[Supabase] Clearing ALL Supabase cookies');
+  console.warn('[Supabase New] Clearing ALL Supabase cookies');
   
   // Look for any Supabase-related cookies
   for (const cookie of allCookies) {
@@ -54,7 +32,7 @@ const clearAllSupabaseCookies = () => {
     
     // If it's a Supabase cookie
     if (name && (name.startsWith('sb-') || name.includes('supabase'))) {
-      console.warn(`[Supabase] Clearing cookie: ${name}`);
+      console.warn(`[Supabase New] Clearing cookie: ${name}`);
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=lax`;
     }
   }
@@ -62,7 +40,7 @@ const clearAllSupabaseCookies = () => {
   // Clear localStorage items
   for (const key of Object.keys(localStorage)) {
     if (key.startsWith('sb-') || key.includes('supabase')) {
-      console.warn(`[Supabase] Clearing localStorage item: ${key}`);
+      console.warn(`[Supabase New] Clearing localStorage item: ${key}`);
       localStorage.removeItem(key);
     }
   }
@@ -72,7 +50,7 @@ export function createClient() {
   const isClient = typeof window !== 'undefined';
   
   if (!isClient) {
-    console.debug('[Supabase] Creating server-side client');
+    console.debug('[Supabase New] Creating server-side client');
     return createSupabaseClient(
       SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -85,7 +63,7 @@ export function createClient() {
     );
   }
 
-  console.debug('[Supabase] Creating browser client with cookie handling');
+  console.debug('[Supabase New] Creating browser client with cookie handling');
   
   // Clear all existing cookies first to ensure we start clean
   clearAllSupabaseCookies();
@@ -103,7 +81,7 @@ export function createClient() {
               acc[name] = value
               return acc
             }, {} as Record<string, string>)
-          console.debug('[Supabase] Getting cookie:', {
+          console.debug('[Supabase New] Getting cookie:', {
             name,
             exists: !!cookies[name],
             allCookies: Object.keys(cookies).filter(k => k.startsWith('sb-')),
@@ -126,24 +104,22 @@ export function createClient() {
           }
           
           const cookieStr = cookieOptions.join('; ')
-          console.debug('[Supabase] Setting cookie:', {
+          console.debug('[Supabase New] Setting cookie:', {
             name,
             valuePreview: value.substring(0, 20) + '...',
             isLocalhost,
             protocol: window.location.protocol,
             options: cookieOptions,
             hostname: window.location.hostname,
-            path: window.location.pathname,
-            cookieStr
+            path: window.location.pathname
           })
           document.cookie = cookieStr
         },
         remove(name: string, options: CookieOptions) {
-          console.debug('[Supabase] Removing cookie:', {
+          console.debug('[Supabase New] Removing cookie:', {
             name,
             hostname: window.location.hostname,
-            path: window.location.pathname,
-            options
+            path: window.location.pathname
           })
           const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')
           const cookieOptions = [
@@ -169,7 +145,7 @@ export function createClient() {
         storage: {
           getItem: (key: string) => {
             const value = window.localStorage.getItem(key)
-            console.debug('[Supabase] Getting storage item:', {
+            console.debug('[Supabase New] Getting storage item:', {
               key,
               exists: !!value,
               allKeys: Object.keys(window.localStorage).filter(k => k.startsWith('sb-')),
@@ -179,7 +155,7 @@ export function createClient() {
             return value
           },
           setItem: (key: string, value: string) => {
-            console.debug('[Supabase] Setting storage item:', {
+            console.debug('[Supabase New] Setting storage item:', {
               key,
               valuePreview: value.substring(0, 20) + '...',
               hostname: window.location.hostname,
@@ -188,7 +164,7 @@ export function createClient() {
             window.localStorage.setItem(key, value)
           },
           removeItem: (key: string) => {
-            console.debug('[Supabase] Removing storage item:', {
+            console.debug('[Supabase New] Removing storage item:', {
               key,
               hostname: window.location.hostname,
               path: window.location.pathname
@@ -203,11 +179,11 @@ export function createClient() {
 
 export function getSupabaseClient() {
   if (_supabase) {
-    console.debug('[Supabase] Returning existing client instance');
+    console.debug('[Supabase New] Returning existing client instance');
     return _supabase;
   }
 
-  console.debug('[Supabase] Creating new client instance');
+  console.debug('[Supabase New] Creating new client instance');
   _supabase = createClient();
   return _supabase;
 }
@@ -215,19 +191,16 @@ export function getSupabaseClient() {
 // Export initialized client
 export const supabase = getSupabaseClient();
 
-// Call the getSupabase function during initialization to check for URL mismatches in cookies
-getSupabase();
-
 // Create service role client only on server-side and only if key is available
 export function getSupabaseAdmin() {
   if (_supabaseAdmin) {
-    console.debug('[Supabase] Returning existing admin client instance');
+    console.debug('[Supabase New] Returning existing admin client instance');
     return _supabaseAdmin;
   }
 
   const isClient = typeof window !== 'undefined';
   if (isClient) {
-    console.debug('[Supabase] Skipping admin client initialization on client-side');
+    console.debug('[Supabase New] Skipping admin client initialization on client-side');
     return null;
   }
 
@@ -235,7 +208,7 @@ export function getSupabaseAdmin() {
     throw new Error('Missing Supabase service role key');
   }
 
-  console.debug('[Supabase] Creating new admin client instance');
+  console.debug('[Supabase New] Creating new admin client instance');
 
   _supabaseAdmin = createSupabaseClient(
     SUPABASE_URL,
@@ -248,7 +221,7 @@ export function getSupabaseAdmin() {
     }
   );
 
-  console.debug('[Supabase] Service role client initialized successfully');
+  console.debug('[Supabase New] Service role client initialized successfully');
   return _supabaseAdmin;
 }
 
@@ -268,7 +241,7 @@ export async function updateUserRole(userId: string, role: string = 'authenticat
     app_metadata: { role }
   });
   if (error) {
-    console.error('[Supabase] Error updating user role:', error);
+    console.error('[Supabase New] Error updating user role:', error);
     throw error;
   }
   return data;
@@ -276,7 +249,7 @@ export async function updateUserRole(userId: string, role: string = 'authenticat
 
 // Test connection and log result
 supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
-  console.debug('[Supabase] Auth state changed:', {
+  console.debug('[Supabase New] Auth state changed:', {
     event,
     sessionExists: !!session,
     userId: session?.user?.id,
@@ -290,20 +263,20 @@ supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null
 // Add logging to help debug
 export const testConnection = async () => {
   try {
-    console.log('[Supabase] Testing connection...');
-    console.log('[Supabase] URL:', SUPABASE_URL);
-    console.log('[Supabase] Context:', typeof window === 'undefined' ? 'server' : 'client');
-    console.log('[Supabase] Has service role:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+    console.log('[Supabase New] Testing connection...');
+    console.log('[Supabase New] URL:', SUPABASE_URL);
+    console.log('[Supabase New] Context:', typeof window === 'undefined' ? 'server' : 'client');
+    console.log('[Supabase New] Has service role:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
     
     // Get current session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError) {
-      console.error('[Supabase] Session error:', sessionError);
+      console.error('[Supabase New] Session error:', sessionError);
       return false;
     }
     
-    console.log('[Supabase] Current session:', session ? 'Found' : 'None');
+    console.log('[Supabase New] Current session:', session ? 'Found' : 'None');
     
     if (session) {
       // Test database access
@@ -313,19 +286,19 @@ export const testConnection = async () => {
         .eq('user_id', session.user.id);
 
       if (error) {
-        console.error('[Supabase] Connection test failed:', error);
-        console.error('[Supabase] Error code:', error.code);
-        console.error('[Supabase] Error message:', error.message);
-        console.error('[Supabase] Error hint:', error.hint);
-        console.error('[Supabase] Error details:', error.details);
+        console.error('[Supabase New] Connection test failed:', error);
+        console.error('[Supabase New] Error code:', error.code);
+        console.error('[Supabase New] Error message:', error.message);
+        console.error('[Supabase New] Error hint:', error.hint);
+        console.error('[Supabase New] Error details:', error.details);
         return false;
       }
-      console.log('[Supabase] Connection test successful:', data);
+      console.log('[Supabase New] Connection test successful:', data);
     }
     
     return true;
   } catch (error) {
-    console.error('[Supabase] Connection test error:', error);
+    console.error('[Supabase New] Connection test error:', error);
     return false;
   }
 };
@@ -392,16 +365,7 @@ export const forceSignOut = async () => {
     }
     return true;
   } catch (error) {
-    console.error('[Supabase] Force sign out error:', error);
+    console.error('[Supabase New] Force sign out error:', error);
     return false;
   }
-};
-
-// Call getSupabase function to check for URL mismatches in cookies
-export function getSupabase() {
-  const isClient = typeof window !== 'undefined';
-  
-  if (isClient) {
-    clearAllSupabaseCookies();
-  }
-}
+}; 
