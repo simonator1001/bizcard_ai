@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 import { subscriptionMiddleware } from './middleware/subscription'
 
 const PUBLIC_ROUTES = [
+  '/', // Allow the root path entirely
   '/signin',
   '/signup',
   '/auth/callback',
@@ -17,7 +18,7 @@ const PUBLIC_ROUTES = [
   '/images',
   '/assets',
   '/pricing',
-  '/manage' // Temporarily add /manage to public routes for testing
+  '/manage'
 ]
 
 export const config = {
@@ -26,18 +27,22 @@ export const config = {
 }
 
 export async function middleware(request: NextRequest) {
+  const url = new URL(request.url);
+  
   console.debug('[Middleware] Processing request:', {
     url: request.url,
     method: request.method,
-    pathname: new URL(request.url).pathname,
+    pathname: url.pathname,
+    search: url.search,
     cookies: Object.fromEntries(request.cookies.getAll().map(c => [c.name, c.value.substring(0, 10) + '...']))
   })
 
   // Skip middleware for public routes and static files
-  const path = new URL(request.url).pathname
-  if (PUBLIC_ROUTES.some(route => path.startsWith(route)) || 
+  const path = url.pathname
+  
+  if (PUBLIC_ROUTES.some(route => path === route || path.startsWith(route + '/')) || 
       path.match(/\.(ico|png|jpg|jpeg|svg|css|js|woff|woff2)$/)) {
-    console.debug('[Middleware] Skipping auth check for public route:', path)
+    console.debug('[Middleware] Skipping auth check for route:', path + url.search)
     return NextResponse.next()
   }
 
