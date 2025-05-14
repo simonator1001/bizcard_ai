@@ -1,5 +1,4 @@
 import { Html, Head, Main, NextScript } from 'next/document';
-import Script from 'next/script';
 
 export default function Document() {
   return (
@@ -11,7 +10,6 @@ export default function Document() {
         <meta httpEquiv="Expires" content="0" />
       </Head>
       <body>
-        <Script src="/clear-cache.js" strategy="beforeInteractive" />
         <Main />
         <NextScript />
       </body>

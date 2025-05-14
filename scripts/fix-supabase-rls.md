@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS public.user_usage_stats (
   unique_companies INTEGER DEFAULT 0,
   cards_count INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT user_usage_stats_user_id_key UNIQUE (user_id)
 );
 
 -- Step 2: Enable RLS on the business_cards table
@@ -80,6 +81,51 @@ CREATE POLICY "Service role can manage usage stats"
 ON public.user_usage_stats
 USING (true)
 WITH CHECK (true);
+
+-- Step 7: Handle any duplicate records and initialize user usage stats
+DO $$
+BEGIN
+  -- If table already has data, handle existing duplicates if any
+  IF EXISTS (
+    SELECT user_id, COUNT(*) 
+    FROM public.user_usage_stats 
+    GROUP BY user_id 
+    HAVING COUNT(*) > 1
+  ) THEN
+    -- Delete duplicates keeping only the most recent record for each user
+    DELETE FROM public.user_usage_stats
+    WHERE id IN (
+      SELECT id FROM (
+        SELECT id, user_id, 
+        ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY updated_at DESC) as row_num
+        FROM public.user_usage_stats
+      ) t
+      WHERE t.row_num > 1
+    );
+  END IF;
+END $$;
+
+-- Now insert usage stats for any users without them
+INSERT INTO public.user_usage_stats (user_id, scans_this_month, unique_companies, cards_count)
+SELECT 
+  id as user_id,
+  0 as scans_this_month,
+  0 as unique_companies,
+  0 as cards_count
+FROM auth.users
+WHERE id NOT IN (SELECT user_id FROM public.user_usage_stats)
+ON CONFLICT (user_id) DO NOTHING;
+```
+
+## Common Errors and Solutions
+
+### Error: "There is no unique or exclusion constraint matching the ON CONFLICT specification"
+
+If you encounter this error, it means the `user_id` column in the `user_usage_stats` table doesn't have a unique constraint. The script above already adds this constraint, but if you need to add it manually:
+
+```sql
+-- Add unique constraint to user_id column
+ALTER TABLE public.user_usage_stats ADD CONSTRAINT user_usage_stats_user_id_key UNIQUE (user_id);
 ```
 
 ## Verification

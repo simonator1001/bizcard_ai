@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS public.user_usage_stats (
   unique_companies INTEGER DEFAULT 0,
   cards_count INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT user_usage_stats_user_id_key UNIQUE (user_id)
 );
 
 -- Enable RLS on the business_cards table
@@ -93,6 +94,38 @@ BEGIN
 END $$;
 
 -- Initialize the user_usage_stats for existing users if needed
+-- First, check if user_id is unique
+DO $$
+BEGIN
+  -- Try to add unique constraint if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint c
+    JOIN pg_namespace n ON n.oid = c.connamespace
+    WHERE c.conname = 'user_usage_stats_user_id_key'
+    AND n.nspname = 'public'
+  ) THEN
+    -- If table already has data, handle existing duplicates if any
+    IF EXISTS (
+      SELECT user_id, COUNT(*) 
+      FROM public.user_usage_stats 
+      GROUP BY user_id 
+      HAVING COUNT(*) > 1
+    ) THEN
+      -- Delete duplicates keeping only the most recent record for each user
+      DELETE FROM public.user_usage_stats
+      WHERE id IN (
+        SELECT id FROM (
+          SELECT id, user_id, 
+          ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY updated_at DESC) as row_num
+          FROM public.user_usage_stats
+        ) t
+        WHERE t.row_num > 1
+      );
+    END IF;
+  END IF;
+END $$;
+
+-- Now it's safe to insert new records
 INSERT INTO public.user_usage_stats (user_id, scans_this_month, unique_companies, cards_count)
 SELECT 
   id as user_id,

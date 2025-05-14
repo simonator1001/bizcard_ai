@@ -3,8 +3,10 @@ import { createBrowserClient } from '@supabase/ssr'
 import { type CookieOptions } from '@supabase/ssr'
 import { BusinessCard } from '@/types/business-card'
 
-// Use this constant throughout the file to ensure consistency
-const SUPABASE_URL = 'https://rzmqepriffysavamtxzg.supabase.co';
+console.log('[DEBUG] [supabase-client.ts] NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+
+// Use the URL from environment variable instead of hardcoding it
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://rzmqepriffysavamtxzg.supabase.co';
 
 // Debug environment variables in detail
 console.log('[Supabase] Environment debug:', {
@@ -87,8 +89,8 @@ export function createClient() {
 
   console.debug('[Supabase] Creating browser client with cookie handling');
   
-  // Clear all existing cookies first to ensure we start clean
-  clearAllSupabaseCookies();
+  // Removing automatic cookie clearing to prevent auth issues
+  // clearAllSupabaseCookies();
   
   return createBrowserClient(
     SUPABASE_URL,
@@ -399,9 +401,13 @@ export const forceSignOut = async () => {
 
 // Call getSupabase function to check for URL mismatches in cookies
 export function getSupabase() {
-  const isClient = typeof window !== 'undefined';
+  // Removing automatic cookie clearing to prevent auth issues
+  // const isClient = typeof window !== 'undefined';
   
-  if (isClient) {
-    clearAllSupabaseCookies();
-  }
+  // if (isClient) {
+  //   clearAllSupabaseCookies();
+  // }
+  
+  // Just return the supabase client without clearing cookies
+  return supabase;
 }

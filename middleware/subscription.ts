@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { SubscriptionService } from '@/lib/subscription';
 
-// Use hardcoded URL for consistency
-const SUPABASE_URL = 'https://rzmqepriffysavamtxzg.supabase.co';
+// Use the URL from environment variable
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
 export async function subscriptionMiddleware(request: NextRequest) {
   const res = NextResponse.next();

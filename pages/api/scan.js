@@ -2,10 +2,34 @@ import { createClient } from '@supabase/supabase-js';
 import { SubscriptionService } from '@/lib/subscription';
 
 // Create a Supabase client with admin privileges
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  supabaseUrl,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+
+// Helper to get project ID from URL for cookie name
+function getProjectId(url) {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    
+    // If it's a standard supabase.co URL, the project ID is the subdomain
+    if (hostname.endsWith('.supabase.co')) {
+      return hostname.split('.')[0];
+    }
+    
+    // For custom domains, we'll use the hostname as the cookie prefix for consistency
+    return hostname.replace(/\./g, '-');
+  } catch (e) {
+    // Fallback to a generic name if URL parsing fails
+    return 'supabase';
+  }
+}
+
+// Get the cookie name based on the Supabase URL
+const projectId = getProjectId(supabaseUrl);
+const AUTH_COOKIE_NAME = `sb-${projectId}-auth-token`;
 
 export default async function handler(req, res) {
   console.log('[API] Scan request received');
@@ -20,7 +44,7 @@ export default async function handler(req, res) {
     console.log('[API] Explicit userId in request:', userId);
 
     // Get the auth cookie from the request
-    const authCookie = req.cookies['sb-rzmqepriffysavamtxzg-auth-token'];
+    const authCookie = req.cookies[AUTH_COOKIE_NAME];
     console.log('[API] Auth cookie present:', !!authCookie);
 
     // Also check for Authorization header

@@ -8,6 +8,8 @@ import { testConnection } from '@/lib/supabase-client'
 import React from 'react'
 import Script from 'next/script'
 
+console.log('[DEBUG] NEXT_PUBLIC_SUPABASE_URL at runtime:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+
 export default function App({ Component, pageProps }: AppProps) {
   React.useEffect(() => {
     console.log('[Supabase] useEffect running');

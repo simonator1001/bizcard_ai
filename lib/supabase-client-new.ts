@@ -3,8 +3,8 @@ import { createBrowserClient } from '@supabase/ssr'
 import { type CookieOptions } from '@supabase/ssr'
 import { BusinessCard } from '@/types/business-card'
 
-// Use this constant throughout the file to ensure consistency
-const SUPABASE_URL = 'https://rzmqepriffysavamtxzg.supabase.co';
+// Use the URL from environment variable instead of hardcoding it
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://rzmqepriffysavamtxzg.supabase.co';
 
 // Debug environment variables in detail
 console.log('[Supabase New Client] Environment debug:', {
@@ -65,8 +65,8 @@ export function createClient() {
 
   console.debug('[Supabase New] Creating browser client with cookie handling');
   
-  // Clear all existing cookies first to ensure we start clean
-  clearAllSupabaseCookies();
+  // Removing automatic cookie clearing to prevent auth issues
+  // clearAllSupabaseCookies();
   
   return createBrowserClient(
     SUPABASE_URL,

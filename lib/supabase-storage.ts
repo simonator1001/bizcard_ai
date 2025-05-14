@@ -48,14 +48,21 @@ export async function getImageUrl(path: string): Promise<string | null> {
 
 export async function uploadImage(file: File, userId: string): Promise<string | null> {
   try {
-    // Generate a unique file path
+    if (!userId) {
+      console.error('[Storage] Missing user ID for upload');
+      throw new Error('Missing user ID for upload');
+    }
+
+    // Generate a unique file path with user ID as the first folder name
+    // This is critical for RLS policies to work correctly
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
 
     console.log('[Storage] Uploading file:', {
       fileName,
       size: file.size,
-      type: file.type
+      type: file.type,
+      userFolder: userId
     });
 
     // Upload the file

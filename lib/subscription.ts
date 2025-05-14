@@ -270,11 +270,17 @@ export class SubscriptionService {
         throw new Error('Service configuration error');
       }
 
+      if (!userId) {
+        console.error('[Subscription] Missing user ID for upload');
+        throw new Error('User ID is required for storage uploads');
+      }
+
       // Convert base64 to blob for upload
       const base64Response = await fetch(base64Image);
       const blob = await base64Response.blob();
       
-      // Generate unique filename
+      // Generate unique filename - ensure userId is first folder component
+      // This is critical for RLS policies to work correctly
       const fileName = `${userId}/${Date.now()}-card.jpg`;
       
       // Upload to Supabase storage using admin client

@@ -38,6 +38,27 @@ function isPublicPath(path: string, search: string = ''): boolean {
   return PUBLIC_ROUTES.some(route => path === route || path.startsWith(route + '/'));
 }
 
+// Helper to get project ID from URL
+function getProjectId(url: string): string {
+  // Try to extract the project ID from the URL
+  // For example, from https://project-id.supabase.co or https://supabase.custom-domain.com
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    
+    // If it's a standard supabase.co URL, the project ID is the subdomain
+    if (hostname.endsWith('.supabase.co')) {
+      return hostname.split('.')[0];
+    }
+    
+    // For custom domains, we'll use the hostname as the cookie prefix for consistency
+    return hostname.replace(/\./g, '-');
+  } catch (e) {
+    // Fallback to a generic name if URL parsing fails
+    return 'supabase';
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const url = new URL(request.url);
   
@@ -62,13 +83,17 @@ export async function middleware(request: NextRequest) {
     // Create a response object that we can return
     let response = NextResponse.next()
 
-    // Get the auth cookie name from the supabase URL
-    const COOKIE_NAME = `sb-rzmqepriffysavamtxzg-auth-token`;
+    // Get the Supabase URL from environment
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    
+    // Generate the auth cookie name from the URL
+    const projectId = getProjectId(supabaseUrl);
+    const COOKIE_NAME = `sb-${projectId}-auth-token`;
 
     // Create a Supabase client with the correct URL
     const supabase = createServerClient(
-      // Use the hardcoded URL to ensure we're connecting to the correct instance
-      'https://rzmqepriffysavamtxzg.supabase.co',
+      // Use the URL from environment variables
+      supabaseUrl,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
