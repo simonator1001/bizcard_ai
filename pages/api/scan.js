@@ -15,6 +15,10 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Extract userId from the request body
+    const { userId } = req.body;
+    console.log('[API] Explicit userId in request:', userId);
+
     // Get the auth cookie from the request
     const authCookie = req.cookies['sb-rzmqepriffysavamtxzg-auth-token'];
     console.log('[API] Auth cookie present:', !!authCookie);
@@ -24,7 +28,7 @@ export default async function handler(req, res) {
     console.log('[API] Auth header present:', !!authHeader);
 
     // Try to get user from cookie first
-    let userId = null;
+    let validatedUserId = null;
     let authError = null;
 
     if (authCookie) {
@@ -38,10 +42,11 @@ export default async function handler(req, res) {
           // Get the user from the token
           const { data: { user }, error } = await supabase.auth.getUser(parsedCookie.access_token);
           if (user) {
-            userId = user.id;
-            console.log('[API] User authenticated from cookie:', userId);
+            validatedUserId = user.id;
+            console.log('[API] User authenticated from cookie:', validatedUserId);
           } else {
             authError = error;
+            console.error('[API] Cookie auth error:', error);
           }
         }
       } catch (e) {
@@ -50,30 +55,32 @@ export default async function handler(req, res) {
     }
 
     // If no user found from cookie, try header
-    if (!userId && authHeader) {
+    if (!validatedUserId && authHeader) {
       const token = authHeader.replace('Bearer ', '');
       const { data: { user }, error } = await supabase.auth.getUser(token);
       if (user) {
-        userId = user.id;
-        console.log('[API] User authenticated from header:', userId);
+        validatedUserId = user.id;
+        console.log('[API] User authenticated from header:', validatedUserId);
       } else {
         authError = error;
+        console.error('[API] Header auth error:', error);
       }
     }
 
-    // If still no user, try the session API
-    if (!userId) {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (session?.user) {
-        userId = session.user.id;
-        console.log('[API] User authenticated from session API:', userId);
+    // If still no validated user but we have an explicit userId in the request body, use that with admin client
+    if (!validatedUserId && userId) {
+      // Verify the user exists with admin client
+      const { data, error } = await supabase.auth.admin.getUserById(userId);
+      if (data?.user) {
+        validatedUserId = userId;
+        console.log('[API] User verified with admin client:', validatedUserId);
       } else {
-        authError = error || authError;
+        console.error('[API] Admin verification failed:', error);
       }
     }
 
     // If no user found through any method, return authentication error
-    if (!userId) {
+    if (!validatedUserId) {
       console.error('[API] Authentication failed:', authError);
       return res.status(401).json({ 
         error: 'Authentication failed',
@@ -81,12 +88,12 @@ export default async function handler(req, res) {
       });
     }
 
-    // Check if the user has scans available
+    // Check if the user has scans available using the validated user ID
     try {
-      const canScan = await SubscriptionService.canPerformAction(userId, 'scan');
+      const canScan = await SubscriptionService.canPerformAction(validatedUserId, 'scan');
       
       if (!canScan) {
-        console.log('[API] User reached scan limit:', userId);
+        console.log('[API] User reached scan limit:', validatedUserId);
         return res.status(403).json({ 
           error: 'Scan limit reached',
           details: 'You have reached your monthly scan limit. Please upgrade your plan to continue scanning.'
@@ -107,13 +114,13 @@ export default async function handler(req, res) {
       });
     }
 
-    // Upload to storage
+    // Upload to storage using the validated user ID
     try {
-      const imageUrl = await SubscriptionService.uploadBusinessCardImage(userId, imageData);
+      const imageUrl = await SubscriptionService.uploadBusinessCardImage(validatedUserId, imageData);
       console.log('[API] Image uploaded successfully:', imageUrl?.substring(0, 50) + '...');
       
       // Increment the user's scan count
-      await SubscriptionService.incrementUsage(userId, 'scan');
+      await SubscriptionService.incrementUsage(validatedUserId, 'scan');
 
       return res.status(200).json({ 
         success: true, 

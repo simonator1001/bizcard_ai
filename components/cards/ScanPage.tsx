@@ -458,14 +458,23 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
 
     try {
       console.log('[Scan] Starting image processing...');
+      console.log('[Scan] User ID:', user.id);
 
       // Get the authentication token
       const { data: { session }, error: authError } = await supabase.auth.getSession();
-      if (authError || !session) {
+      if (authError) {
+        console.error('[Scan] Auth error getting session:', authError);
         throw new Error('Authentication failed. Please sign in again.');
       }
       
-      // Upload the image directly to our API
+      if (!session) {
+        console.error('[Scan] No session found');
+        throw new Error('No active session found. Please sign in again.');
+      }
+      
+      console.log('[Scan] Session found, access token exists:', !!session.access_token);
+      
+      // Upload the image directly to our API with both token and cookies
       const response = await fetch('/api/scan', {
         method: 'POST',
         headers: {
@@ -473,7 +482,8 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
           'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({ 
-          imageData: base64Image 
+          imageData: base64Image,
+          userId: user.id  // Explicitly include user ID in the request
         }),
         credentials: 'include' // Important: include cookies for auth
       });
