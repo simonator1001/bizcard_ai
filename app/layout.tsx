@@ -1,5 +1,11 @@
 import './globals.css'
-import ClientRootLayout from '@/components/layout/ClientRootLayout'
+import { Inter } from 'next/font/google'
+import { AuthProvider } from '@/lib/auth-context'
+import { I18nProvider } from '@/components/i18n-provider'
+import { Toaster } from 'sonner'
+import AppLayoutClient from './AppLayoutClient'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
   title: 'Simon.AI BizCard Digital Archive',
@@ -13,7 +19,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <ClientRootLayout>{children}</ClientRootLayout>
+      <body className={inter.className}>
+        <AuthProvider>
+          <I18nProvider>
+            <AppLayoutClient>{children}</AppLayoutClient>
+          </I18nProvider>
+        </AuthProvider>
+      </body>
     </html>
   )
 }

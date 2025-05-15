@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { useAuth } from '@/lib/auth-context'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -19,10 +19,6 @@ export default function SignInPage() {
   const [showSignUp, setShowSignUp] = useState(false)
   const router = useRouter()
   
-  useEffect(() => {
-    router.replace('/')
-  }, [router])
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
@@ -73,5 +69,101 @@ export default function SignInPage() {
     }
   }
 
-  return null
+  return (
+    <div className="flex min-h-screen items-center justify-center p-4 bg-white">
+      <Dialog open={!showSignUp}>
+        <DialogContent>
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border mb-2" aria-hidden="true">
+              <svg className="stroke-zinc-800 dark:stroke-zinc-100" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
+                <circle cx="16" cy="16" r="12" fill="none" strokeWidth="8" />
+              </svg>
+            </div>
+            <DialogHeader>
+              <DialogTitle className="sm:text-center">Welcome back</DialogTitle>
+              <DialogDescription className="sm:text-center">
+                Enter your credentials to login to your account.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium">Email</label>
+                <Input id="email" name="email" placeholder="hi@yourcompany.com" type="email" required />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium">Password</label>
+                <Input id="password" name="password" placeholder="Enter your password" type="password" required />
+              </div>
+            </div>
+            <div className="flex justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Checkbox id="remember" checked={rememberMe} onCheckedChange={v => setRememberMe(v === true)} />
+                <label htmlFor="remember" className="font-normal text-muted-foreground">Remember me</label>
+              </div>
+              <Link className="text-sm underline hover:no-underline" href="/forgot-password">
+                Forgot password?
+              </Link>
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Signing in...' : 'Sign in'}
+            </Button>
+          </form>
+          <div className="text-center mt-4">
+            <span className="text-gray-600">Don&apos;t have an account? </span>
+            <button type="button" className="text-blue-500 hover:underline" onClick={() => setShowSignUp(true)}>
+              Sign Up
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showSignUp} onOpenChange={setShowSignUp}>
+        <DialogContent>
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border mb-2" aria-hidden="true">
+              <svg className="stroke-zinc-800 dark:stroke-zinc-100" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
+                <circle cx="16" cy="16" r="12" fill="none" strokeWidth="8" />
+              </svg>
+            </div>
+            <DialogHeader>
+              <DialogTitle className="sm:text-center">Create an Account</DialogTitle>
+              <DialogDescription className="sm:text-center">
+                Enter your details to create your account.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <form className="space-y-5" onSubmit={handleSignUp}>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="name" className="text-sm font-medium">Full Name</label>
+                <Input id="name" name="name" placeholder="John Doe" required />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium">Email</label>
+                <Input id="email" name="email" placeholder="m@example.com" type="email" required />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium">Password</label>
+                <Input id="password" name="password" placeholder="Enter your password" type="password" required />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="confirmPassword" className="text-sm font-medium">Confirm Password</label>
+                <Input id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" type="password" required />
+              </div>
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Signing up...' : 'Sign Up'}
+            </Button>
+          </form>
+          <div className="text-center mt-4">
+            <span className="text-gray-600">Already have an account? </span>
+            <button type="button" className="text-blue-500 hover:underline" onClick={() => setShowSignUp(false)}>
+              Sign In
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
 } 

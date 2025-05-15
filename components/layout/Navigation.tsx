@@ -2,11 +2,7 @@
 
 import React from "react";
 
-interface NavigationProps {
-  onSignInClick?: () => void;
-}
-
-export function Navigation({ onSignInClick }: NavigationProps) {
+export function Navigation() {
   return (
     <header className="w-full border-b bg-green-500 z-50">
       <nav className="container mx-auto flex items-center justify-between py-3 px-4">
@@ -29,7 +25,7 @@ export function Navigation({ onSignInClick }: NavigationProps) {
         {/* Right: Auth Actions */}
         <div className="flex items-center gap-3">
           <button className="text-base font-medium text-foreground hover:text-primary transition-colors">Log In</button>
-          <button className="px-5 py-2 rounded-full bg-foreground text-white font-semibold shadow hover:bg-primary transition-colors" onClick={onSignInClick}>Sign In</button>
+          <button className="px-5 py-2 rounded-full bg-foreground text-white font-semibold shadow hover:bg-primary transition-colors">Sign In</button>
       </div>
     </nav>
     </header>
