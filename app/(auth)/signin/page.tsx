@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { useAuth } from '@/lib/auth-context'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
+import { SplashCursor } from '@/components/ui/splash-cursor'
 
 export default function SignInPage() {
   const { signIn, signUp } = useAuth()
@@ -18,6 +19,19 @@ export default function SignInPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [showSignUp, setShowSignUp] = useState(false)
   const router = useRouter()
+  
+  useEffect(() => {
+    console.log("SignInPage mounted with SplashCursor component");
+    // Make sure body background is white
+    document.body.style.backgroundColor = "white";
+    document.body.classList.add('overflow-hidden'); // Prevent scrolling
+    
+    return () => {
+      // Clean up when component unmounts
+      document.body.style.backgroundColor = "";
+      document.body.classList.remove('overflow-hidden');
+    };
+  }, []);
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -70,9 +84,13 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-white">
+    <div className="flex min-h-screen items-center justify-center p-4 bg-white relative">
+      <SplashCursor 
+        colorOne="rgba(120, 85, 255, 0.8)" 
+        colorTwo="rgba(64, 224, 208, 0.8)" 
+      />
       <Dialog open={!showSignUp}>
-        <DialogContent>
+        <DialogContent className="z-50 bg-white border shadow-lg">
           <div className="flex flex-col items-center gap-2">
             <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border mb-2" aria-hidden="true">
               <svg className="stroke-zinc-800 dark:stroke-zinc-100" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
@@ -119,7 +137,7 @@ export default function SignInPage() {
         </DialogContent>
       </Dialog>
       <Dialog open={showSignUp} onOpenChange={setShowSignUp}>
-        <DialogContent>
+        <DialogContent className="z-50 bg-white border shadow-lg">
           <div className="flex flex-col items-center gap-2">
             <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border mb-2" aria-hidden="true">
               <svg className="stroke-zinc-800 dark:stroke-zinc-100" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
