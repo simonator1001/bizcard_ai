@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Search, Check, ChevronDown } from "lucide-react";
+import { Search, Check, ChevronDown, Building } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -56,10 +56,17 @@ export function CompanySearch({
 }: CompanySearchProps) {
   const id = useId();
   const [open, setOpen] = useState<boolean>(false);
+  const [searchInput, setSearchInput] = useState<string>("");
+
+  const selectedCompany = companies.find((company) => company.value === value);
 
   return (
-    <div className={cn("space-y-2", className)}>
-      {label && <Label htmlFor={id}>{label}</Label>}
+    <div className={cn("space-y-2 w-full", className)}>
+      {label && (
+        <Label htmlFor={id} className="text-sm font-medium text-muted-foreground">
+          {label}
+        </Label>
+      )}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -67,25 +74,63 @@ export function CompanySearch({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between bg-background px-3 py-2 font-normal shadow-sm outline-offset-0 hover:bg-background focus-visible:border-ring focus-visible:outline-[3px] focus-visible:outline-ring/20"
+            className="w-full justify-between px-3 py-5 h-10 font-normal shadow-sm bg-background hover:bg-muted/20 transition-colors duration-200 border-border/80 group relative overflow-hidden"
           >
-            <span className={cn("truncate", !value && "text-muted-foreground")}>{
-              value ? companies.find((company) => company.value === value)?.label : placeholder
-            }</span>
-            <ChevronDown size={16} strokeWidth={2} className="shrink-0 text-muted-foreground/80" aria-hidden="true" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-full min-w-[var(--radix-popper-anchor-width)] border-input p-0 shadow-md bg-white" align="start">
-          <Command>
-            <div className="flex items-center border-b px-3">
-              <Search className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
-              <CommandInput 
-                placeholder="Search company..." 
-                className="h-10 flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
+            <div className="flex items-center gap-2 truncate">
+              <span className="h-5 w-5 flex-shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <Building className="h-3 w-3" strokeWidth={2.5} />
+              </span>
+              <span className={cn("truncate", !value && "text-muted-foreground")}>
+                {selectedCompany?.label || placeholder}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              {value && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 rounded-full opacity-70 hover:opacity-100 -mr-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onChange("");
+                  }}
+                >
+                  <span className="sr-only">Clear</span>
+                  <span className="text-xs">×</span>
+                </Button>
+              )}
+              <ChevronDown 
+                size={16} 
+                strokeWidth={2.5} 
+                className="shrink-0 text-muted-foreground/70 group-hover:text-muted-foreground transition-colors duration-200" 
               />
             </div>
-            <CommandList className="max-h-[300px] overflow-y-auto p-1 bg-white">
-              <CommandEmpty>No company found.</CommandEmpty>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent 
+          className="w-full min-w-[var(--radix-popper-anchor-width)] border-border/80 p-0 shadow-lg bg-white" 
+          align="start"
+        >
+          <Command>
+            <div className="flex items-center border-b px-3 sticky top-0 z-10 backdrop-blur-sm bg-background/90">
+              <Search 
+                className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" 
+                strokeWidth={2.5} 
+              />
+              <CommandInput 
+                placeholder="Search company..." 
+                className="h-10 flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground/70"
+                value={searchInput}
+                onValueChange={setSearchInput}
+              />
+            </div>
+            <CommandList className="max-h-[300px] overflow-y-auto p-1">
+              <CommandEmpty className="py-6 text-center text-sm">
+                <div className="flex flex-col items-center justify-center gap-1">
+                  <Building className="h-10 w-10 text-muted-foreground/30" />
+                  <p>No company found</p>
+                </div>
+              </CommandEmpty>
               <CommandGroup>
                 {companies.map((company) => (
                   <CommandItem
@@ -94,12 +139,20 @@ export function CompanySearch({
                     onSelect={(currentValue) => {
                       onChange(currentValue === value ? "" : currentValue);
                       setOpen(false);
+                      setSearchInput("");
                     }}
-                    className="cursor-pointer rounded-md px-2 py-1.5 text-sm"
+                    className="cursor-pointer rounded-md px-2 py-2 text-sm flex items-center"
                   >
-                    {company.label}
+                    <div className="mr-2 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                      <Building className="h-3 w-3" strokeWidth={2.5} />
+                    </div>
+                    <span>{company.label}</span>
                     {value === company.value && (
-                      <Check size={16} strokeWidth={2} className="ml-auto" />
+                      <Check 
+                        size={16} 
+                        strokeWidth={2.5} 
+                        className="ml-auto text-primary" 
+                      />
                     )}
                   </CommandItem>
                 ))}
