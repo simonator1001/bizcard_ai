@@ -202,8 +202,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
         signInWithProvider: async (provider) => {
           try {
-            const origin = typeof window !== 'undefined' ? window.location.origin : ''
-            const redirectUrl = `${origin}/auth/v1/callback`
+            const origin = typeof window !== 'undefined' ? window.location.origin.trim() : ''
+            // Use the path that exactly matches configured callbacks in Supabase
+            const redirectUrl = `${origin}/auth/callback`
             
             console.debug('[AuthContext] Signing in with provider:', {
               provider,
@@ -211,9 +212,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               origin,
               hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
               protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown',
-              state: Math.random().toString(36).substring(7)
             })
+
+            // Clear all potentially interfering cookies
+            if (typeof document !== 'undefined') {
+              document.cookie.split(';').forEach(cookie => {
+                const [name] = cookie.trim().split('=');
+                if (name && (name.includes('supabase') || name.includes('sb-'))) {
+                  const cookieBase = name.trim();
+                  document.cookie = `${cookieBase}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+                }
+              });
+            }
+
+            // Generate code verifier for PKCE flow
+            const generateCodeVerifier = () => {
+              const random = new Uint8Array(32);
+              window.crypto.getRandomValues(random);
+              
+              // Convert Uint8Array to string without using spread
+              let result = '';
+              for (let i = 0; i < random.length; i++) {
+                result += String.fromCharCode(random[i]);
+              }
+              
+              return btoa(result)
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+            };
             
+            // Generate and store code verifier
+            const codeVerifier = generateCodeVerifier();
+            
+            // Store in both localStorage and cookies to improve reliability
+            if (typeof window !== 'undefined') {
+              window.localStorage.setItem('sb-rzmqepriffysavamtxzg-auth-token-code-verifier', codeVerifier);
+              window.localStorage.setItem('sb-code-verifier', codeVerifier);
+              
+              // Also set as a cookie
+              document.cookie = `sb-rzmqepriffysavamtxzg-auth-token-code-verifier=${codeVerifier}; path=/; max-age=300; SameSite=Lax`;
+              
+              console.debug('[AuthContext] Generated and stored code verifier:', {
+                codeVerifierLength: codeVerifier.length,
+                codeVerifierPreview: codeVerifier.substring(0, 10) + '...'
+              });
+            }
+            
+            // Use PKCE flow explicitly
             const { data, error } = await supabase.auth.signInWithOAuth({
               provider,
               options: {
@@ -221,7 +267,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 queryParams: {
                   access_type: 'offline',
                   prompt: 'consent',
-                  hd: '*'
                 },
                 skipBrowserRedirect: false
               }

@@ -8,9 +8,11 @@ const PUBLIC_ROUTES = [
   '/', // Allow the root path entirely
   '/signin',
   '/signup',
-  '/auth/callback',
   '/auth/v1/callback',
+  '/auth/callback',
+  '/auth/debug',
   '/reset-password',
+  '/forgot-password',
   '/verify',
   '/api/auth',
   '/api/scan',
@@ -20,7 +22,6 @@ const PUBLIC_ROUTES = [
   '/assets',
   '/pricing',
   '/manage',
-  '/forgot-password'
 ]
 
 // Configure matcher to exclude static files
