@@ -8,7 +8,6 @@ const PUBLIC_ROUTES = [
   '/', // Allow the root path entirely
   '/signin',
   '/signup',
-  '/auth/v1/callback',
   '/auth/callback',
   '/auth/debug',
   '/reset-password',

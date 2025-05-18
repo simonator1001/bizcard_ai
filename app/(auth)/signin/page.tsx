@@ -12,12 +12,12 @@ import { useRouter } from 'next/navigation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { SplashCursor } from '@/components/ui/splash-cursor'
-import { Chrome as GoogleIcon } from 'lucide-react'
+import { Chrome as Google } from 'lucide-react'
 
 export default function SignInPage() {
   const { signIn, signUp, signInWithProvider } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
+  const [providerLoading, setProviderLoading] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [showSignUp, setShowSignUp] = useState(false)
   const router = useRouter()
@@ -87,17 +87,14 @@ export default function SignInPage() {
 
   const handleGoogleSignIn = async () => {
     try {
-      setGoogleLoading(true)
+      setProviderLoading(true)
+      console.log('Starting Google sign in')
       await signInWithProvider('google')
-      // No need to redirect as the OAuth flow will handle that
-    } catch (error) {
-      console.error('Google sign in error:', error)
-      if (error instanceof Error) {
-        toast.error(error.message || 'Failed to sign in with Google')
-      } else {
-        toast.error('Failed to sign in with Google')
-      }
-      setGoogleLoading(false)
+      // No need to redirect as the OAuth flow will handle it
+    } catch (error: any) {
+      console.error('Google auth error:', error)
+      toast.error(error.message || error.error_description || 'Authentication with Google failed')
+      setProviderLoading(false)
     }
   }
 
@@ -145,25 +142,36 @@ export default function SignInPage() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'Signing in...' : 'Sign in'}
             </Button>
-            <div className="relative flex items-center justify-center">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-gray-500">Or continue with</span>
-              </div>
-            </div>
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full flex items-center justify-center gap-2"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-            >
-              <GoogleIcon className="h-4 w-4" />
-              {googleLoading ? 'Connecting...' : 'Sign in with Google'}
-            </Button>
           </form>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          <Button
+            variant="outline"
+            type="button"
+            className="w-full flex items-center justify-center gap-2"
+            disabled={providerLoading}
+            onClick={handleGoogleSignIn}
+          >
+            {providerLoading ? (
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            ) : (
+              <>
+                <Google className="h-4 w-4" />
+                <span>Sign in with Google</span>
+              </>
+            )}
+          </Button>
+
           <div className="text-center mt-4">
             <span className="text-gray-600">Don&apos;t have an account? </span>
             <button type="button" className="text-blue-500 hover:underline" onClick={() => setShowSignUp(true)}>
@@ -209,25 +217,36 @@ export default function SignInPage() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'Signing up...' : 'Sign Up'}
             </Button>
-            <div className="relative flex items-center justify-center">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-gray-500">Or sign up with</span>
-              </div>
-            </div>
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full flex items-center justify-center gap-2"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-            >
-              <GoogleIcon className="h-4 w-4" />
-              {googleLoading ? 'Connecting...' : 'Sign up with Google'}
-            </Button>
           </form>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          <Button
+            variant="outline"
+            type="button"
+            className="w-full flex items-center justify-center gap-2"
+            disabled={providerLoading}
+            onClick={handleGoogleSignIn}
+          >
+            {providerLoading ? (
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            ) : (
+              <>
+                <Google className="h-4 w-4" />
+                <span>Sign in with Google</span>
+              </>
+            )}
+          </Button>
+
           <div className="text-center mt-4">
             <span className="text-gray-600">Already have an account? </span>
             <button type="button" className="text-blue-500 hover:underline" onClick={() => setShowSignUp(false)}>

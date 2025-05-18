@@ -48,17 +48,18 @@ const getCookieDomain = () => {
   if (typeof window === 'undefined') return undefined;
   
   const hostname = window.location.hostname;
-  // For localhost, we don't set a domain
+  
+  // For localhost, never set a domain - this avoids issues with cookie settings
   if (hostname === 'localhost' || hostname.includes('127.0.0.1')) {
     return undefined;
   }
   
-  // Production domains
+  // Production domains - use the highest level domain to share cookies across subdomains
   if (hostname.includes('simon-gpt.com')) {
     return 'simon-gpt.com';
   }
   
-  // Custom domain handling
+  // For all other cases, return the hostname to ensure cookies work properly
   return hostname;
 };
 
@@ -103,121 +104,113 @@ export function createClient() {
               return acc;
             }, {} as Record<string, string>);
           
-          // Try to retrieve from localStorage if not found in cookies
-          if (!cookies[name] && name.includes('code-verifier') && typeof window !== 'undefined') {
-            try {
-              const fallbackVerifier = window.localStorage.getItem('sb-code-verifier');
-              if (fallbackVerifier) {
-                console.debug('[Supabase] Retrieved code verifier from localStorage fallback:', { 
-                  name, 
-                  fallbackVerifier: fallbackVerifier.substring(0, 10) + '...',
-                  cookieLength: fallbackVerifier.length
-                });
-                return fallbackVerifier;
-              }
-              
-              // Look for any code verifier in localStorage as last resort
-              for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && key.includes('code-verifier')) {
-                  const value = localStorage.getItem(key);
-                  if (value) {
-                    console.debug('[Supabase] Found alternate code verifier in localStorage:', { 
-                      key, 
-                      valuePreview: value.substring(0, 10) + '...',
-                      cookieLength: value.length
-                    });
-                    return value;
-                  }
-                }
-              }
-            } catch (storageError) {
-              console.error('[Supabase] Error accessing localStorage for code verifier:', storageError);
-            }
-          }
-          
           console.debug('[Supabase] Getting cookie:', {
             name,
             exists: !!cookies[name],
             valuePreview: cookies[name] ? cookies[name].substring(0, 10) + '...' : null,
             valueLength: cookies[name] ? cookies[name].length : 0,
-            allCookies: Object.keys(cookies).filter(k => k.includes(cookiePrefix) || k.includes('supabase')),
-            hostname: window.location.hostname,
-            path: window.location.pathname
+            allCookies: Object.keys(cookies)
           });
           
-          return cookies[name];
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          const cookieDomain = getCookieDomain();
-          const cookieOptions = [
-            `${name}=${value}`,
-            `path=${options.path || '/'}`,
-            `max-age=${options.maxAge || 86400}` // Set default to 24 hours
-          ];
-          
-          // Add SameSite attribute - use Lax for better compatibility
-          cookieOptions.push('SameSite=Lax');
-          
-          // Only add Secure flag in https environments, not localhost
-          if (window.location.protocol === 'https:') {
-            cookieOptions.push('Secure');
+          // First try the cookie
+          if (cookies[name]) {
+            return cookies[name];
           }
           
-          // Add domain for non-localhost environments
-          if (cookieDomain) {
-            cookieOptions.push(`domain=${cookieDomain}`);
-          }
-          
-          const cookieStr = cookieOptions.join('; ');
-          console.debug('[Supabase] Setting cookie:', {
-            name,
-            valueLength: value.length,
-            valuePreview: value.substring(0, 20) + '...',
-            domainSet: cookieDomain,
-            protocol: window.location.protocol,
-            options: cookieOptions,
-            hostname: window.location.hostname,
-            path: window.location.pathname
-          });
-          
-          document.cookie = cookieStr;
-          
-          // Also store code verifier in localStorage as backup
-          if (name.includes('code-verifier') && typeof window !== 'undefined') {
+          // If not in cookies, check all localStorage backups
+          if (typeof window !== 'undefined' && window.localStorage) {
             try {
-              window.localStorage.setItem('sb-code-verifier', value);
-              console.debug('[Supabase] Stored code verifier in localStorage as backup');
-            } catch (storageError) {
-              console.error('[Supabase] Error storing code verifier in localStorage:', storageError);
+              // Try primary backup in localStorage
+              for (let i = 0; i <= 4; i++) {
+                const backupKey = `${name}.${i}`;
+                const value = window.localStorage.getItem(backupKey);
+                if (value) {
+                  console.debug('[Supabase] Retrieved code verifier from localStorage primary backup:', {
+                    name: backupKey,
+                    valuePreview: value ? value.substring(0, 10) + '...' : null,
+                    valueLength: value ? value.length : 0
+                  });
+                  return value;
+                }
+              }
+              
+              // Also check if original key exists in localStorage
+              const value = window.localStorage.getItem(name);
+              if (value) {
+                console.debug('[Supabase] Retrieved code verifier from localStorage original key:', {
+                  name,
+                  valuePreview: value ? value.substring(0, 10) + '...' : null,
+                  valueLength: value ? value.length : 0
+                });
+                return value;
+              }
+            } catch (e) {
+              console.error('[Supabase] Error accessing localStorage:', e);
             }
           }
+          
+          return null;
         },
-        remove(name: string, options: CookieOptions) {
-          const cookieDomain = getCookieDomain();
-          console.debug('[Supabase] Removing cookie:', {
+        set(name: string, value: string, options: any = {}) {
+          console.debug('[Supabase] Setting cookie:', {
             name,
-            hostname: window.location.hostname,
-            path: window.location.pathname,
+            valuePreview: value ? value.substring(0, 10) + '...' : null,
+            valueLength: value ? value.length : 0,
             options
           });
           
-          const cookieOptions = [
-            `${name}=`,
-            `path=${options.path || '/'}`,
-            'expires=Thu, 01 Jan 1970 00:00:00 GMT',
-            'SameSite=Lax'
-          ];
+          // Set the actual cookie
+          document.cookie = `${name}=${value}; path=${options.path || '/'}; max-age=${
+            options.maxAge || 86400
+          }; SameSite=${options.sameSite || 'Lax'}${
+            options.domain ? `; domain=${options.domain}` : ''
+          }${options.secure ? '; Secure' : ''}`;
           
-          if (window.location.protocol === 'https:') {
-            cookieOptions.push('Secure');
+          // Also save in localStorage as backup
+          if (typeof window !== 'undefined' && window.localStorage) {
+            try {
+              // Save in multiple backup slots for redundancy
+              for (let i = 0; i <= 4; i++) {
+                const backupKey = `${name}.${i}`;
+                window.localStorage.setItem(backupKey, value);
+              }
+              
+              // Also set the original key
+              window.localStorage.setItem(name, value);
+              
+              console.debug('[Supabase] Saved cookies to localStorage backup');
+            } catch (e) {
+              console.error('[Supabase] Error saving to localStorage:', e);
+            }
           }
+        },
+        remove(name: string, options: any = {}) {
+          console.debug('[Supabase] Removing cookie:', { name, options });
           
-          if (cookieDomain) {
-            cookieOptions.push(`domain=${cookieDomain}`);
+          // Remove the actual cookie
+          document.cookie = `${name}=; path=${options.path || '/'}; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=${
+            options.sameSite || 'Lax'
+          }${options.domain ? `; domain=${options.domain}` : ''}${
+            options.secure ? '; Secure' : ''
+          }`;
+          
+          // Also clean up localStorage
+          if (typeof window !== 'undefined' && window.localStorage) {
+            try {
+              // Clean up all backup slots
+              for (let i = 0; i <= 4; i++) {
+                const backupKey = `${name}.${i}`;
+                window.localStorage.removeItem(backupKey);
+              }
+              
+              // Also remove the original key
+              window.localStorage.removeItem(name);
+              
+              console.debug('[Supabase] Removed cookies from localStorage backup');
+            } catch (e) {
+              console.error('[Supabase] Error removing from localStorage:', e);
+            }
           }
-          
-          document.cookie = cookieOptions.join('; ');
         }
       },
       auth: {

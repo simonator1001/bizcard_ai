@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -51,6 +51,8 @@ import imageCompression from 'browser-image-compression';
 import { OrgChartView } from '@/components/org-chart/OrgChartView';
 import { SubscriptionPage } from '@/components/subscription/SubscriptionPage';
 import { Header } from "@/components/ui/header";
+import { OAuthCallback } from '@/components/auth/OAuthCallback';
+import Image from 'next/image'
 
 type ViewMode = 'list' | 'grid' | 'carousel' | 'stack';
 
@@ -235,7 +237,7 @@ function UpgradePrompt({ open, onOpenChange }: { open: boolean; onOpenChange: (o
   )
 }
 
-export default function Component() {
+export default function HomePage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('scan');
   const { t } = useTranslation();
@@ -245,6 +247,15 @@ export default function Component() {
     const tab = new URLSearchParams(window.location.search).get('tab');
     if (tab) {
       setActiveTab(tab);
+    }
+    
+    // Handle auth error parameters if present
+    const error = new URLSearchParams(window.location.search).get('error');
+    const errorDescription = new URLSearchParams(window.location.search).get('error_description');
+    if (error) {
+      toast.error(errorDescription || error);
+      // Remove the error parameters from the URL to avoid showing the error again on refresh
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 
@@ -358,8 +369,64 @@ export default function Component() {
     }
   };
 
+  useEffect(() => {
+    // Handle OAuth code if present in URL
+    const handleOAuthCallback = async () => {
+      try {
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get('code');
+        const error = url.searchParams.get('error');
+        const errorDescription = url.searchParams.get('error_description');
+        
+        if (error) {
+          console.error('[HomePage] OAuth error:', { error, description: errorDescription });
+          toast.error(errorDescription || 'Authentication failed. Please try again.');
+          // Clean up URL parameters
+          window.history.replaceState({}, document.title, '/');
+          return;
+        }
+        
+        if (code) {
+          console.log('[HomePage] Found OAuth code in URL, exchanging for session...');
+          
+          // Exchange the code for a session
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (error) {
+            console.error('[HomePage] Error exchanging code for session:', error);
+            toast.error('Authentication failed. Please try again.');
+          } else if (data.session) {
+            console.log('[HomePage] Successfully exchanged code for session:', {
+              userId: data.session.user.id,
+              email: data.session.user.email,
+              expiresAt: data.session.expires_at
+            });
+            
+            toast.success('Successfully signed in!');
+            
+            // Clean up URL parameters
+            window.history.replaceState({}, document.title, '/');
+            
+            // Force refresh to ensure we load with the new session
+            window.location.reload();
+          }
+        }
+      } catch (err) {
+        console.error('[HomePage] Error handling OAuth callback:', err);
+      }
+    };
+    
+    handleOAuthCallback();
+  }, []); // Run once on mount
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-full bg-background">
+      {(window.location.hash.includes('access_token=') || 
+        window.location.search.includes('error=') ||
+        window.location.search.includes('code=')) && (
+        <OAuthCallback />
+      )}
+      
       <Header
         logo={<span className="text-xl font-bold">BizCard</span>}
         menuItems={[

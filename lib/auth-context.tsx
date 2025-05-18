@@ -181,7 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               password,
               options: {
                 data: { name },
-                emailRedirectTo: `${window.location.origin}/auth/v1/callback`
+                emailRedirectTo: `${window.location.origin}/auth/callback`
               },
             })
             if (error) throw error
@@ -202,84 +202,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
         signInWithProvider: async (provider) => {
           try {
-            const origin = typeof window !== 'undefined' ? window.location.origin.trim() : ''
-            // Use the path that exactly matches configured callbacks in Supabase
-            const redirectUrl = `${origin}/auth/callback`
-            
             console.debug('[AuthContext] Signing in with provider:', {
               provider,
-              redirectUrl,
-              origin,
               hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
-              protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown',
+              protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown'
             })
 
-            // Clear all potentially interfering cookies
-            if (typeof document !== 'undefined') {
+            // Clear any existing cookies before starting the flow
+            if (typeof window !== 'undefined') {
               document.cookie.split(';').forEach(cookie => {
                 const [name] = cookie.trim().split('=');
                 if (name && (name.includes('supabase') || name.includes('sb-'))) {
-                  const cookieBase = name.trim();
-                  document.cookie = `${cookieBase}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+                  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
                 }
               });
+              
+              // Also clear localStorage
+              for (const key of Object.keys(localStorage)) {
+                if (key.includes('supabase') || key.includes('sb-')) {
+                  localStorage.removeItem(key);
+                }
+              }
             }
 
-            // Generate code verifier for PKCE flow
-            const generateCodeVerifier = () => {
-              const random = new Uint8Array(32);
-              window.crypto.getRandomValues(random);
-              
-              // Convert Uint8Array to string without using spread
-              let result = '';
-              for (let i = 0; i < random.length; i++) {
-                result += String.fromCharCode(random[i]);
-              }
-              
-              return btoa(result)
-                .replace(/\+/g, '-')
-                .replace(/\//g, '_')
-                .replace(/=+$/, '');
-            };
+            // Use the direct, fully-qualified callback URL for consistency
+            const redirectTo = `${window.location.origin}/auth/callback`;
             
-            // Generate and store code verifier
-            const codeVerifier = generateCodeVerifier();
-            
-            // Store in both localStorage and cookies to improve reliability
-            if (typeof window !== 'undefined') {
-              window.localStorage.setItem('sb-rzmqepriffysavamtxzg-auth-token-code-verifier', codeVerifier);
-              window.localStorage.setItem('sb-code-verifier', codeVerifier);
-              
-              // Also set as a cookie
-              document.cookie = `sb-rzmqepriffysavamtxzg-auth-token-code-verifier=${codeVerifier}; path=/; max-age=300; SameSite=Lax`;
-              
-              console.debug('[AuthContext] Generated and stored code verifier:', {
-                codeVerifierLength: codeVerifier.length,
-                codeVerifierPreview: codeVerifier.substring(0, 10) + '...'
-              });
-            }
-            
-            // Use PKCE flow explicitly
+            console.debug('[AuthContext] Starting OAuth flow with redirectTo:', redirectTo);
+
+            // Use the simple OAuth flow with PKCE
             const { data, error } = await supabase.auth.signInWithOAuth({
               provider,
               options: {
-                redirectTo: redirectUrl,
+                skipBrowserRedirect: false,
+                redirectTo,
                 queryParams: {
-                  access_type: 'offline',
-                  prompt: 'consent',
-                },
-                skipBrowserRedirect: false
+                  // Force account selection to avoid cached sessions
+                  prompt: 'select_account'
+                }
               }
             })
             
             if (error) {
               console.error('[AuthContext] Provider sign in error:', {
                 error,
-                provider,
-                redirectUrl
+                provider
               })
               throw error
             }
+            
+            console.debug('[AuthContext] OAuth flow initiated successfully:', {
+              url: data?.url,
+              provider: data?.provider,
+              hasCodeVerifier: typeof localStorage !== 'undefined' && !!localStorage.getItem('supabase-auth-code-verifier')
+            });
             
             return data
           } catch (error) {
@@ -303,6 +279,7 @@ export function AuthScreen({ mode }: { mode: 'signin' | 'signup' }) {
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [providerLoading, setProviderLoading] = useState(false)
   const { signIn, signUp, signInWithProvider } = useAuth()
   const router = useRouter()
 
@@ -322,6 +299,18 @@ export function AuthScreen({ mode }: { mode: 'signin' | 'signup' }) {
       toast.error(error.message || error.error_description || 'Authentication failed')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleProviderSignIn = async (provider: 'google') => {
+    try {
+      setProviderLoading(true)
+      await signInWithProvider(provider)
+      // No need to redirect as the OAuth flow will handle it
+    } catch (error: any) {
+      console.error('Provider auth error:', error)
+      toast.error(error.message || error.error_description || 'Authentication with provider failed')
+      setProviderLoading(false)
     }
   }
 
@@ -412,15 +401,16 @@ export function AuthScreen({ mode }: { mode: 'signin' | 'signup' }) {
             <Button
               variant="outline"
               type="button"
-              disabled={loading}
-              onClick={() => signInWithProvider('google')}
+              disabled={providerLoading}
+              onClick={() => handleProviderSignIn('google')}
+              className="flex items-center justify-center gap-2"
             >
-              {loading ? (
+              {providerLoading ? (
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               ) : (
                 <>
-                  <Icons.google className="mr-2 h-4 w-4" />
-                  Google
+                  <Icons.google className="h-4 w-4" />
+                  <span>Sign in with Google</span>
                 </>
               )}
             </Button>
