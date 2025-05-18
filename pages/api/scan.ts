@@ -373,9 +373,42 @@ export default async function handler(
       
       // If we have a session, include the session token in the response
       if (session?.access_token) {
+        // Send part of the token to help client-side code verify auth state without exposing the full token
         res.setHeader('X-Session-Token', session.access_token.substring(0, 10) + '...');
+        
+        // Set auth cookies to help maintain session
+        const projectId = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('.supabase.co') 
+          ? process.env.NEXT_PUBLIC_SUPABASE_URL.split('.')[0]
+          : 'rzmqepriffysavamtxzg';
+        
+        // Set cookies to help maintain session
+        if (projectId) {
+          // Set authentication cookies with appropriate parameters
+          const cookieOptions = {
+            path: '/',
+            maxAge: 60 * 60 * 24 * 7, // 1 week
+            httpOnly: false, // Allow client-side access for Supabase client
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax' as const
+          };
+          
+          if (process.env.NODE_ENV === 'production' && process.env.COOKIE_DOMAIN) {
+            Object.assign(cookieOptions, { domain: process.env.COOKIE_DOMAIN });
+          }
+
+          // Set session metadata cookie to help with session detection
+          res.setHeader('Set-Cookie', [
+            `scan-completed=true; Path=/; Max-Age=3600; SameSite=Lax`,
+            `x-user-session=${sessionId}; Path=/; Max-Age=86400; SameSite=Lax`
+          ]);
+        }
       }
     }
+    
+    // Include cache control headers to prevent caching issues
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     
     res.status(200).json(savedCard)
   } catch (error: any) {

@@ -109,60 +109,54 @@ function isPostScanNavigation(request: NextRequest): boolean {
   const referer = request.headers.get('referer');
   const path = new URL(request.url).pathname;
   const cookies = request.cookies.getAll();
-  const lastScanPath = request.headers.get('x-last-scan-path');
   
-  // More permissive check for Chrome DevTools and other browser requests
-  if (path.includes('/.well-known/') || path.includes('/clear-cache.js')) {
+  // Enhanced session detection - check for valid authenticated signal patterns
+  const hasXSessionId = request.headers.get('x-session-id') !== null;
+  const hasXUserId = request.headers.get('x-user-id') !== null;
+  const hasXAuthToken = request.headers.get('x-auth-token') !== null;
+  const hasAuthHeader = request.headers.get('authorization')?.startsWith('Bearer ');
+  
+  // Special case for browser utilities
+  if (path.includes('/.well-known/') || 
+      path.includes('/clear-cache.js') || 
+      path.includes('/favicon') ||
+      path.match(/\.(ico|png|jpg|jpeg|svg|css|js|woff|woff2)$/)) {
     console.debug('[Middleware] Allowing browser utility request:', path);
     return true;
   }
   
   // More reliable auth cookie check - any auth cookies with substantial value
   const hasAuthCookies = cookies.some(cookie => 
-    (cookie.name.includes('-auth-token') || cookie.name.includes('auth-token')) && 
+    (cookie.name.includes('-auth-token') || 
+     cookie.name.includes('auth-token') || 
+     cookie.name.includes('supabase')) && 
     cookie.value && 
     cookie.value.length > 10
   );
   
-  if (hasAuthCookies) {
-    console.debug('[Middleware] User has valid auth cookies, allowing navigation');
+  if (hasAuthCookies || hasXSessionId || hasXUserId || hasAuthHeader || hasXAuthToken) {
+    console.debug('[Middleware] User has valid auth signal, allowing navigation');
     return true;
   }
-  
-  // When a user navigates after uploading a card, the URL is typically /
-  // and the referrer should contain the main site URL
-  const isNavigatingFromScan = referer !== null && 
-    (referer.includes('/') || referer.endsWith('localhost:3000') || lastScanPath !== null) &&
-    !referer.includes('/signin') && 
-    !referer.includes('/signup');
   
   // After a card scan, users typically navigate to the home page or cards page
-  const isNavigatingHome = path === '/' || path.startsWith('/cards');
+  const isPostScanDestination = path === '/' || 
+                           path.startsWith('/cards') ||
+                           path.includes('dashboard');
   
-  console.debug('[Middleware] Post-scan navigation check:', {
-    referer,
-    path,
-    lastScanPath,
-    isNavigatingFromScan,
-    isNavigatingHome,
-    hasAuthCookies,
-    cookiesCount: cookies.length,
-    headers: {
-      'x-nextjs-data': request.headers.get('x-nextjs-data'),
-      'sec-fetch-mode': request.headers.get('sec-fetch-mode'),
-      'sec-fetch-dest': request.headers.get('sec-fetch-dest'),
-      'content-type': request.headers.get('content-type')
-    }
-  });
+  // Check if the referer suggests we just completed a scan operation
+  const isScanReferrer = referer !== null && 
+                       (referer.includes('/scan') || 
+                        referer.includes('/?scan=') || 
+                        referer.includes('upload'));
   
-  // For post-scan navigation, be more permissive to reduce login loops
-  // If we're navigating to a home-like page with any sign of previous auth, allow it
-  if (isNavigatingHome && (isNavigatingFromScan || cookies.length > 0)) {
-    console.debug('[Middleware] Allowing likely post-scan navigation with cookies');
+  // More lenient approach to prevent login loops
+  if (isPostScanDestination && (isScanReferrer || cookies.length > 0)) {
+    console.debug('[Middleware] Allowing post-scan navigation based on destination and referrer');
     return true;
   }
   
-  return isNavigatingFromScan && isNavigatingHome;
+  return false;
 }
 
 export async function middleware(request: NextRequest) {
@@ -175,15 +169,15 @@ export async function middleware(request: NextRequest) {
     search: url.search,
     cookiesCount: request.cookies.getAll().length,
     cookies: Object.fromEntries(request.cookies.getAll().map(c => [c.name, c.value.substring(0, 10) + '...']))
-  })
+  });
 
   // Skip middleware for public routes and static files
-  const path = url.pathname
+  const path = url.pathname;
   
   if (isPublicPath(path, url.search) || 
       path.match(/\.(ico|png|jpg|jpeg|svg|css|js|woff|woff2)$/)) {
-    console.debug('[Middleware] Skipping auth check for route:', path + url.search)
-    return NextResponse.next()
+    console.debug('[Middleware] Skipping auth check for route:', path + url.search);
+    return NextResponse.next();
   }
 
   // Don't interrupt post-scan navigation
@@ -194,7 +188,7 @@ export async function middleware(request: NextRequest) {
 
   try {
     // Create a response object that we can return
-    let response = NextResponse.next()
+    let response = NextResponse.next();
 
     // Get the Supabase URL from environment
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -241,8 +235,9 @@ export async function middleware(request: NextRequest) {
               sameSite: 'lax',
               secure: process.env.NODE_ENV === 'production',
               path: '/',
-              domain: process.env.NODE_ENV === 'production' ? 'simon-gpt.com' : undefined
-            })
+              maxAge: 60 * 60 * 24 * 7, // 1 week
+              domain: process.env.NODE_ENV === 'production' ? (process.env.COOKIE_DOMAIN || 'simon-gpt.com') : undefined
+            });
           },
           remove(name: string, options: CookieOptions) {
             console.debug(`[Middleware] Removing cookie ${name}`, `(path=${path})`);
@@ -251,12 +246,13 @@ export async function middleware(request: NextRequest) {
               name,
               value: '',
               ...options,
-              maxAge: 0
-            })
+              maxAge: 0,
+              path: '/'
+            });
           }
         }
       }
-    )
+    );
 
     // Refresh the session if it exists
     const { data: { session }, error } = await supabase.auth.getSession()

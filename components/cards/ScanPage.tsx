@@ -459,16 +459,41 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     try {
       console.log('[Scan] Starting image processing...');
 
-      // Get the authentication token with refresh
+      // Get the authentication token with refresh - ENHANCED SESSION MANAGEMENT
       console.log('[Scan] Getting session data from supabase...');
-      const { data, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !data.session) {
-        console.error('[Scan] Auth error getting session:', sessionError);
-        throw new Error('Authentication failed. Please sign in again.');
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('[Scan] Session error:', sessionError);
+        // Try refreshing the session
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !refreshData.session) {
+          console.error('[Scan] Session refresh failed:', refreshError);
+          throw new Error('Your session has expired. Please sign in again.');
+        }
+        
+        console.log('[Scan] Session refreshed successfully');
+      }
+      
+      if (!sessionData?.session) {
+        console.error('[Scan] No session found, attempting to refresh');
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !refreshData.session) {
+          console.error('[Scan] Session refresh failed:', refreshError);
+          throw new Error('Authentication failed. Please sign in again.');
+        }
+        
+        console.log('[Scan] Session refreshed successfully');
       }
       
       // Make sure we have a valid token
-      const session = data.session;
+      const session = sessionData?.session || (await supabase.auth.getSession()).data.session;
+      
+      if (!session) {
+        console.error('[Scan] Still no session after refresh attempts');
+        throw new Error('Unable to authenticate. Please sign in again.');
+      }
+      
       console.log('[Scan] Session found:', { 
         userId: session.user?.id,
         email: session.user?.email,
@@ -481,7 +506,7 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
         throw new Error('No authentication token found. Please sign in again.');
       }
 
-      // Upload the image to our API
+      // Upload the image to our API with enhanced headers
       console.log('[Scan] Sending image to API with auth token');
       const response = await fetch('/api/scan', {
         method: 'POST',
@@ -489,14 +514,18 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
           'X-Session-Id': session.user?.id || '',
-          'X-Refresh-Token': session.refresh_token || ''
+          'X-Auth-Token': session.access_token.substring(0, 15) + '...',
+          'X-User-Email': session.user?.email || ''
         },
         body: JSON.stringify({ image: base64Image }),
         credentials: 'include' // Important: include cookies
       });
 
-      // Check response
+      // Check response with enhanced error handling
       console.log(`[Scan] API response received: status=${response.status}`);
+      
+      // After any API call, verify the session is still intact
+      const sessionCheckPromise = supabase.auth.getSession();
       
       if (!response.ok) {
         let errorMessage = 'Failed to scan business card';
