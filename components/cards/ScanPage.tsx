@@ -693,7 +693,7 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     }
   };
 
-  // Keep the user session active
+  // Keep the user session active with enhanced session management
   useEffect(() => {
     const refreshSession = async () => {
       try {
@@ -701,21 +701,76 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
           // Refresh the session to keep it active
           console.log('[Session] Attempting to refresh session...');
           const { data, error } = await supabase.auth.refreshSession();
+          
           if (error) {
             console.error('[Session] Refresh error:', error);
-            // Try getting the session to see if it's still valid
-            const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-            if (sessionError || !sessionData.session) {
-              console.error('[Session] Session invalid, redirecting to login');
-              router.push('/signin');
+            
+            // Check browser storage for session information
+            const projectId = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('.supabase.co') 
+              ? process.env.NEXT_PUBLIC_SUPABASE_URL.split('.')[0]
+              : 'rzmqepriffysavamtxzg';
+            
+            // Attempt recovery from localStorage
+            const storedSession = localStorage.getItem(`sb-${projectId}-auth-token-raw`);
+            const hasAuthSuccess = document.cookie.includes('auth-success=true');
+            const hasUserSession = document.cookie.includes('x-user-session');
+            
+            console.log('[Session] Recovery check:', {
+              hasStoredToken: !!storedSession,
+              hasAuthSuccess,
+              hasUserSession
+            });
+            
+            if (storedSession || hasAuthSuccess || hasUserSession) {
+              // Attempt to recover using stored session information
+              console.log('[Session] Found stored session information, attempting recovery');
+              
+              try {
+                // Try to recover by forcing a session refresh
+                const { data: recoveryData, error: recoveryError } = await supabase.auth.getSession();
+                
+                if (recoveryError || !recoveryData?.session) {
+                  // If still no session, try manual refresh
+                  const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+                  
+                  if (refreshError || !refreshData?.session) {
+                    console.error('[Session] Recovery failed, redirecting to login');
+                    router.push('/signin');
+                  } else {
+                    console.log('[Session] Successfully recovered session via refresh');
+                  }
+                } else {
+                  console.log('[Session] Session recovered successfully');
+                }
+              } catch (recoveryError) {
+                console.error('[Session] Error during session recovery:', recoveryError);
+                router.push('/signin');
+              }
             } else {
-              console.log('[Session] Session still valid despite refresh error');
+              // Try getting the session to see if it's still valid
+              const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+              if (sessionError || !sessionData.session) {
+                console.error('[Session] Session invalid, redirecting to login');
+                router.push('/signin');
+              } else {
+                console.log('[Session] Session still valid despite refresh error');
+              }
             }
           } else {
             console.log('[Session] Session refreshed successfully:', {
               userId: data.session?.user?.id,
               expires: data.session?.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : 'unknown'
             });
+            
+            // If we have cookies enabled, also set a marker cookie to help middleware
+            if (data.session?.user) {
+              try {
+                document.cookie = `x-user-session=${data.session.user.id}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+                document.cookie = `auth-success=true; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+              } catch (e) {
+                console.error('[Session] Error setting cookies:', e);
+              }
+            }
           }
         }
       } catch (err) {
@@ -742,12 +797,23 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     window.addEventListener('keydown', handleUserActivity);
     window.addEventListener('click', handleUserActivity);
     
+    // Add specific listeners for page visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[Session] Page became visible, refreshing session');
+        refreshSession();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     return () => {
       clearInterval(interval);
       clearTimeout(activityTimeout);
       window.removeEventListener('mousemove', handleUserActivity);
       window.removeEventListener('keydown', handleUserActivity);
       window.removeEventListener('click', handleUserActivity);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [user, supabase.auth, router]);
 

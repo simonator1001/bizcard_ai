@@ -38,12 +38,14 @@ export async function GET(request: NextRequest) {
           },
           set(name: string, value: string, options: any) {
             console.log(`[auth/callback/route.ts] Setting cookie ${name}:`, value ? `${value.substring(0, 10)}...` : 'empty');
+            
             // Enhanced cookie options to ensure they persist correctly across domains and contexts
             cookieStore.set(name, value, {
               ...options,
               path: '/',
               sameSite: 'lax',
               secure: process.env.NODE_ENV === 'production',
+              httpOnly: false, // Allow client-side JavaScript to access these cookies
               maxAge: 60 * 60 * 24 * 7, // 1 week
               priority: 'high',
               // Set a domain in production for cross-subdomain support
@@ -65,7 +67,7 @@ export async function GET(request: NextRequest) {
     );
     
     // Exchange the code for a session
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (error) {
       console.error('[auth/callback/route.ts] Error exchanging code for session:', error);
@@ -74,11 +76,61 @@ export async function GET(request: NextRequest) {
         new URL(`/signin?error=${encodeURIComponent(error.message)}`, request.url)
       );
     }
+
+    // Access the session data - we'll need it to enhance our response
+    const { session } = data;
+    console.log('[auth/callback/route.ts] Successfully authenticated user:', {
+      userId: session?.user?.id,
+      email: session?.user?.email,
+      expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'unknown'
+    });
+    
+    // Create a response that will redirect to the home page or specified next URL
+    const response = NextResponse.redirect(new URL(next, request.url));
+    
+    // Add additional headers to help client-side code detect and recover the session
+    if (session) {
+      // Add session metadata to response headers to help client-side recovery
+      response.headers.set('X-Auth-User-Id', session.user.id);
+      response.headers.set('X-Auth-User-Email', session.user.email || '');
+      response.headers.set('X-Auth-State', 'authenticated');
+      
+      // Add cookies with raw auth info to help browser-side supabase client
+      // These will be used by client-side JavaScript
+      const projectId = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('.supabase.co') 
+        ? process.env.NEXT_PUBLIC_SUPABASE_URL.split('.')[0]
+        : 'rzmqepriffysavamtxzg';
+      
+      // Set token cookies with appropriate parameters for browser access
+      response.cookies.set(`sb-${projectId}-auth-token-raw`, session.access_token, {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 1 week
+        httpOnly: false, // Allow client-side access
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+      });
+      
+      // Add a marker cookie to indicate successful auth
+      response.cookies.set('auth-success', 'true', {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 1 week
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+      });
+      
+      // Add a session marker with user ID for middleware to detect
+      response.cookies.set('x-user-session', session.user.id, {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 1 week
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+      });
+    }
     
     console.log('[auth/callback/route.ts] Successfully authenticated user, redirecting to:', next);
-    
-    // Redirect to the homepage or specified next URL
-    return NextResponse.redirect(new URL(next, request.url));
+    return response;
   } catch (error) {
     console.error('[auth/callback/route.ts] Unexpected error processing auth code:', error);
     return NextResponse.redirect(

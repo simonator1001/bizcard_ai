@@ -105,16 +105,23 @@ function isInternalApiCall(request: NextRequest): boolean {
 
 // Helper function to check if it's a post-scan redirect that we should allow
 function isPostScanNavigation(request: NextRequest): boolean {
-  // Check the referrer to see if it came from the main page after a scan
+  // Check the request for evidence of recent scan or auth
   const referer = request.headers.get('referer');
   const path = new URL(request.url).pathname;
   const cookies = request.cookies.getAll();
   
-  // Enhanced session detection - check for valid authenticated signal patterns
+  // Look for all possible authentication signals
   const hasXSessionId = request.headers.get('x-session-id') !== null;
   const hasXUserId = request.headers.get('x-user-id') !== null;
   const hasXAuthToken = request.headers.get('x-auth-token') !== null;
+  const hasXSessionToken = request.headers.get('x-session-token') !== null;
   const hasAuthHeader = request.headers.get('authorization')?.startsWith('Bearer ');
+  
+  // Check cookies for auth signals
+  const hasScanCompleted = cookies.some(c => c.name === 'scan-completed' && c.value === 'true');
+  const hasUserSession = cookies.some(c => c.name === 'x-user-session' && c.value.length > 10);
+  const hasAuthSuccess = cookies.some(c => c.name === 'auth-success' && c.value === 'true');
+  const hasSessionVerified = cookies.some(c => c.name === 'session-last-verified' && c.value.length > 10);
   
   // Special case for browser utilities
   if (path.includes('/.well-known/') || 
@@ -125,16 +132,37 @@ function isPostScanNavigation(request: NextRequest): boolean {
     return true;
   }
   
+  // Check for auth-related headers and cookies
   // More reliable auth cookie check - any auth cookies with substantial value
   const hasAuthCookies = cookies.some(cookie => 
     (cookie.name.includes('-auth-token') || 
      cookie.name.includes('auth-token') || 
-     cookie.name.includes('supabase')) && 
+     cookie.name.includes('supabase') || 
+     cookie.name.includes('session')) && 
     cookie.value && 
     cookie.value.length > 10
   );
   
-  if (hasAuthCookies || hasXSessionId || hasXUserId || hasAuthHeader || hasXAuthToken) {
+  // Log all the signals we've found for debugging
+  console.debug('[Middleware] Auth signals check:', {
+    path,
+    hasAuthCookies,
+    hasXSessionId,
+    hasXUserId,
+    hasXAuthToken,
+    hasXSessionToken,
+    hasAuthHeader,
+    hasScanCompleted,
+    hasUserSession,
+    hasAuthSuccess,
+    hasSessionVerified,
+    cookiesCount: cookies.length
+  });
+  
+  // Any auth signal should allow navigation - be permissive to prevent login loops
+  if (hasAuthCookies || hasXSessionId || hasXUserId || hasAuthHeader || 
+      hasXAuthToken || hasXSessionToken || hasScanCompleted || 
+      hasUserSession || hasAuthSuccess || hasSessionVerified) {
     console.debug('[Middleware] User has valid auth signal, allowing navigation');
     return true;
   }
@@ -180,10 +208,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Don't interrupt post-scan navigation
+  // Don't interrupt post-scan navigation - this is critical to prevent login loops
   if (isPostScanNavigation(request)) {
     console.debug('[Middleware] Allowing post-scan navigation');
-    return NextResponse.next();
+    // Create a new response with auth signal
+    const response = NextResponse.next();
+    response.headers.set('X-Auth-Bypass', 'post-scan-navigation');
+    return response;
   }
 
   try {

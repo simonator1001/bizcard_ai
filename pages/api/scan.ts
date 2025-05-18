@@ -381,25 +381,24 @@ export default async function handler(
           ? process.env.NEXT_PUBLIC_SUPABASE_URL.split('.')[0]
           : 'rzmqepriffysavamtxzg';
         
-        // Set cookies to help maintain session
+        // Set cookies to help maintain session across client/server
         if (projectId) {
-          // Set authentication cookies with appropriate parameters
-          const cookieOptions = {
-            path: '/',
-            maxAge: 60 * 60 * 24 * 7, // 1 week
-            httpOnly: false, // Allow client-side access for Supabase client
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax' as const
-          };
-          
-          if (process.env.NODE_ENV === 'production' && process.env.COOKIE_DOMAIN) {
-            Object.assign(cookieOptions, { domain: process.env.COOKIE_DOMAIN });
-          }
-
-          // Set session metadata cookie to help with session detection
+          // JavaScript accessible token for client-side recovery
           res.setHeader('Set-Cookie', [
-            `scan-completed=true; Path=/; Max-Age=3600; SameSite=Lax`,
-            `x-user-session=${sessionId}; Path=/; Max-Age=86400; SameSite=Lax`
+            // Mark the scan as completed, helps middleware detect post-scan navigation
+            `scan-completed=true; Path=/; Max-Age=3600; SameSite=Lax; HttpOnly=false`,
+            
+            // Store user session ID for authentication persistence
+            `x-user-session=${sessionId}; Path=/; Max-Age=86400; SameSite=Lax; HttpOnly=false`,
+            
+            // Store a portion of the access token for verification
+            `sb-${projectId}-auth-token-raw=${session.access_token.substring(0, 20)}...; Path=/; Max-Age=86400; SameSite=Lax; HttpOnly=false`,
+            
+            // Mark authentication as successful
+            `auth-success=true; Path=/; Max-Age=86400; SameSite=Lax; HttpOnly=false`,
+            
+            // When the session was last verified
+            `session-last-verified=${new Date().toISOString()}; Path=/; Max-Age=86400; SameSite=Lax; HttpOnly=false`
           ]);
         }
       }
@@ -410,7 +409,18 @@ export default async function handler(
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     
-    res.status(200).json(savedCard)
+    // Set additional headers for CORS and session verification
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Expose-Headers', 'X-User-Id, X-Session-Token');
+    
+    res.status(200).json({
+      ...savedCard,
+      _auth: {
+        userId: sessionId,
+        verified: true,
+        timestamp: new Date().toISOString()
+      }
+    })
   } catch (error: any) {
     console.error('[SCAN] Error in scan endpoint:', {
       message: error.message,
