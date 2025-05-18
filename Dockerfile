@@ -6,8 +6,13 @@ COPY package*.json ./
 
 RUN npm install
 
+# Copy everything
 COPY . .
 
+# Install dependencies for the mcp-modelcontextprotocol subproject
+RUN cd mcp-modelcontextprotocol/perplexity-ask && npm install
+
+# Build the Next.js app
 RUN npm run build
 
 # Production stage
