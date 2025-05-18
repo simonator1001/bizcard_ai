@@ -72,28 +72,57 @@ export default async function handler(
     // Then verify the token and get user
     console.log('[SCAN-API-DEBUG] 6. Verifying token');
     let userData;
-    const { data: { user: tokenUser }, error: authError } = await supabase.auth.getUser(token);
     
-    if (authError || !tokenUser) {
-      console.error('[SCAN-API-DEBUG] Auth error:', {
-        error: authError,
-        sessionError,
-        hasSession: !!session,
-        token: token ? token.substring(0, 10) + '...' : 'none'
-      });
+    try {
+      const { data: { user: tokenUser }, error: authError } = await supabase.auth.getUser(token);
       
-      // If we have a session but token verification failed, try using session
+      if (authError || !tokenUser) {
+        console.error('[SCAN-API-DEBUG] Auth error with provided token:', {
+          error: authError,
+          token: token ? token.substring(0, 10) + '...' : 'none'
+        });
+        
+        // If we have a session but token verification failed, try using session
+        if (session?.user) {
+          console.log('[SCAN-API-DEBUG] Using session user as fallback');
+          userData = session.user;
+        } else {
+          // Try with admin client as last resort
+          if (supabaseAdmin) {
+            const { data: adminData, error: adminError } = await supabaseAdmin.auth.getUser(token);
+            
+            if (adminError || !adminData.user) {
+              return res.status(401).json({ 
+                error: 'Unauthorized',
+                details: authError?.message || 'Invalid authentication token'
+              });
+            }
+            
+            console.log('[SCAN-API-DEBUG] Using admin client authenticated user as fallback');
+            userData = adminData.user;
+          } else {
+            return res.status(401).json({ 
+              error: 'Unauthorized',
+              details: authError?.message || 'Invalid authentication token and admin client not available'
+            });
+          }
+        }
+      } else {
+        userData = tokenUser;
+      }
+    } catch (tokenError) {
+      console.error('[SCAN-API-DEBUG] Exception during token verification:', tokenError);
+      
+      // Last resort fallback to session if available
       if (session?.user) {
-        console.log('[SCAN-API-DEBUG] Using session user as fallback');
+        console.log('[SCAN-API-DEBUG] Token verification failed, using session user');
         userData = session.user;
       } else {
         return res.status(401).json({ 
           error: 'Unauthorized',
-          details: authError?.message || 'Invalid authentication token'
+          details: 'Failed to verify authentication token'
         });
       }
-    } else {
-      userData = tokenUser;
     }
 
     console.log('[SCAN-API-DEBUG] 7. User authenticated:', {
@@ -161,6 +190,7 @@ export default async function handler(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': req.headers.authorization || ''  // Forward the auth token
       },
       body: JSON.stringify({ image }),
     })
@@ -197,6 +227,7 @@ export default async function handler(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': req.headers.authorization || ''  // Forward the auth token
       },
       body: JSON.stringify({ text: ocrResult.raw_text }),
     })

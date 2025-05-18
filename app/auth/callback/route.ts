@@ -9,17 +9,19 @@ export const dynamic = 'force-dynamic';
  * It processes the code parameter after successful authentication and redirects to the homepage.
  */
 export async function GET(request: NextRequest) {
+  console.log('[auth/callback/route.ts] Handler called with URL:', request.url);
+  
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
   const next = requestUrl.searchParams.get('next') || '/';
   
   // If there's no code parameter, redirect to homepage
   if (!code) {
-    console.log('[auth/callback] No code parameter found, redirecting to homepage');
+    console.log('[auth/callback/route.ts] No code parameter found, redirecting to homepage');
     return NextResponse.redirect(new URL('/', request.url));
   }
   
-  console.log('[auth/callback] Processing auth code');
+  console.log('[auth/callback/route.ts] Processing auth code');
   
   try {
     // Create a Supabase client for the route handler with cookies
@@ -30,12 +32,16 @@ export async function GET(request: NextRequest) {
       {
         cookies: {
           get(name: string) {
-            return cookieStore.get(name)?.value;
+            const cookie = cookieStore.get(name)?.value;
+            console.log(`[auth/callback/route.ts] Getting cookie ${name}:`, cookie ? `${cookie.substring(0, 10)}...` : 'null');
+            return cookie;
           },
           set(name: string, value: string, options: any) {
+            console.log(`[auth/callback/route.ts] Setting cookie ${name}:`, value ? `${value.substring(0, 10)}...` : 'empty');
             cookieStore.set(name, value, options);
           },
           remove(name: string, options: any) {
+            console.log(`[auth/callback/route.ts] Removing cookie ${name}`);
             cookieStore.set(name, '', { ...options, maxAge: 0 });
           },
         },
@@ -46,19 +52,19 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (error) {
-      console.error('[auth/callback] Error exchanging code for session:', error);
+      console.error('[auth/callback/route.ts] Error exchanging code for session:', error);
       // Redirect to signin page with error message
       return NextResponse.redirect(
         new URL(`/signin?error=${encodeURIComponent(error.message)}`, request.url)
       );
     }
     
-    console.log('[auth/callback] Successfully authenticated user, redirecting to homepage');
+    console.log('[auth/callback/route.ts] Successfully authenticated user, redirecting to:', next);
     
     // Redirect to the homepage or specified next URL
     return NextResponse.redirect(new URL(next, request.url));
   } catch (error) {
-    console.error('[auth/callback] Unexpected error processing auth code:', error);
+    console.error('[auth/callback/route.ts] Unexpected error processing auth code:', error);
     return NextResponse.redirect(
       new URL('/signin?error=Unexpected+authentication+error', request.url)
     );

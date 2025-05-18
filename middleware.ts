@@ -23,6 +23,18 @@ const PUBLIC_ROUTES = [
   '/manage',
 ]
 
+// API routes that should be directly accessible by other API routes
+// These endpoints should be directly accessible without redirect for internal API calls
+const INTERNAL_API_ROUTES = [
+  '/api/ocr',
+  '/api/extract-info'
+]
+
+// Define paths that require auth token verification but should not redirect
+const API_AUTH_ROUTES = [
+  '/api/scan'
+]
+
 // Configure matcher to exclude static files
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
@@ -36,6 +48,16 @@ function isPublicPath(path: string, search: string = ''): boolean {
   
   // Allow public routes
   return PUBLIC_ROUTES.some(route => path === route || path.startsWith(route + '/'));
+}
+
+// Helper function to check if a path is an internal API that should never redirect
+function isInternalApiPath(path: string): boolean {
+  return INTERNAL_API_ROUTES.some(route => path === route);
+}
+
+// Helper function to check if a path is an API route that needs auth but shouldn't redirect
+function isApiAuthRoute(path: string): boolean {
+  return API_AUTH_ROUTES.some(route => path === route);
 }
 
 // Helper to get project ID from URL
@@ -59,6 +81,62 @@ function getProjectId(url: string): string {
   }
 }
 
+// Helper function to check if a request is an internal API call
+function isInternalApiCall(request: NextRequest): boolean {
+  const authHeader = request.headers.get('authorization');
+  const origin = request.headers.get('origin');
+  const referer = request.headers.get('referer');
+  const path = new URL(request.url).pathname;
+  
+  const hasAuthHeader = authHeader !== null && authHeader.startsWith('Bearer ');
+  
+  // For same-origin API calls, we need to allow them when they have auth headers
+  if (authHeader && path.startsWith('/api/')) {
+    console.debug('[Middleware] Request has auth header for API route');
+    return true;
+  }
+  
+  const isSameOrigin = origin === null || origin.includes('localhost') || origin.includes('simon-gpt.com');
+  const isSameReferer = referer === null || referer.includes('localhost') || referer.includes('simon-gpt.com');
+  
+  // If it's a same-origin request with an auth header, it's likely an internal API call
+  return isSameOrigin && isSameReferer && hasAuthHeader;
+}
+
+// Helper function to check if it's a post-scan redirect that we should allow
+function isPostScanNavigation(request: NextRequest): boolean {
+  // Check the referrer to see if it came from the main page after a scan
+  const referer = request.headers.get('referer');
+  const path = new URL(request.url).pathname;
+  
+  // When a user navigates after uploading a card, the URL is typically /
+  // and the referrer should contain the main site URL
+  const isNavigatingFromScan = referer !== null && 
+    (referer.includes('/') || referer.endsWith('localhost:3000')) &&
+    !referer.includes('/signin') && 
+    !referer.includes('/signup');
+  
+  // After a card scan, users typically navigate to the home page
+  const isNavigatingHome = path === '/' || path.startsWith('/cards');
+  
+  console.debug('[Middleware] Post-scan navigation check:', {
+    referer,
+    path,
+    isNavigatingFromScan,
+    isNavigatingHome,
+    headers: {
+      'x-nextjs-data': request.headers.get('x-nextjs-data'),
+      'sec-fetch-mode': request.headers.get('sec-fetch-mode'),
+      'sec-fetch-dest': request.headers.get('sec-fetch-dest'),
+      'content-type': request.headers.get('content-type')
+    }
+  });
+  
+  // More permissive check - if we're navigating to a home-like page, and we have a referer
+  // that isn't signin/signup, we'll allow it
+  return isNavigatingFromScan && isNavigatingHome;
+}
+
 export async function middleware(request: NextRequest) {
   const url = new URL(request.url);
   
@@ -67,6 +145,7 @@ export async function middleware(request: NextRequest) {
     method: request.method,
     pathname: url.pathname,
     search: url.search,
+    cookiesCount: request.cookies.getAll().length,
     cookies: Object.fromEntries(request.cookies.getAll().map(c => [c.name, c.value.substring(0, 10) + '...']))
   })
 
@@ -77,6 +156,12 @@ export async function middleware(request: NextRequest) {
       path.match(/\.(ico|png|jpg|jpeg|svg|css|js|woff|woff2)$/)) {
     console.debug('[Middleware] Skipping auth check for route:', path + url.search)
     return NextResponse.next()
+  }
+
+  // Don't interrupt post-scan navigation
+  if (isPostScanNavigation(request)) {
+    console.debug('[Middleware] Allowing post-scan navigation');
+    return NextResponse.next();
   }
 
   try {
@@ -90,6 +175,20 @@ export async function middleware(request: NextRequest) {
     const projectId = getProjectId(supabaseUrl);
     const COOKIE_NAME = `sb-${projectId}-auth-token`;
 
+    // Log all cookies to help with debugging
+    console.debug('[Middleware] All available cookies:', 
+      Object.fromEntries(
+        request.cookies.getAll().map(c => [c.name, c.name.includes('auth') ? c.value.substring(0, 10) + '...' : 'value'])
+      )
+    );
+
+    // Check if this is an internal API call
+    const isInternalCall = isInternalApiCall(request);
+    if (isInternalCall && isInternalApiPath(path)) {
+      console.debug('[Middleware] Detected internal API call to internal route, skipping auth redirect');
+      return NextResponse.next();
+    }
+
     // Create a Supabase client with the correct URL
     const supabase = createServerClient(
       // Use the URL from environment variables
@@ -99,11 +198,13 @@ export async function middleware(request: NextRequest) {
         cookies: {
           get(name: string) {
             const cookie = request.cookies.get(name)?.value;
-            console.debug(`[Middleware] Getting cookie ${name}:`, cookie ? `${cookie.substring(0, 10)}...` : 'null');
+            console.debug(`[Middleware] Getting cookie ${name}:`, cookie ? `${cookie.substring(0, 10)}...` : 'null', 
+              `(path=${path})`);
             return cookie;
           },
           set(name: string, value: string, options: CookieOptions) {
-            console.debug(`[Middleware] Setting cookie ${name}:`, value ? `${value.substring(0, 10)}...` : 'empty');
+            console.debug(`[Middleware] Setting cookie ${name}:`, value ? `${value.substring(0, 10)}...` : 'empty', 
+              `(path=${path})`);
             // If the cookie is updated, update the response
             response.cookies.set({
               name,
@@ -116,7 +217,7 @@ export async function middleware(request: NextRequest) {
             })
           },
           remove(name: string, options: CookieOptions) {
-            console.debug(`[Middleware] Removing cookie ${name}`);
+            console.debug(`[Middleware] Removing cookie ${name}`, `(path=${path})`);
             // If the cookie is removed, update the response
             response.cookies.set({
               name,
@@ -136,6 +237,8 @@ export async function middleware(request: NextRequest) {
       hasSession: !!session,
       userId: session?.user?.id,
       userEmail: session?.user?.email,
+      path: path,
+      expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
       error: error ? { message: error.message, code: error.code } : null
     });
     
@@ -148,14 +251,39 @@ export async function middleware(request: NextRequest) {
         maxAge: 0,
         path: '/'
       })
+      
+      // For API routes that need auth but shouldn't redirect, return 401
+      if (isApiAuthRoute(path) || isInternalApiPath(path)) {
+        console.debug('[Middleware] API route with session error, returning 401');
+        return NextResponse.json(
+          { error: 'Unauthorized', message: error.message },
+          { status: 401 }
+        );
+      }
+      
       return NextResponse.redirect(new URL('/signin', request.url))
     }
 
     if (!session) {
       console.debug('[Middleware] No session found, redirecting to signin')
+      
+      // For API routes that need auth but shouldn't redirect, return 401
+      if (isApiAuthRoute(path) || isInternalApiPath(path)) {
+        console.debug('[Middleware] API route without session, returning 401');
+        return NextResponse.json(
+          { error: 'Unauthorized', message: 'No valid session found' },
+          { status: 401 }
+        );
+      }
+      
       const searchParams = new URLSearchParams()
       searchParams.set('returnUrl', request.url)
       return NextResponse.redirect(new URL(`/signin?${searchParams.toString()}`, request.url))
+    }
+
+    // Add auth token to response headers for API routes
+    if (path.startsWith('/api/')) {
+      response.headers.set('x-auth-token', session.access_token);
     }
 
     // Pass user info to the request headers

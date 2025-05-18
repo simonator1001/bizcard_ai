@@ -458,48 +458,124 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
 
     try {
       console.log('[Scan] Starting image processing...');
-      console.log('[Scan] User ID:', user.id);
 
-      // Get the authentication token
-      const { data: { session }, error: authError } = await supabase.auth.getSession();
-      if (authError) {
-        console.error('[Scan] Auth error getting session:', authError);
+      // Get the authentication token with refresh
+      console.log('[Scan] Getting session data from supabase...');
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !data.session) {
+        console.error('[Scan] Auth error getting session:', sessionError);
         throw new Error('Authentication failed. Please sign in again.');
       }
       
-      if (!session) {
-        console.error('[Scan] No session found');
-        throw new Error('No active session found. Please sign in again.');
+      // Make sure we have a valid token
+      const session = data.session;
+      console.log('[Scan] Session found:', { 
+        userId: session.user?.id,
+        email: session.user?.email,
+        expires: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'unknown',
+        tokenLength: session.access_token?.length || 0
+      });
+      
+      if (!session.access_token) {
+        console.error('[Scan] No access token in session');
+        throw new Error('No authentication token found. Please sign in again.');
       }
-      
-      console.log('[Scan] Session found, access token exists:', !!session.access_token);
-      
-      // Upload the image directly to our API with both token and cookies
+
+      // Upload the image to our API
+      console.log('[Scan] Sending image to API with auth token');
       const response = await fetch('/api/scan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ 
-          imageData: base64Image,
-          userId: user.id  // Explicitly include user ID in the request
-        }),
-        credentials: 'include' // Important: include cookies for auth
+        body: JSON.stringify({ image: base64Image }),
+        credentials: 'include' // Important: include cookies
       });
 
       // Check response
+      console.log(`[Scan] API response received: status=${response.status}`);
+      
       if (!response.ok) {
         let errorMessage = 'Failed to scan business card';
         
         try {
           const errorData = await response.json();
           console.error('[Scan] API error:', errorData);
-          errorMessage = errorData.details || errorData.error || errorMessage;
+          errorMessage = errorData.message || errorData.details || errorData.error || errorMessage;
           
           // Handle specific error types
-          if (errorMessage.includes('Authentication failed') || errorMessage.includes('No valid authentication')) {
-            throw new Error('Session expired. Please sign in again.');
+          if (response.status === 401 || 
+              response.status === 403 || 
+              errorMessage.includes('Authentication') || 
+              errorMessage.includes('Unauthorized') || 
+              errorMessage.includes('session')) {
+            console.error('[Scan] Authentication error:', { status: response.status, message: errorMessage });
+            
+            // Try refreshing the session before failing
+            console.log('[Scan] Attempting session refresh...');
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+            
+            if (refreshError || !refreshData.session) {
+              console.error('[Scan] Session refresh failed:', refreshError);
+              throw new Error('Your session has expired. Please sign in again.');
+            }
+            
+            // Retry with new token after refresh
+            console.log('[Scan] Retrying with refreshed token, new expiry:', 
+              refreshData.session.expires_at ? new Date(refreshData.session.expires_at * 1000).toISOString() : 'unknown');
+            
+            const retryResponse = await fetch('/api/scan', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${refreshData.session.access_token}`
+              },
+              body: JSON.stringify({ image: base64Image }),
+              credentials: 'include'
+            });
+            
+            if (!retryResponse.ok) {
+              const retryErrorData = await retryResponse.json();
+              throw new Error(retryErrorData.message || 'Session expired. Please sign in again.');
+            }
+            
+            const retryResult = await retryResponse.json();
+            console.log('[Scan] Card scanned successfully after token refresh:', retryResult);
+            
+            // Update UI state
+            setProcessingStatus('success');
+            setProcessingStage(`Card scanned successfully! ID: ${retryResult.id}`);
+            
+            // Add the card to the list
+            if (retryResult && onAddCard) {
+              onAddCard({
+                id: retryResult.id,
+                name: retryResult.name || '',
+                name_zh: retryResult.name_zh || '',
+                company: retryResult.company || '',
+                company_zh: retryResult.company_zh || '',
+                title: retryResult.title || '',
+                title_zh: retryResult.title_zh || '',
+                email: retryResult.email || '',
+                phone: retryResult.phone || '',
+                address: retryResult.address || '',
+                address_zh: retryResult.address_zh || '',
+                imageUrl: retryResult.image_url || '',
+                notes: retryResult.notes || '',
+                created_at: retryResult.created_at || new Date().toISOString(),
+                updated_at: retryResult.updated_at || new Date().toISOString()
+              });
+            }
+            
+            // Refresh usage stats
+            refreshUsage?.();
+            
+            // Clear form
+            setFile(null);
+            setPreview(null);
+            
+            return retryResult;
           }
         } catch (parseError) {
           if (parseError instanceof Error && parseError.message.includes('Session expired')) {
@@ -515,14 +591,43 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       const result = await response.json();
       console.log('[Scan] Card scanned successfully:', result);
 
-      if (result.imageUrl) {
-        // Create a business card record with the OCR results
-        await recognizeBusinessCard(result.imageUrl);
-      }
-
       // Update UI state
       setProcessingStatus('success');
-      setProcessingStage('Card scanned successfully!');
+      setProcessingStage(`Card scanned successfully! ID: ${result.id}`);
+      
+      // Add the card to the list
+      if (result && onAddCard) {
+        onAddCard({
+          id: result.id,
+          name: result.name || '',
+          name_zh: result.name_zh || '',
+          company: result.company || '',
+          company_zh: result.company_zh || '',
+          title: result.title || '',
+          title_zh: result.title_zh || '',
+          email: result.email || '',
+          phone: result.phone || '',
+          address: result.address || '',
+          address_zh: result.address_zh || '',
+          imageUrl: result.image_url || '',
+          notes: result.notes || '',
+          created_at: result.created_at || new Date().toISOString(),
+          updated_at: result.updated_at || new Date().toISOString()
+        });
+      }
+      
+      // Pre-emptively refresh the session to ensure it doesn't expire during navigation
+      console.log('[Scan] Pre-emptively refreshing session after successful scan');
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (!refreshError) {
+        console.log('[Scan] Session refreshed successfully after scan:', {
+          userId: refreshData.session?.user?.id,
+          expires: refreshData.session?.expires_at ? new Date(refreshData.session.expires_at * 1000).toISOString() : 'unknown',
+          tokenLength: refreshData.session?.access_token?.length || 0
+        });
+      } else {
+        console.error('[Scan] Session refresh error:', refreshError);
+      }
       
       // Refresh usage stats
       refreshUsage?.();
@@ -550,9 +655,75 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       
       throw error;
     } finally {
+      // Remove any redirects from error cases when processing has completed
       setIsProcessing(false);
     }
   };
+
+  // Keep the user session active
+  useEffect(() => {
+    const refreshSession = async () => {
+      try {
+        if (user) {
+          // Refresh the session to keep it active
+          const { data, error } = await supabase.auth.refreshSession();
+          if (error) {
+            console.error('[Session] Refresh error:', error);
+          } else {
+            console.log('[Session] Session refreshed successfully:', {
+              userId: data.session?.user?.id,
+              expires: data.session?.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : 'unknown'
+            });
+          }
+        }
+      } catch (err) {
+        console.error('[Session] Error refreshing session:', err);
+      }
+    };
+
+    // Refresh session when component mounts
+    refreshSession();
+
+    // Set up interval to refresh session every 5 minutes
+    const interval = setInterval(refreshSession, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [user, supabase.auth]);
+
+  const checkSession = async () => {
+    console.log('[Debug] Checking current session status...');
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error('[Debug] Error checking session:', error);
+    } else {
+      console.log('[Debug] Current session:', {
+        hasSession: !!data.session,
+        userId: data.session?.user?.id,
+        email: data.session?.user?.email,
+        expires: data.session?.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : 'unknown',
+        tokenLength: data.session?.access_token?.length || 0
+      });
+    }
+  };
+
+  // Check the session status at mount and after navigation
+  useEffect(() => {
+    checkSession();
+    
+    // For App Router, we need to use usePathname or similar hooks
+    // instead of router.events which is Pages Router only
+    const handleRouteChange = () => {
+      console.log('[Debug] Route changed, checking session...');
+      setTimeout(checkSession, 100); // Slight delay to ensure navigation is complete
+    };
+    
+    // Add event listener for navigation
+    window.addEventListener('popstate', handleRouteChange);
+    
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+    };
+  }, []);
 
   return (
     <ScrollArea className="h-[calc(100vh-280px)]">

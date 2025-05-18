@@ -375,16 +375,6 @@ export default function HomePage() {
       try {
         const url = new URL(window.location.href);
         const code = url.searchParams.get('code');
-        const error = url.searchParams.get('error');
-        const errorDescription = url.searchParams.get('error_description');
-        
-        if (error) {
-          console.error('[HomePage] OAuth error:', { error, description: errorDescription });
-          toast.error(errorDescription || 'Authentication failed. Please try again.');
-          // Clean up URL parameters
-          window.history.replaceState({}, document.title, '/');
-          return;
-        }
         
         if (code) {
           console.log('[HomePage] Found OAuth code in URL, exchanging for session...');
@@ -406,9 +396,6 @@ export default function HomePage() {
             
             // Clean up URL parameters
             window.history.replaceState({}, document.title, '/');
-            
-            // Force refresh to ensure we load with the new session
-            window.location.reload();
           }
         }
       } catch (err) {
@@ -422,8 +409,7 @@ export default function HomePage() {
   return (
     <div className="h-full bg-background">
       {(window.location.hash.includes('access_token=') || 
-        window.location.search.includes('error=') ||
-        window.location.search.includes('code=')) && (
+        window.location.search.includes('error=')) && (
         <OAuthCallback />
       )}
       
