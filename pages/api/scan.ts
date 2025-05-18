@@ -365,6 +365,18 @@ export default async function handler(
 
     // Step 4: Return the saved card data
     console.log('[SCAN] Scan completed successfully')
+    
+    // Include session information in the response headers to help maintain state
+    const sessionId = userData.id || '';
+    if (sessionId) {
+      res.setHeader('X-User-Id', sessionId);
+      
+      // If we have a session, include the session token in the response
+      if (session?.access_token) {
+        res.setHeader('X-Session-Token', session.access_token.substring(0, 10) + '...');
+      }
+    }
+    
     res.status(200).json(savedCard)
   } catch (error: any) {
     console.error('[SCAN] Error in scan endpoint:', {

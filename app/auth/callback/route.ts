@@ -38,11 +38,25 @@ export async function GET(request: NextRequest) {
           },
           set(name: string, value: string, options: any) {
             console.log(`[auth/callback/route.ts] Setting cookie ${name}:`, value ? `${value.substring(0, 10)}...` : 'empty');
-            cookieStore.set(name, value, options);
+            // Enhanced cookie options to ensure they persist correctly
+            cookieStore.set(name, value, {
+              ...options,
+              path: '/',
+              sameSite: 'lax',
+              secure: process.env.NODE_ENV === 'production',
+              // Set a domain in production for cross-subdomain support
+              ...(process.env.NODE_ENV === 'production' && process.env.COOKIE_DOMAIN
+                ? { domain: process.env.COOKIE_DOMAIN }
+                : {})
+            });
           },
           remove(name: string, options: any) {
             console.log(`[auth/callback/route.ts] Removing cookie ${name}`);
-            cookieStore.set(name, '', { ...options, maxAge: 0 });
+            cookieStore.set(name, '', { 
+              ...options, 
+              maxAge: 0,
+              path: '/' 
+            });
           },
         },
       }

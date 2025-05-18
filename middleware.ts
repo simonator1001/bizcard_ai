@@ -108,22 +108,45 @@ function isPostScanNavigation(request: NextRequest): boolean {
   // Check the referrer to see if it came from the main page after a scan
   const referer = request.headers.get('referer');
   const path = new URL(request.url).pathname;
+  const cookies = request.cookies.getAll();
+  const lastScanPath = request.headers.get('x-last-scan-path');
+  
+  // More permissive check for Chrome DevTools and other browser requests
+  if (path.includes('/.well-known/') || path.includes('/clear-cache.js')) {
+    console.debug('[Middleware] Allowing browser utility request:', path);
+    return true;
+  }
+  
+  // More reliable auth cookie check - any auth cookies with substantial value
+  const hasAuthCookies = cookies.some(cookie => 
+    (cookie.name.includes('-auth-token') || cookie.name.includes('auth-token')) && 
+    cookie.value && 
+    cookie.value.length > 10
+  );
+  
+  if (hasAuthCookies) {
+    console.debug('[Middleware] User has valid auth cookies, allowing navigation');
+    return true;
+  }
   
   // When a user navigates after uploading a card, the URL is typically /
   // and the referrer should contain the main site URL
   const isNavigatingFromScan = referer !== null && 
-    (referer.includes('/') || referer.endsWith('localhost:3000')) &&
+    (referer.includes('/') || referer.endsWith('localhost:3000') || lastScanPath !== null) &&
     !referer.includes('/signin') && 
     !referer.includes('/signup');
   
-  // After a card scan, users typically navigate to the home page
+  // After a card scan, users typically navigate to the home page or cards page
   const isNavigatingHome = path === '/' || path.startsWith('/cards');
   
   console.debug('[Middleware] Post-scan navigation check:', {
     referer,
     path,
+    lastScanPath,
     isNavigatingFromScan,
     isNavigatingHome,
+    hasAuthCookies,
+    cookiesCount: cookies.length,
     headers: {
       'x-nextjs-data': request.headers.get('x-nextjs-data'),
       'sec-fetch-mode': request.headers.get('sec-fetch-mode'),
@@ -132,8 +155,13 @@ function isPostScanNavigation(request: NextRequest): boolean {
     }
   });
   
-  // More permissive check - if we're navigating to a home-like page, and we have a referer
-  // that isn't signin/signup, we'll allow it
+  // For post-scan navigation, be more permissive to reduce login loops
+  // If we're navigating to a home-like page with any sign of previous auth, allow it
+  if (isNavigatingHome && (isNavigatingFromScan || cookies.length > 0)) {
+    console.debug('[Middleware] Allowing likely post-scan navigation with cookies');
+    return true;
+  }
+  
   return isNavigatingFromScan && isNavigatingHome;
 }
 

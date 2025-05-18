@@ -487,7 +487,9 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
+          'Authorization': `Bearer ${session.access_token}`,
+          'X-Session-Id': session.user?.id || '',
+          'X-Refresh-Token': session.refresh_token || ''
         },
         body: JSON.stringify({ image: base64Image }),
         credentials: 'include' // Important: include cookies
@@ -616,22 +618,24 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
         });
       }
       
-      // Pre-emptively refresh the session to ensure it doesn't expire during navigation
-      console.log('[Scan] Pre-emptively refreshing session after successful scan');
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      if (!refreshError) {
-        console.log('[Scan] Session refreshed successfully after scan:', {
-          userId: refreshData.session?.user?.id,
-          expires: refreshData.session?.expires_at ? new Date(refreshData.session.expires_at * 1000).toISOString() : 'unknown',
-          tokenLength: refreshData.session?.access_token?.length || 0
-        });
-      } else {
-        console.error('[Scan] Session refresh error:', refreshError);
-      }
+      // After successful scan, always make sure session is still valid
+      setTimeout(async () => {
+        console.log('[Scan] Verifying session is still active after scan...');
+        const { data: verifyData, error: verifyError } = await supabase.auth.getSession();
+        
+        if (verifyError || !verifyData.session) {
+          console.error('[Scan] Session lost after scan:', verifyError);
+          const { data: refreshResult, error: refreshErr } = await supabase.auth.refreshSession();
+          if (!refreshErr && refreshResult.session) {
+            console.log('[Scan] Successfully restored session after scan');
+          } else {
+            console.error('[Scan] Failed to restore session after scan:', refreshErr);
+          }
+        } else {
+          console.log('[Scan] Session verified after scan');
+        }
+      }, 1000);
       
-      // Refresh usage stats
-      refreshUsage?.();
-
       // Clear form
       setFile(null);
       setPreview(null);
@@ -666,9 +670,18 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       try {
         if (user) {
           // Refresh the session to keep it active
+          console.log('[Session] Attempting to refresh session...');
           const { data, error } = await supabase.auth.refreshSession();
           if (error) {
             console.error('[Session] Refresh error:', error);
+            // Try getting the session to see if it's still valid
+            const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError || !sessionData.session) {
+              console.error('[Session] Session invalid, redirecting to login');
+              router.push('/signin');
+            } else {
+              console.log('[Session] Session still valid despite refresh error');
+            }
           } else {
             console.log('[Session] Session refreshed successfully:', {
               userId: data.session?.user?.id,
@@ -684,11 +697,30 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     // Refresh session when component mounts
     refreshSession();
 
-    // Set up interval to refresh session every 5 minutes
-    const interval = setInterval(refreshSession, 5 * 60 * 1000);
+    // Set up interval to refresh session more frequently (every 2 minutes)
+    const interval = setInterval(refreshSession, 2 * 60 * 1000);
     
-    return () => clearInterval(interval);
-  }, [user, supabase.auth]);
+    // Also refresh after a period of inactivity
+    let activityTimeout: NodeJS.Timeout;
+    
+    const handleUserActivity = () => {
+      clearTimeout(activityTimeout);
+      activityTimeout = setTimeout(refreshSession, 30000); // Refresh after 30s of inactivity
+    };
+    
+    // Listen for user activity
+    window.addEventListener('mousemove', handleUserActivity);
+    window.addEventListener('keydown', handleUserActivity);
+    window.addEventListener('click', handleUserActivity);
+    
+    return () => {
+      clearInterval(interval);
+      clearTimeout(activityTimeout);
+      window.removeEventListener('mousemove', handleUserActivity);
+      window.removeEventListener('keydown', handleUserActivity);
+      window.removeEventListener('click', handleUserActivity);
+    };
+  }, [user, supabase.auth, router]);
 
   const checkSession = async () => {
     console.log('[Debug] Checking current session status...');
