@@ -1,76 +1,382 @@
 import { createClient as createSupabaseClient, SupabaseClient, Session, AuthChangeEvent } from '@supabase/supabase-js'
-import { createBrowserClient } from '@supabase/ssr'
 import { type CookieOptions } from '@supabase/ssr'
 import { BusinessCard } from '@/types/business-card'
 
 console.log('[DEBUG] [supabase-client.ts] NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
 
-// Use the URL from environment variable instead of hardcoding it
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://rzmqepriffysavamtxzg.supabase.co';
+// Check if we're in the browser or on the server
+const isClient = typeof window !== 'undefined';
+const isServer = !isClient;
 
-// Debug environment variables in detail
+// Custom storage implementation to improve cookie persistence
+class CustomStorageAdapter {
+  private localStorageKeys: Record<string, boolean> = {};
+  private cookieData: Record<string, string> = {};
+  private prefix: string;
+
+  constructor() {
+    this.prefix = `sb-${process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('.supabase.co') 
+                      ? process.env.NEXT_PUBLIC_SUPABASE_URL.split('.')[0]
+                      : 'rzmqepriffysavamtxzg'}`;
+                      
+    console.log('[Supabase] Custom Storage: Initializing with prefix', this.prefix);
+    
+    // Sync with existing storage on initialization
+    if (isClient) {
+      this.synchronizeStorage();
+    }
+  }
+  
+  private synchronizeStorage() {
+    // Load from localStorage
+    try {
+      // Collect all localStorage keys with our prefix
+      if (typeof localStorage !== 'undefined') {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(this.prefix)) {
+            this.localStorageKeys[key] = true;
+          }
+        }
+      }
+      
+      // Load from cookies
+      const cookies = document.cookie.split(';').map(cookie => cookie.trim());
+      for (const cookie of cookies) {
+        if (cookie.startsWith(`${this.prefix}-`) || cookie.startsWith('auth-') || cookie.startsWith('x-')) {
+          const [key, value] = cookie.split('=');
+          if (key && value) {
+            this.cookieData[key] = decodeURIComponent(value);
+          }
+        }
+      }
+      
+      console.log('[Supabase] Custom Storage: Synchronized storage', {
+        localStorageKeyCount: Object.keys(this.localStorageKeys).length,
+        cookieKeyCount: Object.keys(this.cookieData).length
+      });
+    } catch (error) {
+      console.error('[Supabase] Custom Storage error synchronizing:', error);
+    }
+  }
+
+  getItem(key: string): string | null {
+    console.log('[Supabase] CustomStorage.getItem:', key);
+    const fullKey = `${this.prefix}-${key}`;
+    
+    // Try cookies first 
+    const cookieValue = this.cookieData[fullKey];
+    if (cookieValue) {
+      console.log('[Supabase] CustomStorage: Found in cookies', { key, valueLength: cookieValue.length });
+      return cookieValue;
+    }
+    
+    // Special cookie format handling
+    if (key === 'auth-token') {
+      const rawTokenCookie = this.cookieData[`${this.prefix}-auth-token-raw`];
+      if (rawTokenCookie) {
+        console.log('[Supabase] CustomStorage: Found raw token in cookies');
+        return rawTokenCookie;
+      }
+    }
+    
+    // Then try localStorage
+    if (isClient && typeof localStorage !== 'undefined') {
+      try {
+        const value = localStorage.getItem(fullKey);
+        if (value) {
+          console.log('[Supabase] CustomStorage: Found in localStorage', { key, valueLength: value.length });
+          return value;
+        }
+        
+        // Try variants with numeric suffixes (Supabase splits large values)
+        for (let i = 0; i < 5; i++) {
+          const variantKey = `${fullKey}.${i}`;
+          const variantValue = localStorage.getItem(variantKey);
+          if (variantValue) {
+            console.log('[Supabase] CustomStorage: Found variant in localStorage', { variantKey, valueLength: variantValue.length });
+            // For tokens, we should concatenate the parts, but for simplicity just return the first one
+            return variantValue;
+          }
+        }
+      } catch (error) {
+        console.error('[Supabase] CustomStorage getItem localStorage error:', error);
+      }
+    }
+    
+    return null;
+  }
+
+  setItem(key: string, value: string): void {
+    console.log('[Supabase] CustomStorage.setItem:', key, value ? `${value.substring(0, 15)}...` : 'empty');
+    const fullKey = `${this.prefix}-${key}`;
+    
+    // Store in our cookie cache
+    this.cookieData[fullKey] = value;
+    
+    // Special handling for auth tokens
+    if (key === 'auth-token' && value) {
+      // Also set a raw token cookie that's easier to recover
+      this.cookieData[`${this.prefix}-auth-token-raw`] = value;
+      
+      try {
+        // Set browser cookie
+        document.cookie = `${this.prefix}-auth-token-raw=${encodeURIComponent(value)};path=/;max-age=${60 * 60 * 24 * 7};SameSite=Lax`;
+        document.cookie = `auth-success=true;path=/;max-age=${60 * 60 * 24 * 7};SameSite=Lax`;
+      } catch (error) {
+        console.error('[Supabase] Error setting cookies:', error);
+      }
+    }
+    
+    // Store in localStorage for persistence
+    if (isClient && typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(fullKey, value);
+        this.localStorageKeys[fullKey] = true;
+        
+        // For auth token, also set additional metadata cookies
+        if (key === 'auth-token' && value) {
+          try {
+            // Parse the JWT to get user data
+            const tokenParts = value.split('.');
+            if (tokenParts.length === 3) {
+              const payload = JSON.parse(atob(tokenParts[1]));
+              const userId = payload.sub;
+              if (userId) {
+                document.cookie = `x-user-session=${userId};path=/;max-age=${60 * 60 * 24 * 7};SameSite=Lax`;
+                localStorage.setItem('user-id', userId);
+              }
+            }
+          } catch (error) {
+            console.error('[Supabase] Error parsing token:', error);
+          }
+        }
+      } catch (error) {
+        console.error('[Supabase] CustomStorage setItem localStorage error:', error);
+        
+        // If localStorage fails (e.g., quota exceeded), try to split the value
+        if (value && value.length > 1000) {
+          try {
+            // Split the token into chunks and store them
+            const chunkSize = Math.ceil(value.length / 5);
+            for (let i = 0; i < 5; i++) {
+              const start = i * chunkSize;
+              const end = Math.min((i + 1) * chunkSize, value.length);
+              const chunk = value.substring(start, end);
+              const chunkKey = `${fullKey}.${i}`;
+              
+              localStorage.setItem(chunkKey, chunk);
+              this.localStorageKeys[chunkKey] = true;
+            }
+            console.log('[Supabase] CustomStorage: Split large value into chunks');
+          } catch (chunkError) {
+            console.error('[Supabase] CustomStorage chunk storage error:', chunkError);
+          }
+        }
+      }
+    }
+  }
+
+  removeItem(key: string): void {
+    console.log('[Supabase] CustomStorage.removeItem:', key);
+    const fullKey = `${this.prefix}-${key}`;
+    
+    // Remove from cookie cache
+    delete this.cookieData[fullKey];
+    
+    // Remove browser cookie
+    if (isClient) {
+      try {
+        document.cookie = `${fullKey}=;path=/;max-age=0;SameSite=Lax`;
+        document.cookie = `${this.prefix}-auth-token-raw=;path=/;max-age=0;SameSite=Lax`;
+      } catch (error) {
+        console.error('[Supabase] Error removing cookies:', error);
+      }
+    }
+    
+    // Remove from localStorage
+    if (isClient && typeof localStorage !== 'undefined') {
+      try {
+        localStorage.removeItem(fullKey);
+        delete this.localStorageKeys[fullKey];
+        
+        // Remove potential split chunks
+        for (let i = 0; i < 5; i++) {
+          const chunkKey = `${fullKey}.${i}`;
+          localStorage.removeItem(chunkKey);
+          delete this.localStorageKeys[chunkKey];
+        }
+      } catch (error) {
+        console.error('[Supabase] CustomStorage removeItem localStorage error:', error);
+      }
+    }
+  }
+}
+
+// Browser-compatible cookie handling for server client
+class BrowserCookieHandler {
+  get(name: string) {
+    if (isClient) {
+      try {
+        const cookieValue = document.cookie
+          .split('; ')
+          .find(row => row.startsWith(`${name}=`))
+          ?.split('=')[1];
+        
+        console.log(`[Supabase] Browser cookie get ${name}:`, cookieValue ? `${cookieValue.substring(0, 10)}...` : 'null');
+        return cookieValue;
+      } catch (error) {
+        console.error(`[Supabase] Error getting cookie ${name}:`, error);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  set(name: string, value: string, options: CookieOptions) {
+    if (isClient) {
+      try {
+        let cookieString = `${name}=${value}; path=${options.path || '/'}`;
+        
+        if (options.maxAge) {
+          cookieString += `; max-age=${options.maxAge}`;
+        }
+        
+        if (options.domain) {
+          cookieString += `; domain=${options.domain}`;
+        }
+        
+        if (options.secure) {
+          cookieString += '; secure';
+        }
+        
+        if (options.sameSite) {
+          // Convert enum to string safely
+          const sameSiteValue = typeof options.sameSite === 'string' 
+            ? options.sameSite.toLowerCase() 
+            : options.sameSite === true ? 'strict' : 'lax';
+          cookieString += `; samesite=${sameSiteValue}`;
+        }
+        
+        document.cookie = cookieString;
+        console.log(`[Supabase] Browser cookie set ${name}:`, value ? `${value.substring(0, 10)}...` : 'null');
+      } catch (error) {
+        console.error(`[Supabase] Error setting cookie ${name}:`, error);
+      }
+    }
+  }
+
+  remove(name: string, options: CookieOptions) {
+    if (isClient) {
+      try {
+        const path = options.path || '/';
+        document.cookie = `${name}=; path=${path}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        console.log(`[Supabase] Browser cookie removed ${name}`);
+      } catch (error) {
+        console.error(`[Supabase] Error removing cookie ${name}:`, error);
+      }
+    }
+  }
+}
+
+// Initialize the Supabase client (the correct one based on environment)
 console.log('[Supabase] Environment debug:', {
-  context: typeof window === 'undefined' ? 'server' : 'client',
+  context: isClient ? 'client' : 'server',
   NODE_ENV: process.env.NODE_ENV,
-  SUPABASE_URL: SUPABASE_URL,
+  SUPABASE_URL: process.env.SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  URL_MATCH: process.env.NEXT_PUBLIC_SUPABASE_URL === SUPABASE_URL
-});
+  URL_MATCH: process.env.SUPABASE_URL === process.env.NEXT_PUBLIC_SUPABASE_URL
+})
 
-// Debug environment variables
-const envCheck = {
+// Verify we have the correct URL and keys
+console.log('[Supabase] Environment check:', {
   hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
   hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
   url: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  isServer: typeof window === 'undefined'
-};
+  isServer
+})
 
-console.log('[Supabase] Environment check:', envCheck);
+console.log('[Supabase] Creating new client instance');
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL is required');
+// Custom storage for client-side auth
+const customStorage = isClient ? new CustomStorageAdapter() : undefined;
+const cookieHandler = new BrowserCookieHandler();
+
+// Create a common client for both client and server
+const supabase = createSupabaseClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      autoRefreshToken: isClient,
+      persistSession: isClient,
+      detectSessionInUrl: isClient,
+      storage: customStorage,
+    },
+    global: {
+      headers: {
+        'x-client-info': `bizcard/${process.env.npm_package_version || '1.0.0'}`
+      }
+    }
+  }
+);
+
+// Set up cookie handler after client creation (this approach avoids the cookies error)
+if (isClient) {
+  // Apply the cookie handlers directly to the auth instance
+  const authClient = supabase.auth;
+  (authClient as any).cookieOptions = {
+    get: cookieHandler.get,
+    set: cookieHandler.set,
+    remove: cookieHandler.remove
+  };
 }
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is required');
+// Add listener for client-side auth state changes
+if (isClient) {
+  supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
+    console.log('[Supabase] Auth state changed:', {
+      event,
+      sessionExists: !!session,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
+      hostname: window.location.hostname,
+      path: window.location.pathname
+    });
+    
+    // Set extra cookies when a session is created
+    if (session) {
+      try {
+        // Set a cookie that's easier to detect in middleware
+        document.cookie = `auth-success=true;path=/;max-age=${60 * 60 * 24 * 7};SameSite=Lax`;
+        document.cookie = `x-user-session=${session.user.id};path=/;max-age=${60 * 60 * 24 * 7};SameSite=Lax`;
+        
+        // Store the raw token in a cookie for easier recovery
+        const projectId = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('.supabase.co') 
+          ? process.env.NEXT_PUBLIC_SUPABASE_URL.split('.')[0]
+          : 'rzmqepriffysavamtxzg';
+          
+        document.cookie = `${projectId}-auth-token-raw=${session.access_token};path=/;max-age=${60 * 60 * 24 * 7};SameSite=Lax`;
+      } catch (error) {
+        console.error('[Supabase] Error setting auth cookies:', error);
+      }
+    }
+  });
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Attempt to initialize admin client for server-side operations
+let supabaseAdmin: SupabaseClient | undefined = undefined;
 
-// Create a single instance of the Supabase client
-let _supabase: SupabaseClient | null = null;
-let _supabaseAdmin: SupabaseClient | null = null;
-
-// Helper to get a sanitized domain for cookies
-const getCookieDomain = () => {
-  if (typeof window === 'undefined') return undefined;
-  
-  const hostname = window.location.hostname;
-  
-  // For localhost, never set a domain - this avoids issues with cookie settings
-  if (hostname === 'localhost' || hostname.includes('127.0.0.1')) {
-    return undefined;
-  }
-  
-  // Production domains - use the highest level domain to share cookies across subdomains
-  if (hostname.includes('simon-gpt.com')) {
-    return 'simon-gpt.com';
-  }
-  
-  // For all other cases, return the hostname to ensure cookies work properly
-  return hostname;
-};
-
-export function createClient() {
-  const isClient = typeof window !== 'undefined';
-  
-  if (!isClient) {
-    console.debug('[Supabase] Creating server-side client');
-    return createSupabaseClient(
-      SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+// Only create the admin client server-side with the service role key
+console.log('[Supabase] Creating new admin client instance')
+try {
+  // Only create if we're on the server and have the necessary key
+  if (isServer && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    supabaseAdmin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
       {
         auth: {
           autoRefreshToken: false,
@@ -78,289 +384,15 @@ export function createClient() {
         }
       }
     );
+    console.log('[Supabase] Service role client initialized successfully')
+  } else {
+    console.log('[Supabase] Skipping admin client initialization on client-side')
   }
-
-  console.debug('[Supabase] Creating browser client with cookie handling');
-  
-  // Extract project ID from supabase URL for cookie naming
-  const projectId = supabaseUrl.split('//')[1]?.split('.')[0] || 'rzmqepriffysavamtxzg';
-  const cookiePrefix = `sb-${projectId}`;
-  
-  return createBrowserClient(
-    SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          const cookieString = document.cookie;
-          const cookies = cookieString.split(';')
-            .map(cookie => cookie.trim())
-            .reduce((acc, cookie) => {
-              const [cookieName, ...rest] = cookie.split('=');
-              if (cookieName) {
-                // Handle cookies with = in the value
-                acc[cookieName] = rest.join('=');
-              }
-              return acc;
-            }, {} as Record<string, string>);
-          
-          console.debug('[Supabase] Getting cookie:', {
-            name,
-            exists: !!cookies[name],
-            valuePreview: cookies[name] ? cookies[name].substring(0, 10) + '...' : null,
-            valueLength: cookies[name] ? cookies[name].length : 0,
-            allCookies: Object.keys(cookies)
-          });
-          
-          // First try the cookie
-          if (cookies[name]) {
-            return cookies[name];
-          }
-          
-          // If not in cookies, check all localStorage backups
-          if (typeof window !== 'undefined' && window.localStorage) {
-            try {
-              // Try primary backup in localStorage
-              for (let i = 0; i <= 4; i++) {
-                const backupKey = `${name}.${i}`;
-                const value = window.localStorage.getItem(backupKey);
-                if (value) {
-                  console.debug('[Supabase] Retrieved code verifier from localStorage primary backup:', {
-                    name: backupKey,
-                    valuePreview: value ? value.substring(0, 10) + '...' : null,
-                    valueLength: value ? value.length : 0
-                  });
-                  return value;
-                }
-              }
-              
-              // Also check if original key exists in localStorage
-              const value = window.localStorage.getItem(name);
-              if (value) {
-                console.debug('[Supabase] Retrieved code verifier from localStorage original key:', {
-                  name,
-                  valuePreview: value ? value.substring(0, 10) + '...' : null,
-                  valueLength: value ? value.length : 0
-                });
-                return value;
-              }
-            } catch (e) {
-              console.error('[Supabase] Error accessing localStorage:', e);
-            }
-          }
-          
-          return null;
-        },
-        set(name: string, value: string, options: any = {}) {
-          console.debug('[Supabase] Setting cookie:', {
-            name,
-            valuePreview: value ? value.substring(0, 10) + '...' : null,
-            valueLength: value ? value.length : 0,
-            options
-          });
-          
-          // Set the actual cookie
-          document.cookie = `${name}=${value}; path=${options.path || '/'}; max-age=${
-            options.maxAge || 86400
-          }; SameSite=${options.sameSite || 'Lax'}${
-            options.domain ? `; domain=${options.domain}` : ''
-          }${options.secure ? '; Secure' : ''}`;
-          
-          // Also save in localStorage as backup
-          if (typeof window !== 'undefined' && window.localStorage) {
-            try {
-              // Save in multiple backup slots for redundancy
-              for (let i = 0; i <= 4; i++) {
-                const backupKey = `${name}.${i}`;
-                window.localStorage.setItem(backupKey, value);
-              }
-              
-              // Also set the original key
-              window.localStorage.setItem(name, value);
-              
-              console.debug('[Supabase] Saved cookies to localStorage backup');
-            } catch (e) {
-              console.error('[Supabase] Error saving to localStorage:', e);
-            }
-          }
-        },
-        remove(name: string, options: any = {}) {
-          console.debug('[Supabase] Removing cookie:', { name, options });
-          
-          // Remove the actual cookie
-          document.cookie = `${name}=; path=${options.path || '/'}; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=${
-            options.sameSite || 'Lax'
-          }${options.domain ? `; domain=${options.domain}` : ''}${
-            options.secure ? '; Secure' : ''
-          }`;
-          
-          // Also clean up localStorage
-          if (typeof window !== 'undefined' && window.localStorage) {
-            try {
-              // Clean up all backup slots
-              for (let i = 0; i <= 4; i++) {
-                const backupKey = `${name}.${i}`;
-                window.localStorage.removeItem(backupKey);
-              }
-              
-              // Also remove the original key
-              window.localStorage.removeItem(name);
-              
-              console.debug('[Supabase] Removed cookies from localStorage backup');
-            } catch (e) {
-              console.error('[Supabase] Error removing from localStorage:', e);
-            }
-          }
-        }
-      },
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-        flowType: 'pkce',
-        debug: true,
-        storage: {
-          getItem: (key: string) => {
-            try {
-              // Try to get from localStorage first
-              const value = window.localStorage.getItem(key);
-              
-              // For code verifier, we also need to check cookies as fallback
-              if (!value && key.includes('code-verifier')) {
-                // Check cookie as fallback for code verifier
-                const cookieName = key;
-                const cookieValue = document.cookie
-                  .split('; ')
-                  .find(row => row.startsWith(`${cookieName}=`))
-                  ?.split('=')[1];
-                
-                if (cookieValue) {
-                  console.debug('[Supabase] Retrieved code verifier from cookie fallback:', {
-                    key,
-                    valueLength: cookieValue.length,
-                    valuePreview: cookieValue.substring(0, 10) + '...'
-                  });
-                  return cookieValue;
-                }
-                
-                // Last resort - check other localStorage keys that might contain the verifier
-                for (let i = 0; i < localStorage.length; i++) {
-                  const storedKey = localStorage.key(i);
-                  if (storedKey && storedKey.includes('code-verifier')) {
-                    const storedValue = localStorage.getItem(storedKey);
-                    if (storedValue) {
-                      console.debug('[Supabase] Found code verifier in another localStorage key:', { 
-                        originalKey: key,
-                        foundKey: storedKey,
-                        valueLength: storedValue.length,
-                        valuePreview: storedValue.substring(0, 10) + '...'
-                      });
-                      return storedValue;
-                    }
-                  }
-                }
-              }
-              
-              console.debug('[Supabase] Getting storage item:', {
-                key,
-                exists: !!value,
-                valueLength: value ? value.length : 0,
-                valuePreview: value ? value.substring(0, 10) + '...' : null,
-                allKeys: Object.keys(window.localStorage).filter(k => k.includes(cookiePrefix) || k.includes('supabase')),
-                hostname: window.location.hostname,
-                path: window.location.pathname
-              });
-              return value;
-            } catch (error) {
-              console.error('[Supabase] Error accessing localStorage:', error);
-              return null;
-            }
-          },
-          setItem: (key: string, value: string) => {
-            try {
-              console.debug('[Supabase] Setting storage item:', {
-                key,
-                valueLength: value.length,
-                valuePreview: value.substring(0, 10) + '...',
-                hostname: window.location.hostname,
-                path: window.location.pathname
-              });
-              window.localStorage.setItem(key, value);
-            } catch (error) {
-              console.error('[Supabase] Error setting localStorage item:', error);
-            }
-          },
-          removeItem: (key: string) => {
-            try {
-              console.debug('[Supabase] Removing storage item:', {
-                key,
-                hostname: window.location.hostname,
-                path: window.location.pathname
-              });
-              window.localStorage.removeItem(key);
-            } catch (error) {
-              console.error('[Supabase] Error removing localStorage item:', error);
-            }
-          }
-        }
-      }
-    }
-  );
+} catch (error) {
+  console.error('[Supabase] Error initializing admin client:', error)
 }
 
-export function getSupabaseClient() {
-  if (_supabase) {
-    console.debug('[Supabase] Returning existing client instance');
-    return _supabase;
-  }
-
-  console.debug('[Supabase] Creating new client instance');
-  _supabase = createClient();
-  return _supabase;
-}
-
-// Export initialized client
-export const supabase = getSupabaseClient();
-
-// Call the getSupabase function during initialization to check for URL mismatches in cookies
-getSupabase();
-
-// Create service role client only on server-side and only if key is available
-export function getSupabaseAdmin() {
-  if (_supabaseAdmin) {
-    console.debug('[Supabase] Returning existing admin client instance');
-    return _supabaseAdmin;
-  }
-
-  const isClient = typeof window !== 'undefined';
-  if (isClient) {
-    console.debug('[Supabase] Skipping admin client initialization on client-side');
-    return null;
-  }
-
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('Missing Supabase service role key');
-  }
-
-  console.debug('[Supabase] Creating new admin client instance');
-
-  _supabaseAdmin = createSupabaseClient(
-    SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false
-      }
-    }
-  );
-
-  console.debug('[Supabase] Service role client initialized successfully');
-  return _supabaseAdmin;
-}
-
-// Export admin client for server-side use
-export const supabaseAdmin = getSupabaseAdmin();
+export { supabase, supabaseAdmin };
 
 /**
  * Update a user's app_metadata to include role: 'authenticated' using the admin API.
@@ -398,7 +430,7 @@ supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null
 export const testConnection = async () => {
   try {
     console.log('[Supabase] Testing connection...');
-    console.log('[Supabase] URL:', SUPABASE_URL);
+    console.log('[Supabase] URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
     console.log('[Supabase] Context:', typeof window === 'undefined' ? 'server' : 'client');
     console.log('[Supabase] Has service role:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
     
