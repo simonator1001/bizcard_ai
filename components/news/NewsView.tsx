@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { supabase } from '@/lib/supabase-client';
 import { NewsTimeline } from './NewsTab';
 import { motion, AnimatePresence } from 'framer-motion';
+import LoaderOne from '@/components/ui/loader-one';
 
 function CompanySelect({ companies, selectedCompanies, onSelect }: { 
   companies: string[], 
@@ -598,10 +599,13 @@ export function NewsView() {
 
       <div className="space-y-4">
         {loading || loadingCompanies.size > 0 ? (
-          <div className="grid grid-cols-1 gap-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-[120px] w-full" />
-            ))}
+          <div className="flex flex-col items-center justify-center gap-4 p-8">
+            <LoaderOne />
+            <p className="text-sm text-muted-foreground mt-2">
+              {loadingCompanies.size > 0 
+                ? `Loading news for ${Array.from(loadingCompanies).join(", ")}...` 
+                : "Loading news..."}
+            </p>
           </div>
         ) : errors.size > 0 ? (
           <div className="rounded-lg border bg-destructive/10 p-4 text-center text-destructive">
