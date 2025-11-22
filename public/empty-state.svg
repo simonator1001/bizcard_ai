@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="60" cy="60" r="58" fill="#F3F4F6" stroke="#E5E7EB" stroke-width="2"/>
+  
+  <!-- Business Card Icon -->
+  <rect x="30" y="40" width="60" height="40" rx="4" fill="white" stroke="#D1D5DB" stroke-width="2"/>
+  <rect x="38" y="48" width="24" height="4" rx="2" fill="#9CA3AF"/>
+  <rect x="38" y="56" width="44" height="4" rx="2" fill="#D1D5DB"/>
+  <rect x="38" y="64" width="34" height="4" rx="2" fill="#E5E7EB"/>
+  
+  <!-- Plus Icon -->
+  <circle cx="90" cy="90" r="15" fill="#A855F7"/>
+  <path d="M90 83V97M83 90H97" stroke="white" stroke-width="2" stroke-linecap="round"/>
+</svg> 

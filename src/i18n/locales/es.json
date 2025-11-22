@@ -1,0 +1,378 @@
+{
+  "appTitle": "ArchivoDigital.ai",
+  "navigation": {
+    "dashboard": "Panel",
+    "scan": "Escanear",
+    "manage": "Gestionar",
+    "news": "Noticias",
+    "orgChart": "Organigrama",
+    "settings": "Ajustes",
+    "pro": "Pro"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "description": "Gestiona tus preferencias de cuenta y suscripción",
+    "subscription": "Suscripción",
+    "preferences": "Preferencias",
+    "language": "Idioma",
+    "languageDescription": "Elige tu idioma preferido",
+    "darkMode": "Modo oscuro",
+    "darkModeDescription": "Activa el modo oscuro para una mejor visualización nocturna",
+    "notifications": "Notificaciones",
+    "notificationsDescription": "Recibe actualizaciones sobre tus contactos",
+    "autoScan": "Escaneo automático",
+    "autoScanDescription": "Procesa automáticamente las tarjetas después de subirlas"
+  },
+  "subscription": {
+    "businessCardScans": "Escaneos gratuitos restantes",
+    "totalCardsStored": "Número de tarjetas almacenadas: {{count}}",
+    "companiesTracked": "Empresas que puedes seguir",
+    "upgradeNow": "Actualizar a Pro",
+    "subscriptionEnding": "Tu suscripción terminará el",
+    "renewSubscription": "Renueva tu suscripción para mantener el acceso a todas las funciones.",
+    "freePlan": "Plan gratuito",
+    "renewsOn": "El plan expira el:",
+    "manageSubscription": "Gestionar plan",
+    "currentPlan": "Plan actual",
+    "approachingLimit": "Te estás acercando a los límites del plan gratuito. ¡Actualiza a Pro para acceso ilimitado!",
+    "of": "de",
+    "left": "restante"
+  },
+  "account": {
+    "title": "Cuenta",
+    "signOut": "Cerrar sesión"
+  },
+  "pro": {
+    "title": "Desbloquea funciones Pro para aumentar la productividad",
+    "subtitle": "Actualiza a Pro para almacenamiento ilimitado, OCR avanzado y funciones exclusivas",
+    "getStarted": "Comenzar con Pro",
+    "choosePlan": "Elige tu plan",
+    "feature": "Función",
+    "freePlan": "Gratuito",
+    "basicPlan": "Básico",
+    "proPlan": "Pro",
+    "bestValue": "Mejor valor",
+    "features": {
+      "cardScanning": {
+        "name": "Escaneo de tarjetas",
+        "free": "5 por mes",
+        "basic": "30 por mes",
+        "pro": "Ilimitado"
+      },
+      "ocrSupport": {
+        "name": "Soporte OCR",
+        "free": "Básico",
+        "basic": "Mejorado",
+        "pro": "Avanzado"
+      },
+      "cardManagement": {
+        "name": "Gestión de tarjetas",
+        "free": "Básico",
+        "basic": "Mejorado",
+        "pro": "Avanzado"
+      },
+      "duplicateRemoval": {
+        "name": "Eliminación de duplicados",
+        "free": false,
+        "basic": true,
+        "pro": true
+      },
+      "export": {
+        "name": "Exportar",
+        "free": "CSV",
+        "basic": "CSV, PDF",
+        "pro": "Todos los formatos"
+      },
+      "companyTracking": {
+        "name": "Seguimiento de empresas",
+        "free": "3 empresas",
+        "basic": "10 empresas",
+        "pro": "Ilimitado"
+      },
+      "newsUpdates": {
+        "name": "Actualizaciones de noticias",
+        "free": "Diario",
+        "basic": "Tiempo real",
+        "pro": "Tiempo real + Alertas"
+      },
+      "newsSources": {
+        "name": "Fuentes de noticias",
+        "free": "Básico",
+        "basic": "Premium",
+        "pro": "Todas las fuentes"
+      },
+      "newsHistory": {
+        "name": "Historial de noticias",
+        "free": "7 días",
+        "basic": "30 días",
+        "pro": "Ilimitado"
+      },
+      "emailDigests": {
+        "name": "Resúmenes por correo",
+        "free": false,
+        "basic": "Semanal",
+        "pro": "Diario + Personalizado"
+      },
+      "aiFeatures": {
+        "name": "Funciones de IA",
+        "free": "Básico",
+        "basic": "Mejorado",
+        "pro": "Avanzado"
+      },
+      "competitorAnalysis": {
+        "name": "Análisis de competencia",
+        "free": false,
+        "basic": "Básico",
+        "pro": "Avanzado"
+      },
+      "marketPredictions": {
+        "name": "Predicciones de mercado",
+        "free": false,
+        "basic": "Básico",
+        "pro": "Avanzado"
+      },
+      "teamSharing": {
+        "name": "Compartir en equipo",
+        "free": false,
+        "basic": "Hasta 3 usuarios",
+        "pro": "Ilimitado"
+      },
+      "customAnnotations": {
+        "name": "Anotaciones personalizadas",
+        "free": false,
+        "basic": "Básico",
+        "pro": "Avanzado"
+      }
+    },
+    "price": {
+      "free": "Gratis",
+      "basic": {
+        "monthly": "€9/mes",
+        "yearly": "€89/año"
+      },
+      "pro": {
+        "monthly": "€19/mes",
+        "yearly": "€189/año"
+      }
+    },
+    "buttons": {
+      "getBasic": "Obtener Básico",
+      "upgradePro": "Actualizar a Pro"
+    },
+    "sections": {
+      "featureHighlights": {
+        "title": "Características destacadas",
+        "storage": {
+          "title": "Almacenamiento ilimitado",
+          "description": "Almacena y gestiona tarjetas de visita sin límites"
+        },
+        "ocr": {
+          "title": "OCR avanzado",
+          "description": "Extrae texto multilingüe con alta precisión"
+        },
+        "orgChart": {
+          "title": "Organigrama",
+          "description": "Visualiza jerarquías y relaciones empresariales"
+        },
+        "news": {
+          "title": "Noticias empresariales",
+          "description": "Sigue las últimas actualizaciones de las empresas de tus contactos"
+        }
+      },
+      "faq": {
+        "title": "Preguntas frecuentes",
+        "questions": {
+          "downgrade": {
+            "question": "¿Puedo bajar de categoría mi plan?",
+            "answer": "Sí, puedes bajar de categoría tu plan en cualquier momento. Tus funciones Pro seguirán activas hasta el final del ciclo de facturación actual."
+          },
+          "cancel": {
+            "question": "¿Cómo cancelo mi suscripción?",
+            "answer": "Puedes cancelar tu suscripción en la página de ajustes. Tu cuenta volverá al plan gratuito al final del ciclo de facturación actual."
+          },
+          "trial": {
+            "question": "¿Hay una prueba gratuita?",
+            "answer": "Sí, ofrecemos una prueba gratuita de 14 días de las funciones Pro. No se requiere tarjeta de crédito."
+          }
+        }
+      }
+    },
+    "footer": {
+      "cta": "¿Listo para mejorar tu gestión de tarjetas de visita?",
+      "button": "Actualizar a Pro"
+    }
+  },
+  "scan": {
+    "title": "Escanear tarjeta",
+    "description": "Sube imágenes de tarjetas para extraer información",
+    "dropzone": {
+      "title": "Haz clic o arrastra para subir imágenes de tarjetas",
+      "subtitle": "Se admiten múltiples archivos"
+    },
+    "preview": "Vista previa",
+    "processing": "Procesando...",
+    "success": "Tarjeta procesada con éxito",
+    "error": "Error al procesar la tarjeta"
+  },
+  "orgChart": {
+    "title": "Organigrama",
+    "description": "Visualiza jerarquías y relaciones empresariales",
+    "search": {
+      "placeholder": "Buscar empresas...",
+      "selectCompany": "Seleccionar empresa",
+      "noCompanySelected": "Selecciona una empresa para ver su organigrama"
+    },
+    "loading": "Cargando organigrama...",
+    "errors": {
+      "noData": "No hay datos disponibles para esta empresa",
+      "failed": "Error al generar el organigrama"
+    },
+    "node": {
+      "unknown": "Desconocido",
+      "noPosition": "Sin cargo"
+    }
+  },
+  "dialogs": {
+    "filter": {
+      "title": "Filtrar tarjetas",
+      "selectCompany": "Seleccionar empresa",
+      "selectPosition": "Seleccionar cargo",
+      "allCompanies": "Todas las empresas",
+      "allPositions": "Todos los cargos"
+    },
+    "sort": {
+      "title": "Ordenar tarjetas",
+      "field": "Ordenar por",
+      "direction": "Dirección",
+      "selectField": "Seleccionar campo",
+      "selectDirection": "Seleccionar dirección",
+      "ascending": "Ascendente",
+      "descending": "Descendente"
+    },
+    "merge": {
+      "title": "Fusionar tarjetas similares",
+      "description": "Se encontraron {{count}} grupos de tarjetas que se pueden fusionar. La fusión combinará información de tarjetas con el mismo correo electrónico",
+      "confirm": "¿Estás seguro de que quieres fusionar estas tarjetas?",
+      "success": "Tarjetas fusionadas con éxito",
+      "error": "Error al fusionar tarjetas",
+      "noMergeableCards": "No se encontraron tarjetas para fusionar"
+    },
+    "removeDuplicates": {
+      "title": "Eliminar tarjetas duplicadas",
+      "description": "Se encontraron {{count}} tarjetas duplicadas. ¿Estás seguro de que quieres eliminarlas?",
+      "confirm": "¿Estás seguro de que quieres eliminar las tarjetas duplicadas?",
+      "success": "Se eliminaron {{count}} tarjetas duplicadas",
+      "error": "Error al eliminar tarjetas duplicadas",
+      "noDuplicates": "No se encontraron tarjetas duplicadas"
+    }
+  },
+  "actions": {
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "merge": "Fusionar tarjetas",
+    "remove": "Eliminar tarjetas",
+    "filter": "Filtrar tarjetas",
+    "sort": "Ordenar tarjetas",
+    "uploadCard": "Subir tarjeta",
+    "gotIt": "Entendido",
+    "tryAgain": "Intentar de nuevo",
+    "email": "Correo",
+    "notes": "Notas",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "save": "Guardar cambios",
+    "copyLink": "Copiar enlace",
+    "share": "Compartir",
+    "download": "Descargar",
+    "apply": "Aplicar",
+    "reset": "Restablecer"
+  },
+  "view": {
+    "grid": "Vista de cuadrícula",
+    "table": "Vista de tabla"
+  },
+  "card": {
+    "name": "Nombre",
+    "company": "Empresa",
+    "position": "Cargo",
+    "createdAt": "Creado el",
+    "contact": "Contacto",
+    "address": "Dirección",
+    "businessCardImage": "Imagen de tarjeta",
+    "noImage": "Sin imagen",
+    "details": {
+      "title": "Detalles de la tarjeta",
+      "description": "Ver y editar información de la tarjeta",
+      "nameEnglish": "Nombre (inglés)",
+      "nameChinese": "Nombre (chino)",
+      "companyEnglish": "Empresa (inglés)",
+      "companyChinese": "Empresa (chino)",
+      "titleEnglish": "Cargo (inglés)",
+      "titleChinese": "Cargo (chino)",
+      "email": "Correo electrónico",
+      "phone": "Teléfono",
+      "addressEnglish": "Dirección (inglés)",
+      "addressChinese": "Dirección (chino)",
+      "remarks": "Observaciones"
+    },
+    "share": {
+      "title": "Compartir tarjeta",
+      "copyLink": "Copiar enlace",
+      "email": "Correo",
+      "whatsapp": "WhatsApp"
+    },
+    "delete": {
+      "title": "Eliminar tarjeta",
+      "description": "¿Estás seguro de que quieres eliminar esta tarjeta? Esta acción no se puede deshacer.",
+      "cancel": "Cancelar",
+      "confirm": "Eliminar"
+    }
+  },
+  "tooltips": {
+    "welcome": "¡Bienvenido! Usa las opciones de filtro y ordenación para organizar tus tarjetas. Haz clic en una tarjeta para ver los detalles."
+  },
+  "manage": {
+    "title": "Gestionar tarjetas",
+    "description": "Ver, editar y organizar tus tarjetas escaneadas",
+    "loading": "Cargando tus tarjetas...",
+    "searchPlaceholder": "Buscar tarjetas...",
+    "empty": {
+      "title": "No se encontraron tarjetas",
+      "description": "Comienza subiendo una nueva tarjeta"
+    },
+    "actions": {
+      "merge": "Fusionar tarjetas similares",
+      "removeDuplicates": "Eliminar duplicados",
+      "download": "Descargar CSV",
+      "share": "Compartir"
+    }
+  },
+  "news": {
+    "title": "Noticias empresariales",
+    "description": "Sigue las noticias sobre las empresas de tus contactos",
+    "companiesSelected": "{{count}} empresas seleccionadas",
+    "articlesPerCompany": {
+      "one": "1 artículo por empresa",
+      "three": "3 artículos por empresa",
+      "five": "5 artículos por empresa",
+      "ten": "10 artículos por empresa"
+    },
+    "clearAll": "Borrar todo",
+    "loading": "Cargando noticias...",
+    "noCompanies": "Seleccionar empresas",
+    "selectCompanies": "Selecciona empresas para ver sus noticias",
+    "noArticles": "No se encontraron artículos",
+    "error": {
+      "fetchFailed": "Error al obtener artículos",
+      "noArticlesFound": "No se encontraron artículos para las empresas seleccionadas"
+    }
+  },
+  "errors": {
+    "chineseOnly": "Este campo solo acepta caracteres chinos",
+    "englishOnly": "Este campo solo acepta caracteres en inglés",
+    "required": "Este campo es obligatorio",
+    "invalidEmail": "Por favor, introduce una dirección de correo válida",
+    "invalidPhone": "Por favor, introduce un número de teléfono válido",
+    "generic": "Se produjo un error, por favor inténtalo de nuevo"
+  }
+} 

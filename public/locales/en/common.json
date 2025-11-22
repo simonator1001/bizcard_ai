@@ -1,0 +1,49 @@
+{
+  "navigation": {
+    "settings": "Settings",
+    "dashboard": "Dashboard",
+    "manage": "Manage Cards",
+    "scan": "Scan Card"
+  },
+  "settings": {
+    "description": "Manage your account preferences and subscription settings",
+    "subscription": "Subscription",
+    "preferences": "Preferences",
+    "darkMode": "Dark Mode",
+    "darkModeDescription": "Switch between light and dark themes",
+    "notifications": "Notifications",
+    "notificationsDescription": "Receive updates about your scanned cards",
+    "autoScan": "Auto Scan",
+    "autoScanDescription": "Automatically process cards when images are uploaded"
+  },
+  "subscription": {
+    "businessCardScans": "Number of free biz cards scanned left",
+    "totalCardsStored": "Number of Cards Stored: {{count}}",
+    "companiesTracked": "Total number of biz cards scanned",
+    "subscriptionEnding": "Your subscription period ends on",
+    "renewSubscription": "Please renew your subscription to maintain access to all features.",
+    "freePlan": "Free Plan",
+    "renewsOn": "Plan expires on:",
+    "manageSubscription": "Manage Plan",
+    "upgradeNow": "Upgrade Now",
+    "currentPlan": "Current Plan"
+  },
+  "account": {
+    "title": "Account",
+    "signOut": "Sign Out",
+    "deleteAccount": "Delete Account",
+    "profile": "Profile Settings"
+  },
+  "scan": {
+    "title": "Scan Business Card",
+    "description": "Upload a business card image to extract contact information",
+    "dropzone": {
+      "title": "Drop your business card image here",
+      "subtitle": "or click to select a file"
+    },
+    "preview": "Card Preview",
+    "processing": "Processing card...",
+    "success": "Card successfully processed",
+    "error": "Error processing card"
+  }
+} 

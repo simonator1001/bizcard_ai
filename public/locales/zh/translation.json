@@ -1,0 +1,20 @@
+{
+  "orgChart": {
+    "title": "组织架构图",
+    "description": "可视化名片连接和层级关系",
+    "search": {
+      "placeholder": "搜索公司...",
+      "selectCompany": "选择公司",
+      "noCompanySelected": "选择公司以查看其组织架构图"
+    },
+    "loading": "正在加载组织架构图...",
+    "errors": {
+      "noData": "该公司暂无可用数据",
+      "failed": "生成组织架构图失败"
+    },
+    "node": {
+      "unknown": "未知",
+      "noPosition": "无职位"
+    }
+  }
+} 
