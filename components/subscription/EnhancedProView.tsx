@@ -10,7 +10,7 @@ import { Check, X, CreditCard, Search, Users, Zap, HelpCircle, ChevronRight, Loa
 import { useToast } from "@/components/ui/use-toast"
 import { useTranslation } from 'react-i18next'
 import { useUser } from '@/hooks/useUser'
-import { supabase } from '@/lib/supabase-client'
+// DISABLED: Supabase removed
 
 const planFeatures = [
   // Card Scanning Features
@@ -62,8 +62,9 @@ export function EnhancedProView() {
     try {
       setLoading(true);
       
+      // DISABLED: Supabase removed - get session stub
       // Get session for auth token
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = { access_token: 'disabled' };
       if (!session) {
         throw new Error("No active session found");
       }

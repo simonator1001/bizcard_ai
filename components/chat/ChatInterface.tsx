@@ -5,7 +5,7 @@ import { Message } from '@/types/chat';
 import { AIInputWithSearch } from './AIInputWithSearch';
 import { toast } from 'sonner';
 import { getSystemPrompt } from '@/lib/prompts';
-import { supabase } from '@/lib/supabase-client';
+// DISABLED: Supabase removed
 import { useAuth } from '@/lib/auth-context';
 
 export function ChatInterface() {
@@ -21,8 +21,9 @@ export function ChatInterface() {
       const userMessage: Message = { role: 'user', content };
       setMessages(prev => [...prev, userMessage]);
 
+      // DISABLED: Supabase removed - get session stub
       // Get current session token
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = { access_token: 'disabled' };
       if (!session) {
         throw new Error('No active session found. Please sign in again.');
       }

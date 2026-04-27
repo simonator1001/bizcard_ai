@@ -1,4 +1,4 @@
-import { supabase } from './supabase-client';
+// DISABLED: Supabase removed
 import { LlamaAPI } from './llama-api';
 
 const PERPLEXITY_API_KEY = process.env.NEXT_PUBLIC_PERPLEXITY_API_KEY;
@@ -48,48 +48,9 @@ export class NewsService {
   }
 
   async getRandomCompanies(count: number = 5): Promise<Company[]> {
-    console.log(`Fetching ${count} random companies...`);
-    try {
-      // Get all business cards with company names
-      const { data: cards, error } = await supabase
-        .from('business_cards')
-        .select('company, company_zh')
-        .not('company', 'is', null)
-        .not('company', 'eq', '');
-
-      if (error) {
-        console.error('Supabase error fetching companies:', error);
-        throw error;
-      }
-
-      console.log('Total business cards found:', cards?.length);
-      if (!cards?.length) {
-        console.warn('No companies found in database');
-        return [];
-      }
-
-      // Get unique companies
-      const uniqueCompanies = Array.from(new Set(
-        cards.map(card => card.company)
-      )).filter(Boolean);
-
-      console.log('Unique companies found:', uniqueCompanies.length);
-
-      // Randomly select companies
-      const selectedCompanies = uniqueCompanies
-        .sort(() => Math.random() - 0.5)
-        .slice(0, count)
-        .map(company => ({
-          id: company,
-          name: company
-        }));
-      
-      console.log('Selected random companies:', selectedCompanies);
-      return selectedCompanies;
-    } catch (error) {
-      console.error('Error in getRandomCompanies:', error);
-      throw error;
-    }
+    // DISABLED: Supabase removed
+    console.log('[DISABLED] getRandomCompanies: Supabase removed');
+    return [];
   }
 
   async getNewsForCompanies(
@@ -258,28 +219,8 @@ export class NewsService {
   }
 
   async getAllCompanies(): Promise<Company[]> {
-    try {
-      const { data: cards, error } = await supabase
-        .from('business_cards')
-        .select('company, company_zh')
-        .not('company', 'is', null);
-
-      if (error) throw error;
-
-      // Remove duplicates and create Company objects
-      const uniqueCompanies = Array.from(new Set(
-        cards
-          ?.map(card => card.company)
-          .filter(Boolean) || []
-      )).map(company => ({
-        id: company,
-        name: company
-      }));
-
-      return uniqueCompanies;
-    } catch (error) {
-      console.error('Error fetching all companies:', error);
-      throw error;
-    }
+    // DISABLED: Supabase removed
+    console.log('[DISABLED] getAllCompanies: Supabase removed');
+    return [];
   }
-} 
+}

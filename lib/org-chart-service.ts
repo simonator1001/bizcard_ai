@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { supabase } from './supabase-client';
+// DISABLED: Supabase removed
 
 // Remove the custom client and use the shared one
 // const supabase = createClient(
@@ -26,16 +26,9 @@ interface OrgChartNode {
 
 export class OrgChartService {
   static async fetchCompanyCards(company: string): Promise<BusinessCard[]> {
-    // console.log('Fetching cards for company:', company);
-    const { data, error } = await supabase
-      .from('business_cards')
-      .select('*')
-      .eq('company', company)
-      .order('title');
-
-    if (error) throw new Error('Failed to fetch business cards');
-    // console.log('Fetched cards:', data);
-    return data || [];
+    // DISABLED: Supabase removed
+    console.log('[DISABLED] fetchCompanyCards: Supabase removed');
+    return [];
   }
 
   static async analyzeRelationships(cards: BusinessCard[]): Promise<OrgChartNode> {

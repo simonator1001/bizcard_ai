@@ -1,39 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+// DISABLED: Supabase removed
+// import { createClient } from '@supabase/supabase-js';
+// import { supabase } from '@/lib/supabase-client';
 import { SUBSCRIPTION_PLANS } from '@/lib/plans';
-import { supabase } from '@/lib/supabase-client';
 import { CustomBranding, Subscription as SubscriptionType, SubscriptionTier } from '@/types/subscription';
 
-// Check if we're on the client side
-const isClient = typeof window !== 'undefined';
-
-// Only require environment variables on the server side
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = isClient ? undefined : process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-// Log environment check
-console.debug('[Subscription] Environment check:', {
-  isClient,
-  hasUrl: !!supabaseUrl,
-  hasServiceKey: !!supabaseServiceKey,
-  availableKeys: Object.keys(process.env).filter(key => key.includes('SUPABASE'))
-});
-
-// Use regular client on client side, admin client on server side
-export const adminClient = isClient ? null : (supabaseUrl && supabaseServiceKey ? 
-  createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: false
-    }
-  }) : null);
-
-// Log initialization status
-console.debug('[Subscription] Initialization:', {
-  isClient,
-  hasAdminClient: !!adminClient,
-  url: supabaseUrl
-});
+// DISABLED: Supabase removed - no client available
+export const adminClient = null;
 
 export type { CustomBranding };
 export type Subscription = SubscriptionType;
@@ -47,132 +19,21 @@ export interface SubscriptionUsage {
 
 export class SubscriptionService {
   static async getCurrentSubscription(userId: string): Promise<Subscription> {
-    try {
-      // Always use the regular client on the client side
-      const client = isClient ? supabase : adminClient;
-      
-      if (!client) {
-        console.debug('[Subscription] No client available, returning default subscription');
-        return this.getDefaultSubscription(userId);
-      }
-
-      console.debug('[Subscription] Fetching subscription for user:', userId);
-      const { data: subscription, error } = await client
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[Subscription] Error fetching subscription:', error);
-        return this.getDefaultSubscription(userId);
-      }
-
-      if (!subscription) {
-        console.debug('[Subscription] No subscription found, returning default');
-        return this.getDefaultSubscription(userId);
-      }
-
-      // Ensure tier is one of the valid values and normalize to lowercase
-      const rawTier = subscription.tier;
-      const normalizedTier = rawTier?.toLowerCase();
-      
-      const validTier: SubscriptionTier = normalizedTier === 'free' || normalizedTier === 'basic' || normalizedTier === 'pro' || normalizedTier === 'enterprise'
-        ? normalizedTier as SubscriptionTier
-        : 'free';
-
-      const result: Subscription = {
-        id: subscription.id,
-        userId: subscription.user_id,
-        tier: validTier,
-        status: subscription.status || 'active',
-        currentPeriodStart: new Date(subscription.current_period_start || Date.now()),
-        currentPeriodEnd: new Date(subscription.current_period_end || new Date().setFullYear(new Date().getFullYear() + 1)),
-        cancelAtPeriodEnd: subscription.cancel_at_period_end || false,
-        createdAt: new Date(subscription.created_at || Date.now()),
-        updatedAt: new Date(subscription.updated_at || Date.now()),
-        customBranding: subscription.custom_branding || undefined
-      };
-
-      return result;
-    } catch (error) {
-      console.error('[Subscription] Error in getCurrentSubscription:', error);
-      return this.getDefaultSubscription(userId);
-    }
+    // DISABLED: Supabase removed
+    return this.getDefaultSubscription(userId);
   }
 
   static async updateBranding(userId: string, branding: { logoUrl?: string; primaryColor?: string; companyName?: string }) {
-    try {
-      if (!adminClient) {
-        console.debug('[Subscription] No admin client available, skipping branding update');
-        return false;
-      }
-
-      const { error } = await adminClient
-        .from('subscriptions')
-        .update({
-          custom_branding: branding,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userId);
-
-      if (error) {
-        console.error('[Subscription] Error updating branding:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('[Subscription] Error in updateBranding:', error);
-      return false;
-    }
+    // DISABLED: Supabase removed
+    return false;
   }
 
   static async getCurrentUsage(userId: string): Promise<SubscriptionUsage> {
-    try {
-      // Get subscription to determine scan limits
-      const subscription = await this.getCurrentSubscription(userId);
-      const tier = subscription.tier.toLowerCase();
-      const plan = SUBSCRIPTION_PLANS[tier] || SUBSCRIPTION_PLANS.free;
-
-      // Always use the regular client on the client side
-      const client = isClient ? supabase : adminClient;
-      
-      if (!client) {
-        console.debug('[Subscription] No client available, returning default usage');
-        return this.getDefaultUsage(plan);
-      }
-
-      // Get current stats from user_usage_stats table
-      const { data: stats, error: statsError } = await client
-        .from('user_usage_stats')
-        .select('scans_this_month, unique_companies, cards_count')
-        .eq('user_id', userId)
-        .single();
-
-      if (statsError) {
-        console.error('[Subscription] Error getting user stats:', statsError);
-        return this.getDefaultUsage(plan);
-      }
-
-      const monthlyLimit = plan.limits.scansPerMonth;
-      const scansCount = stats?.scans_this_month || 0;
-      const totalCards = stats?.cards_count || 0;
-      const uniqueCompanies = stats?.unique_companies || 0;
-
-      // For Pro plan, remaining scans should be Infinity
-      const remainingScans = monthlyLimit === Infinity ? Infinity : Math.max(0, monthlyLimit - scansCount);
-
-      return {
-        scansCount,
-        companiesTracked: uniqueCompanies,
-        totalCards,
-        remainingScans
-      };
-    } catch (error) {
-      console.error('[Subscription] Error in getCurrentUsage:', error);
-      return this.getDefaultUsage(SUBSCRIPTION_PLANS.free);
-    }
+    // DISABLED: Supabase removed
+    const subscription = await this.getCurrentSubscription(userId);
+    const tier = subscription.tier.toLowerCase();
+    const plan = SUBSCRIPTION_PLANS[tier] || SUBSCRIPTION_PLANS.free;
+    return this.getDefaultUsage(plan);
   }
 
   static getDefaultSubscription(userId: string): Subscription {
@@ -199,32 +60,11 @@ export class SubscriptionService {
       totalCards: 0,
       remainingScans: plan.limits.scansPerMonth
     };
-    console.debug('[Subscription] Using default usage:', {
-      result,
-      planLimits: plan.limits
-    });
     return result;
   }
 
   static async updateUsageAfterCardDeletion(userId: string): Promise<void> {
-    try {
-      if (!adminClient) {
-        console.debug('[Subscription] No admin client available, skipping usage update');
-        return;
-      }
-
-      // Call the stored procedure to update usage stats
-      const { error } = await adminClient
-        .rpc('initialize_monthly_usage', { user_id_param: userId });
-
-      if (error) {
-        console.error('[Subscription] Error updating usage:', error);
-        throw error;
-      }
-    } catch (error) {
-      console.error('[Subscription] Error updating usage after card deletion:', error);
-      throw error;
-    }
+    // DISABLED: Supabase removed
   }
 
   static async getUserPlan(userId: string) {
@@ -233,341 +73,30 @@ export class SubscriptionService {
   }
 
   static async canPerformAction(userId: string, action: 'scan' | 'track_company'): Promise<boolean> {
-    try {
-      const [subscription, usage] = await Promise.all([
-        this.getCurrentSubscription(userId),
-        this.getCurrentUsage(userId),
-      ]);
-
-      if (!subscription || !usage) {
-        console.debug('[Subscription] No subscription or usage data available');
-        return false;
-      }
-
-      const plan = SUBSCRIPTION_PLANS[subscription.tier];
-      if (!plan) {
-        console.debug('[Subscription] Invalid subscription tier:', subscription.tier);
-        return false;
-      }
-
-      if (action === 'scan') {
-        return usage.remainingScans > 0;
-      } else if (action === 'track_company') {
-        return usage.companiesTracked < plan.limits.companiesTracked;
-      }
-
-      return false;
-    } catch (error) {
-      console.error('[Subscription] Error in canPerformAction:', error);
-      return false;
-    }
+    // DISABLED: Supabase removed - always return true for now
+    return true;
   }
 
   static async uploadBusinessCardImage(userId: string, base64Image: string): Promise<string> {
-    try {
-      if (!adminClient) {
-        console.error('[Subscription] No admin client available for storage upload');
-        throw new Error('Service configuration error');
-      }
-
-      if (!userId) {
-        console.error('[Subscription] Missing user ID for upload');
-        throw new Error('User ID is required for storage uploads');
-      }
-
-      // Convert base64 to blob for upload
-      const base64Response = await fetch(base64Image);
-      const blob = await base64Response.blob();
-      
-      // Generate unique filename - ensure userId is first folder component
-      // This is critical for RLS policies to work correctly
-      const fileName = `${userId}/${Date.now()}-card.jpg`;
-      
-      // Upload to Supabase storage using admin client
-      const { data: uploadData, error: uploadError } = await adminClient.storage
-        .from('business-cards')
-        .upload(fileName, blob, {
-          contentType: 'image/jpeg',
-          upsert: true
-        });
-
-      if (uploadError) {
-        console.error('[Subscription] Error uploading image:', uploadError);
-        throw uploadError;
-      }
-
-      // Get the base URL from environment
-      const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      if (!baseUrl) {
-        console.error('[Subscription] Missing SUPABASE_URL environment variable');
-        throw new Error('Missing SUPABASE_URL environment variable');
-      }
-
-      // Construct the storage URL manually for self-hosted instance
-      const publicUrl = `${baseUrl}/storage/v1/object/public/business-cards/${fileName}`;
-      
-      // Log the URL for debugging
-      console.debug('[Subscription] Generated public URL:', publicUrl);
-
-      return publicUrl;
-    } catch (error) {
-      console.error('[Subscription] Error uploading business card image:', error);
-      throw error;
-    }
-  }
-
-  // Helper function for consistent date formatting
-  private static formatMonthDate(date: Date = new Date()): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    return `${year}-${month}`;
+    // DISABLED: Supabase removed
+    throw new Error('Service configuration error');
   }
 
   static async incrementUsage(userId: string, action: 'scan' | 'track_company'): Promise<void> {
-    try {
-      // Always use the regular client on the client side
-      const client = isClient ? supabase : adminClient;
-      
-      if (!client) {
-        console.debug('[Subscription] No client available, skipping usage increment');
-        return;
-      }
-
-      // Get current month in YYYY-MM format
-      const currentMonth = this.formatMonthDate();
-
-      // Get current subscription and usage
-      const [subscription, usage] = await Promise.all([
-        this.getCurrentSubscription(userId),
-        this.getCurrentUsage(userId)
-      ]);
-
-      // Check if user can perform action
-      const canPerform = await this.canPerformAction(userId, action);
-      if (!canPerform) {
-        throw new Error(`User has reached their ${action} limit`);
-      }
-
-      // Prepare update data based on action type
-      let updateData: any = {
-        updated_at: new Date().toISOString()
-      };
-
-      if (action === 'scan') {
-        updateData.scans_this_month = (usage.scansCount || 0) + 1;
-      } else if (action === 'track_company') {
-        updateData.unique_companies = (usage.companiesTracked || 0) + 1;
-      }
-
-      // Update usage stats
-      const { error } = await client
-        .from('user_usage_stats')
-        .upsert({
-          user_id: userId,
-          ...updateData
-        }, {
-          onConflict: 'user_id'
-        });
-
-      if (error) {
-        console.error('[Subscription] Error incrementing usage:', error);
-        throw error;
-      }
-    } catch (error) {
-      console.error('[Subscription] Error in incrementUsage:', error);
-      throw error;
-    }
+    // DISABLED: Supabase removed
   }
 
   static async upgradeSubscription(userId: string, tier: 'free' | 'basic' | 'pro', paymentDetails: { provider: string; subscriptionId: string }): Promise<boolean> {
-    try {
-      // Validate the tier
-      if (!['free', 'basic', 'pro'].includes(tier)) {
-        throw new Error('Invalid subscription tier');
-      }
-
-      // Use either admin client or regular client, whichever is available
-      const client = adminClient || supabase;
-      
-      if (!client) {
-        console.error('[Subscription] No database client available for subscription upgrade');
-        return false;
-      }
-      
-      console.log('[Subscription] Using client for subscription upgrade:', adminClient ? 'admin' : 'regular');
-
-      // Get current subscription
-      const currentSubscription = await this.getCurrentSubscription(userId);
-      console.log('[Subscription] Current subscription:', {
-        tier: currentSubscription.tier,
-        status: currentSubscription.status,
-        newTier: tier
-      });
-
-      // Don't allow downgrading to free tier
-      if (tier === 'free' && currentSubscription.tier !== 'free') {
-        throw new Error('Cannot downgrade to free tier');
-      }
-
-      // Special handling for test mode subscription IDs
-      const isTestSession = paymentDetails.subscriptionId.startsWith('test_session_');
-      if (isTestSession) {
-        console.log('[Subscription] Detected test session ID, special upgrade flow');
-      }
-
-      // Current date and expiration date (one year from now)
-      const now = new Date();
-      const expirationDate = new Date();
-      expirationDate.setFullYear(expirationDate.getFullYear() + 1);
-      
-      // Add logging before upsert
-      console.log('[SubscriptionService] Upsert payload:', {
-        user_id: userId,
-        tier,
-        provider: paymentDetails.provider,
-        subscription_id: paymentDetails.subscriptionId,
-        status: 'active',
-        current_period_start: new Date().toISOString(),
-        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date().toISOString(),
-      });
-
-      // Update subscription in database
-      const { data, error } = await client
-        .from('subscriptions')
-        .upsert({
-          user_id: userId,
-          tier,
-          status: 'active',
-          current_period_start: now.toISOString(),
-          current_period_end: expirationDate.toISOString(), 
-          cancel_at_period_end: false,
-          payment_provider: paymentDetails.provider,
-          subscription_id: paymentDetails.subscriptionId,
-          updated_at: now.toISOString(),
-          created_at: currentSubscription.id === 'free' ? now.toISOString() : undefined // Only set created_at if it's a new subscription
-        }, {
-          onConflict: 'user_id'
-        });
-
-      // Add logging after upsert
-      console.log('[SubscriptionService] Upsert response:', { data, error });
-
-      if (error) {
-        console.error('[Subscription] Error upgrading subscription:', error);
-        console.error('[Subscription] Detailed error:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        });
-        return false;
-      }
-
-      // Initialize usage stats directly to avoid service call issues
-      try {
-        console.log('[Subscription] Initializing usage stats directly');
-        const { error: usageError } = await client
-          .from('user_usage_stats')
-          .upsert({
-            user_id: userId,
-            scans_this_month: 0,
-            unique_companies: 0,
-            cards_count: 0,
-            updated_at: now.toISOString()
-          }, {
-            onConflict: 'user_id'
-          });
-          
-        if (usageError) {
-          console.error('[Subscription] Error initializing usage stats:', usageError);
-          // Continue anyway - this is not critical
-        }
-      } catch (usageErr) {
-        console.error('[Subscription] Exception during usage stats initialization:', usageErr);
-        // Not critical, continue
-      }
-      
-      console.log('[Subscription] Subscription successfully upgraded to', tier);
-      return true;
-    } catch (error) {
-      console.error('[Subscription] Error in upgradeSubscription:', error);
-      console.error('[Subscription] Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
-      });
-      throw error;
-    }
+    // DISABLED: Supabase removed
+    return false;
   }
 
   static async initializeUsageStats(userId: string): Promise<void> {
-    try {
-      // Try using the admin client first, but fall back to regular client if needed
-      const client = adminClient || supabase;
-      
-      if (!client) {
-        console.debug('[Subscription] No client available, skipping usage stats initialization');
-        return;
-      }
-
-      console.log('[Subscription] Initializing usage stats for user:', userId);
-      
-      const { error } = await client
-        .from('user_usage_stats')
-        .upsert({
-          user_id: userId,
-          scans_this_month: 0,
-          unique_companies: 0,
-          cards_count: 0,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
-
-      if (error) {
-        console.error('[Subscription] Error initializing usage stats:', error);
-        throw error;
-      }
-    } catch (error) {
-      console.error('[Subscription] Error in initializeUsageStats:', error);
-      throw error;
-    }
+    // DISABLED: Supabase removed
   }
 
   static async insertBusinessCard(record: any): Promise<{ data: any; error: any }> {
-    try {
-      if (!adminClient) {
-        console.debug('[Subscription] No admin client available, cannot insert business card');
-        return { data: null, error: new Error('Service configuration error') };
-      }
-
-      // First, do a simple insert
-      const { error: insertError } = await adminClient
-        .from('business_cards')
-        .insert([record]);
-
-      if (insertError) {
-        return { data: null, error: insertError };
-      }
-
-      // Then get the ID in a separate query
-      const { data, error: selectError } = await adminClient
-        .from('business_cards')
-        .select('id')
-        .eq('user_id', record.user_id)
-        .eq('image_url', record.image_url)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (selectError) {
-        return { data: null, error: selectError };
-      }
-
-      return { data, error: null };
-    } catch (error) {
-      console.error('[Subscription] Error inserting business card:', error);
-      return { data: null, error };
-    }
+    // DISABLED: Supabase removed
+    return { data: null, error: new Error('Service configuration error') };
   }
-} 
+}

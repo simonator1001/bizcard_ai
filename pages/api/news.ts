@@ -117,7 +117,7 @@ async function getEmployeesForCompany(company: string, authToken: string) {
     };
 
     // Filter and deduplicate cards
-    const matchingCards = allCards?.filter(card => companiesMatch(card, company)) || [];
+    const matchingCards = (allCards as any[])?.filter((card: any) => companiesMatch(card, company)) || [];
 
     // Deduplicate by name
     const uniqueCards = Array.from(new Map(

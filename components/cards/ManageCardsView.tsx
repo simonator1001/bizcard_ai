@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { supabase } from '@/lib/supabase-client';
+// DISABLED: Supabase removed
 import { 
   Mail, 
   Phone, 
@@ -88,73 +88,13 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
       });
       setLoading(true);
       
-      // Add connection check
-      const { error: connectionError } = await supabase.from('business_cards').select('count', { count: 'exact', head: true });
-      if (connectionError) {
-        console.error('Database connection error:', connectionError);
-        toast.error('Unable to connect to database. Please try again later.');
-        setLoading(false);
-        return;
-      }
-
+      // DISABLED: Supabase removed - stub
+      
       // First, try to get the total count of cards
-      const { count, error: countError } = await supabase
-        .from('business_cards')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.$id);
-
-      if (countError) {
-        console.error('Error getting card count:', countError);
-        toast.error('Error loading cards. Please try refreshing the page.');
-        setLoading(false);
-        return;
-      }
-
-      console.log('Total cards in database:', count, 'for user:', user.$id);
-
-      // Then fetch the actual cards
-      const { data, error } = await supabase
-        .from('business_cards')
-        .select(`
-          id,
-          name,
-          name_zh,
-          company,
-          company_zh,
-          title,
-          title_zh,
-          email,
-          phone,
-          address,
-          address_zh,
-          notes,
-          image_url,
-          created_at,
-          updated_at,
-          user_id
-        `)
-        .eq('user_id', user.$id)
-        .order(sortField, { ascending: sortDirection === 'asc' });
-
-      if (error) {
-        console.error('Error fetching cards:', error);
-        toast.error('Error loading cards. Please try refreshing the page.');
-        setLoading(false);
-        return;
-      }
-
-      // Debug: log fetched data
-      console.log('[FetchCards] Raw data from Supabase:', data);
-
-      // Transform the data to include images array with image_url
-      const cardsWithImages = data?.map(card => ({
-        ...card,
-        images: card.image_url ? [card.image_url] : []
-      })) || [];
-
-      // Debug: log transformed cards
-      console.log('[FetchCards] Transformed cards:', cardsWithImages);
-      setCards(cardsWithImages);
+      // DISABLED: Supabase removed
+      console.log('[DISABLED] fetchCards: Supabase removed');
+      
+      setCards([]);
     } catch (err) {
       console.error('Error in fetchCards:', err);
       toast.error('Failed to load business cards. Please check your connection.');
@@ -166,16 +106,8 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
   // Add connection status check
   useEffect(() => {
     const checkConnection = async () => {
-      try {
-        const { error } = await supabase.from('business_cards').select('count', { count: 'exact', head: true });
-        if (error) {
-          console.error('Database connection error:', error);
-          toast.error('Unable to connect to database. Please check your connection.');
-        }
-      } catch (err) {
-        console.error('Connection check error:', err);
-        toast.error('Connection error. Please check your network.');
-      }
+      // DISABLED: Supabase removed
+      console.log('[DISABLED] checkConnection: Supabase removed');
     };
     
     checkConnection();
@@ -221,44 +153,11 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
       // Debug: log card to upsert
       console.log('[Merge] Card to upsert:', cardToUpsert);
 
+      // DISABLED: Supabase removed
       // First, update the merged card
-      const { error: upsertError, data: upsertedCard } = await supabase
-        .from('business_cards')
-        .upsert([cardToUpsert])
-        .select()
-        .single();
-
-      if (upsertError) {
-        console.error('Error upserting merged card:', upsertError);
-        throw upsertError;
-      }
-
-      if (!upsertedCard) {
-        throw new Error('Failed to upsert merged card - no data returned');
-      }
-
-      console.log('[Merge] Successfully upserted card:', upsertedCard);
-
-      // Only delete cards that are not the merged card
-      const deleteIds = (mergedCard.mergedFrom || []).filter(id => id !== mergedCard.id);
-      console.log('[Merge] Deleting cards with IDs:', deleteIds);
+      const upsertedCard = mergedCard;
       
-      if (deleteIds.length > 0) {
-        // Delete cards one by one to ensure each deletion is successful
-        for (const id of deleteIds) {
-          const { error: deleteError } = await supabase
-            .from('business_cards')
-            .delete()
-            .eq('id', id)
-            .eq('user_id', user.$id); // Ensure we only delete user's own cards
-          
-          if (deleteError) {
-            console.error(`Error deleting card ${id}:`, deleteError);
-            throw deleteError;
-          }
-        }
-      }
-
+      console.log('[DISABLED] handleMergeCard: Supabase removed');
       toast.success('Cards merged successfully');
       await fetchCards(); // Refresh the cards list
     } catch (err) {
@@ -274,17 +173,8 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
     }
 
     try {
-      const { error } = await supabase
-        .from('business_cards')
-        .delete()
-        .eq('id', cardId)
-        .eq('user_id', user.$id);
-      
-      if (error) {
-        console.error('Error deleting card:', error);
-        throw error;
-      }
-      
+      // DISABLED: Supabase removed
+      console.log('[DISABLED] handleDeleteCard: Supabase removed');
       setCards(prev => prev.filter(card => card.id !== cardId));
       toast.success('Card deleted successfully');
     } catch (error) {

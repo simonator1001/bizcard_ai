@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { supabase } from '@/lib/supabase-client';
+// DISABLED: Supabase removed
 import { NewsTimeline } from './NewsTab';
 import { motion, AnimatePresence } from 'framer-motion';
 import LoaderOne from '@/components/ui/loader-one';
@@ -170,52 +170,16 @@ export function NewsView() {
   // Initialize session
   useEffect(() => {
     const initSession = async () => {
-      try {
-        console.log('[DEBUG] Initializing session...');
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('[DEBUG] Session error:', error);
-          toast({
-            title: 'Authentication Error',
-            description: 'Please sign in to view news.',
-            variant: 'destructive',
-          });
-          return;
-        }
-        if (!session) {
-          console.log('[DEBUG] No session found');
-          toast({
-            title: 'Authentication Required',
-            description: 'Please sign in to view news.',
-            variant: 'destructive',
-          });
-          return;
-        }
-        console.log('[DEBUG] Session initialized:', session.user.id);
-        setSession(session);
-      } catch (error) {
-        console.error('[DEBUG] Session initialization error:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to initialize session.',
-          variant: 'destructive',
-        });
-      } finally {
-        setSessionLoading(false);
-      }
+      // DISABLED: Supabase removed - session stub
+      console.log('[DISABLED] Session initialization: Supabase removed');
+      setSession({ access_token: 'disabled', user: { id: 'disabled' } });
+      setSessionLoading(false);
     };
 
     initSession();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('[DEBUG] Auth state changed:', _event);
-      setSession(session);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    // DISABLED: Supabase removed - no auth state listener
+    return () => {};
   }, [toast]);
 
   // Fetch news for a single company

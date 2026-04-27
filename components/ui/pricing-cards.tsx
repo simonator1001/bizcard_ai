@@ -12,7 +12,7 @@ import { Tab } from "@/components/ui/pricing-tab";
 import * as React from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useUser } from "@/hooks/useUser";
-import { supabase } from "@/lib/supabase-client";
+// DISABLED: Supabase removed
 
 const FREQUENCIES = ["monthly", "yearly"] as const;
 type Frequency = typeof FREQUENCIES[number];
@@ -42,8 +42,9 @@ export function Pricing() {
     try {
       setLoading(true);
 
+      // DISABLED: Supabase removed - get session stub
       // Get session for auth token
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = { access_token: 'disabled' };
       if (!session) {
         throw new Error("No active session found");
       }

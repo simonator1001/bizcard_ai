@@ -36,7 +36,7 @@ import { useBusinessCards } from '@/lib/hooks/useBusinessCards'
 import { useAuth } from '@/lib/auth-context'
 import { BusinessCard } from '@/types/business-card'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-client'
+// DISABLED: Supabase removed
 import { ManageCardsView } from '@/components/cards/ManageCardsView'
 import { SubscriptionService } from '@/lib/subscription'
 import { SettingsTab } from '@/components/shared/SettingsTab'
@@ -377,26 +377,10 @@ export default function HomePage() {
         const code = url.searchParams.get('code');
         
         if (code) {
-          console.log('[HomePage] Found OAuth code in URL, exchanging for session...');
-          
-          // Exchange the code for a session
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          
-          if (error) {
-            console.error('[HomePage] Error exchanging code for session:', error);
-            toast.error('Authentication failed. Please try again.');
-          } else if (data.session) {
-            console.log('[HomePage] Successfully exchanged code for session:', {
-              userId: data.session.user.id,
-              email: data.session.user.email,
-              expiresAt: data.session.expires_at
-            });
-            
-            toast.success('Successfully signed in!');
-            
-            // Clean up URL parameters
-            window.history.replaceState({}, document.title, '/');
-          }
+          console.log('[HomePage] Found OAuth code in URL, Supabase removed');
+          // DISABLED: Supabase removed - exchangeCodeForSession not available
+          // Clean up URL parameters
+          window.history.replaceState({}, document.title, '/');
         }
       } catch (err) {
         console.error('[HomePage] Error handling OAuth callback:', err);
@@ -496,9 +480,10 @@ export default function HomePage() {
                                   const base64 = await base64Promise;
 
                                   setUploadProgress('Authenticating...');
+                                  // DISABLED: Supabase removed - auth stub
                                   // Get fresh session token
-                                  const { data: { session: refreshedSession }, error: refreshError } = 
-                                    await supabase.auth.refreshSession();
+                                  const refreshedSession = { access_token: 'disabled', user: { id: 'disabled' }, expires_at: Date.now()/1000 + 3600 };
+                                  const refreshError = null;
                                   
                                   if (refreshError || !refreshedSession) {
                                     // console.error('[DEBUG] Auth error:', refreshError);
@@ -643,9 +628,10 @@ export default function HomePage() {
                                 const base64 = await base64Promise;
 
                                 setUploadProgress('Authenticating...');
+                                // DISABLED: Supabase removed - auth stub
                                 // Get fresh session token
-                                const { data: { session: refreshedSession }, error: refreshError } = 
-                                  await supabase.auth.refreshSession();
+                                const refreshedSession = { access_token: 'disabled', user: { id: 'disabled' }, expires_at: Date.now()/1000 + 3600 };
+                                const refreshError = null;
                                 
                                 if (refreshError || !refreshedSession) {
                                   // console.error('[DEBUG] Auth error:', refreshError);

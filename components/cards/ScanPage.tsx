@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Upload, X, Loader2, Camera } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { recognizeBusinessCard } from '@/lib/ocr-service'
-import { supabase, testConnection } from '@/lib/supabase-client'
+// DISABLED: Supabase removed
 import { toast } from 'sonner'
 import imageCompression from 'browser-image-compression';
 import { useSubscription } from '@/hooks/useSubscription'
@@ -86,63 +86,9 @@ const mapOCRToRecord = (
 
 // Add this function to save to database
 const saveToDatabase = async (record: BusinessCardRecord): Promise<string> => {
-  try {
-    // Create a clean record object with only the fields we want to save
-    const dbRecord = {
-      user_id: record.user_id,
-      name: record.name,
-      name_zh: record.name_zh,
-      company: record.company,
-      company_zh: record.company_zh,
-      title: record.title,
-      title_zh: record.title_zh,
-      email: record.email,
-      phone: record.phone,
-      address: record.address,
-      address_zh: record.address_zh,
-      image_url: record.image_url,
-      notes: record.notes
-    };
-
-    console.log('[Database] Saving record:', dbRecord);
-
-    // Try to insert with minimal fields first
-    const { data, error } = await supabase
-      .from('business_cards')
-      .insert({
-        user_id: record.user_id,
-        name: record.name,
-        company: record.company
-      })
-      .select('id')
-      .single();
-
-    if (error) {
-      console.error('[Database] Error details:', error);
-      throw error;
-    }
-
-    // If successful, update with remaining fields
-    if (data?.id) {
-      const { error: updateError } = await supabase
-        .from('business_cards')
-        .update(dbRecord)
-        .eq('id', data.id);
-
-      if (updateError) {
-        console.error('[Database] Error updating full record:', updateError);
-        throw updateError;
-      }
-
-      console.log('[Database] Successfully saved record:', data);
-      return data.id;
-    }
-
-    throw new Error('Failed to get ID from insert');
-  } catch (error) {
-    console.error('[Database] Error saving to database:', error);
-    throw error;
-  }
+  // DISABLED: Supabase removed
+  console.log('[DISABLED] saveToDatabase: Supabase removed');
+  throw new Error('Database not available');
 };
 
 // Add this new PremiumButton component at the top of the file
@@ -459,37 +405,13 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     try {
       console.log('[Scan] Starting image processing...');
 
-      // Get the authentication token with refresh - ENHANCED SESSION MANAGEMENT
-      console.log('[Scan] Getting session data from supabase...');
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      // DISABLED: Supabase removed - session stub
+      // Get the authentication token - stub
+      console.log('[Scan] Session stub: Supabase removed');
       
-      if (sessionError) {
-        console.error('[Scan] Session error:', sessionError);
-        // Try refreshing the session
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError || !refreshData.session) {
-          console.error('[Scan] Session refresh failed:', refreshError);
-          throw new Error('Your session has expired. Please sign in again.');
-        }
-        
-        console.log('[Scan] Session refreshed successfully');
-      }
+      const session = { access_token: 'disabled', user: { id: 'disabled', email: 'disabled@example.com' }, expires_at: Date.now() + 3600 };
       
-      if (!sessionData?.session) {
-        console.error('[Scan] No session found, attempting to refresh');
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError || !refreshData.session) {
-          console.error('[Scan] Session refresh failed:', refreshError);
-          throw new Error('Authentication failed. Please sign in again.');
-        }
-        
-        console.log('[Scan] Session refreshed successfully');
-      }
-      
-      // Make sure we have a valid token
-      const session = sessionData?.session || (await supabase.auth.getSession()).data.session;
-      
-      if (!session) {
+      if (!session.access_token) {
         console.error('[Scan] Still no session after refresh attempts');
         throw new Error('Unable to authenticate. Please sign in again.');
       }
@@ -525,7 +447,7 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
       console.log(`[Scan] API response received: status=${response.status}`);
       
       // After any API call, verify the session is still intact
-      const sessionCheckPromise = supabase.auth.getSession();
+      // DISABLED: Supabase removed - session check stub
       
       if (!response.ok) {
         let errorMessage = 'Failed to scan business card';
@@ -543,70 +465,8 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
               errorMessage.includes('session')) {
             console.error('[Scan] Authentication error:', { status: response.status, message: errorMessage });
             
-            // Try refreshing the session before failing
-            console.log('[Scan] Attempting session refresh...');
-            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-            
-            if (refreshError || !refreshData.session) {
-              console.error('[Scan] Session refresh failed:', refreshError);
-              throw new Error('Your session has expired. Please sign in again.');
-            }
-            
-            // Retry with new token after refresh
-            console.log('[Scan] Retrying with refreshed token, new expiry:', 
-              refreshData.session.expires_at ? new Date(refreshData.session.expires_at * 1000).toISOString() : 'unknown');
-            
-            const retryResponse = await fetch('/api/scan', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${refreshData.session.access_token}`
-              },
-              body: JSON.stringify({ image: base64Image }),
-              credentials: 'include'
-            });
-            
-            if (!retryResponse.ok) {
-              const retryErrorData = await retryResponse.json();
-              throw new Error(retryErrorData.message || 'Session expired. Please sign in again.');
-            }
-            
-            const retryResult = await retryResponse.json();
-            console.log('[Scan] Card scanned successfully after token refresh:', retryResult);
-            
-            // Update UI state
-            setProcessingStatus('success');
-            setProcessingStage(`Card scanned successfully! ID: ${retryResult.id}`);
-            
-            // Add the card to the list
-            if (retryResult && onAddCard) {
-              onAddCard({
-                id: retryResult.id,
-                name: retryResult.name || '',
-                name_zh: retryResult.name_zh || '',
-                company: retryResult.company || '',
-                company_zh: retryResult.company_zh || '',
-                title: retryResult.title || '',
-                title_zh: retryResult.title_zh || '',
-                email: retryResult.email || '',
-                phone: retryResult.phone || '',
-                address: retryResult.address || '',
-                address_zh: retryResult.address_zh || '',
-                imageUrl: retryResult.image_url || '',
-                notes: retryResult.notes || '',
-                created_at: retryResult.created_at || new Date().toISOString(),
-                updated_at: retryResult.updated_at || new Date().toISOString()
-              });
-            }
-            
-            // Refresh usage stats
-            refreshUsage?.();
-            
-            // Clear form
-            setFile(null);
-            setPreview(null);
-            
-            return retryResult;
+            // Supabase removed — skip retry, just fail
+            throw new Error('Session expired. Please sign in again.');
           }
         } catch (parseError) {
           if (parseError instanceof Error && parseError.message.includes('Session expired')) {
@@ -647,23 +507,8 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
         });
       }
       
-      // After successful scan, always make sure session is still valid
-      setTimeout(async () => {
-        console.log('[Scan] Verifying session is still active after scan...');
-        const { data: verifyData, error: verifyError } = await supabase.auth.getSession();
-        
-        if (verifyError || !verifyData.session) {
-          console.error('[Scan] Session lost after scan:', verifyError);
-          const { data: refreshResult, error: refreshErr } = await supabase.auth.refreshSession();
-          if (!refreshErr && refreshResult.session) {
-            console.log('[Scan] Successfully restored session after scan');
-          } else {
-            console.error('[Scan] Failed to restore session after scan:', refreshErr);
-          }
-        } else {
-          console.log('[Scan] Session verified after scan');
-        }
-      }, 1000);
+      // DISABLED: Supabase removed - after scan session verification stub
+      // After successful scan, session check removed
       
       // Clear form
       setFile(null);
@@ -693,144 +538,22 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     }
   };
 
-  // Keep the user session active with enhanced session management
+  // DISABLED: Supabase removed - session management stub
   useEffect(() => {
     const refreshSession = async () => {
-      try {
-        if (user) {
-          // Refresh the session to keep it active
-          console.log('[Session] Attempting to refresh session...');
-          const { data, error } = await supabase.auth.refreshSession();
-          
-          if (error) {
-            console.error('[Session] Refresh error:', error);
-            
-            // Check browser storage for session information
-            const projectId = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('.supabase.co') 
-              ? process.env.NEXT_PUBLIC_SUPABASE_URL.split('.')[0]
-              : 'rzmqepriffysavamtxzg';
-            
-            // Attempt recovery from localStorage
-            const storedSession = localStorage.getItem(`sb-${projectId}-auth-token-raw`);
-            const hasAuthSuccess = document.cookie.includes('auth-success=true');
-            const hasUserSession = document.cookie.includes('x-user-session');
-            
-            console.log('[Session] Recovery check:', {
-              hasStoredToken: !!storedSession,
-              hasAuthSuccess,
-              hasUserSession
-            });
-            
-            if (storedSession || hasAuthSuccess || hasUserSession) {
-              // Attempt to recover using stored session information
-              console.log('[Session] Found stored session information, attempting recovery');
-              
-              try {
-                // Try to recover by forcing a session refresh
-                const { data: recoveryData, error: recoveryError } = await supabase.auth.getSession();
-                
-                if (recoveryError || !recoveryData?.session) {
-                  // If still no session, try manual refresh
-                  const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-                  
-                  if (refreshError || !refreshData?.session) {
-                    console.error('[Session] Recovery failed, redirecting to login');
-                    router.push('/signin');
-                  } else {
-                    console.log('[Session] Successfully recovered session via refresh');
-                  }
-                } else {
-                  console.log('[Session] Session recovered successfully');
-                }
-              } catch (recoveryError) {
-                console.error('[Session] Error during session recovery:', recoveryError);
-                router.push('/signin');
-              }
-            } else {
-              // Try getting the session to see if it's still valid
-              const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-              if (sessionError || !sessionData.session) {
-                console.error('[Session] Session invalid, redirecting to login');
-                router.push('/signin');
-              } else {
-                console.log('[Session] Session still valid despite refresh error');
-              }
-            }
-          } else {
-            console.log('[Session] Session refreshed successfully:', {
-              userId: data.session?.user?.id,
-              expires: data.session?.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : 'unknown'
-            });
-            
-            // If we have cookies enabled, also set a marker cookie to help middleware
-            if (data.session?.user) {
-              try {
-                document.cookie = `x-user-session=${data.session.user.id}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-                document.cookie = `auth-success=true; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-              } catch (e) {
-                console.error('[Session] Error setting cookies:', e);
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.error('[Session] Error refreshing session:', err);
-      }
+      // DISABLED: Supabase removed
+      console.log('[DISABLED] Session refresh: Supabase removed');
     };
 
-    // Refresh session when component mounts
     refreshSession();
 
-    // Set up interval to refresh session more frequently (every 2 minutes)
-    const interval = setInterval(refreshSession, 2 * 60 * 1000);
-    
-    // Also refresh after a period of inactivity
-    let activityTimeout: NodeJS.Timeout;
-    
-    const handleUserActivity = () => {
-      clearTimeout(activityTimeout);
-      activityTimeout = setTimeout(refreshSession, 30000); // Refresh after 30s of inactivity
-    };
-    
-    // Listen for user activity
-    window.addEventListener('mousemove', handleUserActivity);
-    window.addEventListener('keydown', handleUserActivity);
-    window.addEventListener('click', handleUserActivity);
-    
-    // Add specific listeners for page visibility changes
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('[Session] Page became visible, refreshing session');
-        refreshSession();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      clearInterval(interval);
-      clearTimeout(activityTimeout);
-      window.removeEventListener('mousemove', handleUserActivity);
-      window.removeEventListener('keydown', handleUserActivity);
-      window.removeEventListener('click', handleUserActivity);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [user, supabase.auth, router]);
+    // DISABLED: Supabase removed - no interval
+    return () => {};
+  }, [user, router]);
 
   const checkSession = async () => {
-    console.log('[Debug] Checking current session status...');
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
-      console.error('[Debug] Error checking session:', error);
-    } else {
-      console.log('[Debug] Current session:', {
-        hasSession: !!data.session,
-        userId: data.session?.user?.id,
-        email: data.session?.user?.email,
-        expires: data.session?.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : 'unknown',
-        tokenLength: data.session?.access_token?.length || 0
-      });
-    }
+    // DISABLED: Supabase removed
+    console.log('[DISABLED] checkSession: Supabase removed');
   };
 
   // Check the session status at mount and after navigation

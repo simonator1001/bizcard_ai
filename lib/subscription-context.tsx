@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useAuth } from './auth-context'
 import { SubscriptionService } from './subscription'
-import { supabase } from './supabase-client'
+// DISABLED: Supabase removed
 import { SUBSCRIPTION_PLANS } from '@/lib/plans'
 
 interface SubscriptionState {
