@@ -55,8 +55,8 @@ export function SettingsTab() {
   // Debug log usage data
   console.debug('[SettingsTab] Usage data:', usageData);
 
-  // Get name and email from user_metadata or fallback
-  const name = currentUser?.user_metadata?.name || currentUser?.user_metadata?.full_name || currentUser?.email || "";
+  // Get name and email from AppWrite user or fallback
+  const name = currentUser?.name || currentUser?.email?.split('@')[0] || "";
   const email = currentUser?.email || "";
   const initials = name
     ? name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -96,11 +96,11 @@ export function SettingsTab() {
     });
   };
 
-  const userId = currentUser?.id || '';
-  const createdAt = currentUser?.created_at ? new Date(currentUser.created_at) : null;
-  const lastSignIn = currentUser?.last_sign_in_at ? new Date(currentUser.last_sign_in_at) : null;
+  const userId = currentUser?.$id || '';
+  const createdAt = currentUser?.$createdAt ? new Date(currentUser.$createdAt) : null;
+  const lastSignIn: Date | null = null; // AppWrite doesn't expose last_sign_in directly
   const phone = currentUser?.phone || '';
-  const providers = currentUser?.app_metadata?.provider ? [currentUser.app_metadata.provider] : (currentUser?.app_metadata?.providers || []);
+  const providers = ['google']; // AppWrite OAuth provider
 
   // Profile completeness calculation
   const profileFields = [name, email, userId, createdAt, lastSignIn];
@@ -209,7 +209,7 @@ export function SettingsTab() {
             className="flex flex-col items-center gap-2 mb-8"
           >
             <Avatar className="h-20 w-20 shadow-lg border-4 border-white/30 bg-gradient-to-br from-blue-200 via-purple-200 to-pink-200 dark:from-neutral-800 dark:via-neutral-900 dark:to-neutral-800">
-              <AvatarImage src={currentUser?.user_metadata?.avatar_url || undefined} alt={name} />
+              <AvatarImage src={currentUser?.prefs?.avatar_url || undefined} alt={name} />
               <AvatarFallback className="text-3xl font-bold bg-primary/10 text-primary">
                 {initials}
               </AvatarFallback>
@@ -270,7 +270,7 @@ export function SettingsTab() {
                 {lastSignIn && (
                   <div className="flex items-center gap-2 text-sm">
                     <LogIn className="h-4 w-4 text-purple-400" />
-                    <span>Last login {lastSignIn.toLocaleString()}</span>
+                    <span>Welcome!</span>
                   </div>
                 )}
                 {providers.length > 0 && (

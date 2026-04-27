@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Facebook, Chrome as Google, MessageCircle } from 'lucide-react'
-import { supabase } from '@/lib/supabase-client'
-import type { User, AuthError } from '@supabase/supabase-js'
+import { account, ID } from '@/lib/appwrite'
+import { OAuthProvider } from 'appwrite'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -19,8 +19,23 @@ const Icons = {
   wechat: MessageCircle,
 }
 
+export interface AppWriteUser {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  name: string;
+  email: string;
+  phone: string;
+  emailVerification: boolean;
+  phoneVerification: boolean;
+  status: boolean;
+  passwordUpdate: string;
+  registration: string;
+  prefs: Record<string, any>;
+}
+
 interface AuthContextType {
-  user: User | null
+  user: AppWriteUser | null
   loading: boolean
   initialized: boolean
   signIn: (email: string, password: string) => Promise<void>
@@ -40,7 +55,7 @@ const AuthContext = createContext<AuthContextType>({
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<AppWriteUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [initialized, setInitialized] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -59,28 +74,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     async function initializeAuth() {
       try {
-        // Get initial session
-        const { data: { session }, error } = await supabase.auth.getSession()
+        // Get current user from AppWrite
+        const currentUser = await account.get()
         
-        if (error) {
-          console.error('[AuthContext] Error getting initial session:', error)
-          if (!ignore) {
-            setLoading(false)
-            setInitialized(true)
-          }
-          return
-        }
-
-        if (session) {
+        if (currentUser) {
           console.debug('[AuthContext] Initial session:', {
-            id: session.user.id,
-            email: session.user.email,
-            role: session.user.role,
-            expiresAt: new Date(session.expires_at! * 1000).toISOString()
+            id: currentUser.$id,
+            email: currentUser.email,
           })
           
           if (!ignore) {
-            setUser(session.user)
+            setUser(currentUser as AppWriteUser)
           }
         } else {
           console.debug('[AuthContext] No initial session')
@@ -93,9 +97,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false)
           setInitialized(true)
         }
-      } catch (err) {
-        console.error('[AuthContext] Error initializing auth:', err)
+      } catch (err: any) {
+        // If no session, account.get() throws — that's normal
+        if (err?.type === 'general_unauthorized_scope' || err?.code === 401) {
+          console.debug('[AuthContext] No authenticated session')
+        } else {
+          console.error('[AuthContext] Error initializing auth:', err)
+        }
         if (!ignore) {
+          setUser(null)
           setLoading(false)
           setInitialized(true)
         }
@@ -104,41 +114,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeAuth()
 
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.debug('[AuthContext] Auth state changed:', event, session ? {
-        id: session.user.id,
-        email: session.user.email,
-        role: session.user.role,
-        expiresAt: new Date(session.expires_at! * 1000).toISOString()
-      } : 'No session')
-
-      if (ignore) return
-
-      if (session) {
-        setUser(session.user)
-        // Only redirect on sign in events
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          const returnUrl = window.localStorage.getItem('returnUrl') || '/'
-          window.localStorage.removeItem('returnUrl')
-          router.push(returnUrl)
-        }
-      } else {
-        setUser(null)
-        // Only redirect on sign out events
-        if (event === 'SIGNED_OUT') {
-          // Store the current URL before redirecting
-          if (window.location.pathname !== '/signin') {
-            window.localStorage.setItem('returnUrl', window.location.pathname)
+    // AppWrite doesn't have real-time auth state listener like Supabase.
+    // We poll periodically to detect changes from other tabs/windows.
+    const pollInterval = setInterval(async () => {
+      try {
+        const currentUser = await account.get()
+        if (!ignore) {
+          if (currentUser) {
+            setUser(currentUser as AppWriteUser)
+          } else {
+            setUser(null)
           }
-          router.push('/signin')
+        }
+      } catch {
+        if (!ignore) {
+          setUser(null)
         }
       }
-    })
+    }, 5000)
 
     return () => {
       ignore = true
-      subscription.unsubscribe()
+      clearInterval(pollInterval)
     }
   }, [mounted, router])
 
@@ -163,11 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn: async (email, password) => {
           try {
             console.debug('[AuthContext] Signing in with email:', email)
-            const { error } = await supabase.auth.signInWithPassword({
-              email,
-              password,
-            })
-            if (error) throw error
+            await account.createEmailPasswordSession(email, password)
           } catch (error) {
             console.error('[AuthContext] Sign in error:', error)
             throw error
@@ -176,15 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signUp: async (email, password, name) => {
           try {
             console.debug('[AuthContext] Signing up with email:', email)
-            const { error } = await supabase.auth.signUp({
-              email,
-              password,
-              options: {
-                data: { name },
-                emailRedirectTo: `${window.location.origin}/auth/callback`
-              },
-            })
-            if (error) throw error
+            await account.create(ID.unique(), email, password, name)
           } catch (error) {
             console.error('[AuthContext] Sign up error:', error)
             throw error
@@ -193,8 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut: async () => {
           try {
             console.debug('[AuthContext] Signing out')
-            const { error } = await supabase.auth.signOut()
-            if (error) throw error
+            await account.deleteSession('current')
           } catch (error) {
             console.error('[AuthContext] Sign out error:', error)
             throw error
@@ -208,56 +192,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown'
             })
 
-            // Clear any existing cookies before starting the flow
-            if (typeof window !== 'undefined') {
-              document.cookie.split(';').forEach(cookie => {
-                const [name] = cookie.trim().split('=');
-                if (name && (name.includes('supabase') || name.includes('sb-'))) {
-                  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
-                }
-              });
-              
-              // Also clear localStorage
-              for (const key of Object.keys(localStorage)) {
-                if (key.includes('supabase') || key.includes('sb-')) {
-                  localStorage.removeItem(key);
-                }
-              }
-            }
-
             // Use the direct, fully-qualified callback URL for consistency
             const redirectTo = `${window.location.origin}/auth/callback`;
             
             console.debug('[AuthContext] Starting OAuth flow with redirectTo:', redirectTo);
 
-            // Use the simple OAuth flow with PKCE
-            const { data, error } = await supabase.auth.signInWithOAuth({
-              provider,
-              options: {
-                skipBrowserRedirect: false,
-                redirectTo,
-                queryParams: {
-                  // Force account selection to avoid cached sessions
-                  prompt: 'select_account'
-                }
-              }
-            })
+            // AppWrite OAuth — createOAuth2Session handles the full redirect flow
+            account.createOAuth2Session(
+              OAuthProvider.Google,
+              redirectTo,  // success URL
+              redirectTo,  // failure URL (same page handles errors)
+              ['profile', 'email']
+            )
             
-            if (error) {
-              console.error('[AuthContext] Provider sign in error:', {
-                error,
-                provider
-              })
-              throw error
-            }
-            
-            console.debug('[AuthContext] OAuth flow initiated successfully:', {
-              url: data?.url,
-              provider: data?.provider,
-              hasCodeVerifier: typeof localStorage !== 'undefined' && !!localStorage.getItem('supabase-auth-code-verifier')
-            });
-            
-            return data
+            // AppWrite's createOAuth2Session handles the redirect internally
+            // so we don't get a data object back like Supabase
+            return undefined
           } catch (error) {
             console.error('[AuthContext] Provider sign in error:', error)
             throw error
@@ -437,4 +387,4 @@ export function AuthScreen({ mode }: { mode: 'signin' | 'signup' }) {
       </Card>
     </div>
   )
-} 
+}

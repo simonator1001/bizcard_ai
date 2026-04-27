@@ -60,7 +60,7 @@ export function ChatInterface() {
   // Clear messages when user changes
   useEffect(() => {
     setMessages([]);
-  }, [user?.id]);
+  }, [user?.$id]);
 
   return (
     <div className="flex flex-col h-full">

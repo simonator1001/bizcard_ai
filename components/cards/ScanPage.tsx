@@ -400,7 +400,7 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
         return;
       }
 
-      const canScan = await SubscriptionService.canPerformAction(user.id, 'scan');
+      const canScan = await SubscriptionService.canPerformAction(user.$id, 'scan');
       if (!canScan) {
         console.log('[UPLOAD-DEBUG] User cannot scan - subscription limit');
         setShowUpgradePrompt(true);

@@ -23,7 +23,7 @@ export function useSubscription() {
         }
 
         // If no user, set default subscription
-        if (!user?.id) {
+        if (!user?.$id) {
           console.debug('[useSubscription] No user ID, setting default subscription');
           const defaultSubscription = SubscriptionService.getDefaultSubscription('anonymous');
           const defaultUsage = SubscriptionService.getDefaultUsage(SUBSCRIPTION_PLANS.free);
@@ -37,14 +37,14 @@ export function useSubscription() {
           return;
         }
 
-        console.debug('[useSubscription] Fetching subscription data for user:', user.id);
+        console.debug('[useSubscription] Fetching subscription data for user:', user.$id);
         setLoading(true);
         setError(null);
 
         // Fetch both subscription and usage data in parallel
         const [newSubscription, newUsage] = await Promise.all([
-          SubscriptionService.getCurrentSubscription(user.id),
-          SubscriptionService.getCurrentUsage(user.id)
+          SubscriptionService.getCurrentSubscription(user.$id),
+          SubscriptionService.getCurrentUsage(user.$id)
         ]);
 
         if (isMounted) {
@@ -63,7 +63,7 @@ export function useSubscription() {
         if (isMounted) {
           setError(err instanceof Error ? err : new Error('Failed to fetch subscription data'));
           // Set default values on error
-          const defaultSubscription = SubscriptionService.getDefaultSubscription(user?.id || 'anonymous');
+          const defaultSubscription = SubscriptionService.getDefaultSubscription(user?.$id || 'anonymous');
           const defaultUsage = SubscriptionService.getDefaultUsage(SUBSCRIPTION_PLANS.free);
           setSubscription(defaultSubscription);
           setUsage(defaultUsage);
@@ -78,17 +78,17 @@ export function useSubscription() {
     return () => {
       isMounted = false;
     };
-  }, [user?.id, userLoading]);
+  }, [user?.$id, userLoading]);
 
   // Helper function to check if user can perform an action
   const canPerformAction = async (action: 'scan' | 'track_company'): Promise<boolean> => {
-    if (!user?.id) {
+    if (!user?.$id) {
       console.debug('[useSubscription] No user ID, cannot perform action');
       return false;
     }
 
     try {
-      return await SubscriptionService.canPerformAction(user.id, action);
+      return await SubscriptionService.canPerformAction(user.$id, action);
     } catch (err) {
       console.error('[useSubscription] Error checking action permission:', err);
       return false;
@@ -97,15 +97,15 @@ export function useSubscription() {
 
   // Helper function to increment usage
   const incrementUsage = async (action: 'scan' | 'track_company'): Promise<void> => {
-    if (!user?.id) {
+    if (!user?.$id) {
       console.debug('[useSubscription] No user ID, cannot increment usage');
       return;
     }
 
     try {
-      await SubscriptionService.incrementUsage(user.id, action);
+      await SubscriptionService.incrementUsage(user.$id, action);
       // Refresh usage data after incrementing
-      const newUsage = await SubscriptionService.getCurrentUsage(user.id);
+      const newUsage = await SubscriptionService.getCurrentUsage(user.$id);
       setUsage(newUsage);
     } catch (err) {
       console.error('[useSubscription] Error incrementing usage:', err);
@@ -115,13 +115,13 @@ export function useSubscription() {
 
   // Add refreshUsage function
   const refreshUsage = async () => {
-    if (!user?.id) {
+    if (!user?.$id) {
       console.debug('[useSubscription] No user ID, cannot refresh usage');
       return;
     }
 
     try {
-      const newUsage = await SubscriptionService.getCurrentUsage(user.id);
+      const newUsage = await SubscriptionService.getCurrentUsage(user.$id);
       setUsage(newUsage);
     } catch (err) {
       console.error('[useSubscription] Error refreshing usage:', err);
@@ -204,7 +204,7 @@ export function useSubscription() {
     isFree: subscriptionData.isFree,
     remainingScans: usage?.remainingScans,
     companiesTracked: usage?.companiesTracked,
-    userId: user?.id,
+    userId: user?.$id,
     userLoading,
     loading: subscriptionData.loading,
     initialized

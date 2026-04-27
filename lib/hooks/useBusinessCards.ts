@@ -2,9 +2,33 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { supabase } from '@/lib/supabase-client';
+import { databases, ID, DATABASE_ID, CARDS_COLLECTION } from '@/lib/appwrite';
+import { Query } from 'appwrite';
 import { BusinessCard } from '@/types/business-card';
 import { toast } from 'sonner';
+
+function mapDocument(doc: any): BusinessCard {
+  return {
+    id: doc.$id,
+    created_at: doc.$createdAt,
+    lastModified: doc.lastModified,
+    user_id: doc.user_id,
+    name: doc.name,
+    name_zh: doc.name_zh,
+    company: doc.company,
+    company_zh: doc.company_zh,
+    title: doc.title,
+    title_zh: doc.title_zh,
+    email: doc.email,
+    phone: doc.phone,
+    address: doc.address,
+    address_zh: doc.address_zh,
+    image_url: doc.image_url,
+    images: doc.images,
+    notes: doc.notes,
+    mergedFrom: doc.mergedFrom,
+  };
+}
 
 export function useBusinessCards() {
   const [cards, setCards] = useState<BusinessCard[]>([]);
@@ -23,40 +47,24 @@ export function useBusinessCards() {
       setLoading(true);
       setError(null);
 
-      // First, try to get the total count of cards
-      const { count, error: countError } = await supabase
-        .from('business_cards')
-        .select('*', { count: 'exact' })
-        .eq('user_id', user.id);
+      // Fetch cards from AppWrite
+      const response = await databases.listDocuments(
+        DATABASE_ID,
+        CARDS_COLLECTION,
+        [
+          Query.equal('user_id', user.$id),
+          Query.orderDesc('$createdAt'),
+          Query.isNotNull('company'),
+          Query.notEqual('company', ''),
+        ]
+      );
 
-      if (countError) {
-        console.error('Error getting card count:', countError);
-        throw countError;
-      }
-      if (typeof count !== 'number') {
-        console.error('Count is undefined when fetching business cards');
-      }
+      console.log('Total cards in database for user:', response.total);
 
-      console.log('Total cards in database for user:', count);
+      // Map AppWrite documents to BusinessCard type
+      const mappedCards = response.documents.map(mapDocument);
 
-      // Then fetch the actual cards
-      const { data, error: fetchError } = await supabase
-        .from('business_cards')
-        .select('*')
-        .eq('user_id', user.id)
-        .not('company', 'is', null)
-        .not('company', 'eq', '')
-        .order('created_at', { ascending: false });
-
-      if (fetchError) {
-        console.error('Error fetching cards:', fetchError);
-        throw fetchError;
-      }
-
-      // Log the raw response
-      console.log('Raw Supabase response:', data);
-
-      setCards(data || []);
+      setCards(mappedCards);
     } catch (err) {
       setError(err as Error);
       console.error('Error fetching cards:', err);
@@ -76,28 +84,20 @@ export function useBusinessCards() {
     }
 
     try {
-      if ('id' in card) {
-        setCards(prevCards => [(card as BusinessCard), ...prevCards]);
-        return card;
-      }
-
-      const { data, error: insertError } = await supabase
-        .from('business_cards')
-        .insert([{
+      const newDoc = await databases.createDocument(
+        DATABASE_ID,
+        CARDS_COLLECTION,
+        ID.unique(),
+        {
           ...card,
-          user_id: user.id,
+          user_id: user.$id,
           lastModified: new Date().toISOString()
-        }])
-        .select()
-        .single();
+        }
+      );
 
-      if (insertError) {
-        console.error('Error adding card:', insertError);
-        throw insertError;
-      }
-
-      setCards(prevCards => [data, ...prevCards]);
-      return data;
+      const mappedDoc = mapDocument(newDoc);
+      setCards(prevCards => [mappedDoc, ...prevCards]);
+      return mappedDoc;
     } catch (err) {
       console.error('Error adding card:', err);
       toast.error('Failed to add business card');
@@ -111,26 +111,21 @@ export function useBusinessCards() {
     }
 
     try {
-      const { data, error: updateError } = await supabase
-        .from('business_cards')
-        .update({
+      const updated = await databases.updateDocument(
+        DATABASE_ID,
+        CARDS_COLLECTION,
+        id,
+        {
           ...updates,
           lastModified: new Date().toISOString(),
-        })
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .select()
-        .single();
-
-      if (updateError) {
-        console.error('Error updating card:', updateError);
-        throw updateError;
-      }
-
-      setCards(prevCards =>
-        prevCards.map(card => (card.id === id ? { ...card, ...data } : card))
+        }
       );
-      return data;
+
+      const mappedDoc = mapDocument(updated);
+      setCards(prevCards =>
+        prevCards.map(card => (card.id === id ? { ...card, ...mappedDoc } : card))
+      );
+      return mappedDoc;
     } catch (err) {
       console.error('Error updating card:', err);
       toast.error('Failed to update business card');
@@ -144,16 +139,11 @@ export function useBusinessCards() {
     }
 
     try {
-      const { error: deleteError } = await supabase
-        .from('business_cards')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
-
-      if (deleteError) {
-        console.error('Error deleting card:', deleteError);
-        throw deleteError;
-      }
+      await databases.deleteDocument(
+        DATABASE_ID,
+        CARDS_COLLECTION,
+        id
+      );
 
       setCards(prevCards => prevCards.filter(card => card.id !== id));
     } catch (err) {
@@ -172,4 +162,4 @@ export function useBusinessCards() {
     deleteCard,
     refresh: fetchCards,
   };
-} 
+}

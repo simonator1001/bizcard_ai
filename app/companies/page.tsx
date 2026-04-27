@@ -9,7 +9,7 @@ import React from 'react';
 export default function CompaniesPage() {
     const { user, loading, initialized } = useAuth();
     console.log('[CompaniesPage] Rendering with auth state:', {
-        user: user ? { id: user.id, email: user.email } : null,
+        user: user ? { id: user.$id, email: user.email } : null,
         loading,
         initialized
     });

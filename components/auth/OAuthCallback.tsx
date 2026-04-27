@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase-client'
+import { account } from '@/lib/appwrite'
 import { useRouter } from 'next/navigation'
 
 export function OAuthCallback() {
@@ -14,7 +14,6 @@ export function OAuthCallback() {
     const url = new URL(window.location.href)
     const errorParam = url.searchParams.get('error')
     const errorDescription = url.searchParams.get('error_description')
-    const code = url.searchParams.get('code')
     
     if (errorParam) {
       console.error('OAuth error:', { error: errorParam, description: errorDescription })
@@ -25,68 +24,46 @@ export function OAuthCallback() {
     
     const processAuth = async () => {
       try {
-        console.log('[OAuthCallback] Processing auth callback with code:', !!code)
+        console.log('[OAuthCallback] Processing auth callback')
         
-        if (code) {
-          // Try to exchange the code for a session
-          const { data: authData, error: authError } = await supabase.auth.exchangeCodeForSession(code)
+        // AppWrite's createOAuth2Session handles the code exchange automatically
+        // during the redirect. We just need to verify the session was created.
+        const currentUser = await account.get()
+        
+        if (currentUser) {
+          console.log('[OAuthCallback] Successfully authenticated:', {
+            userId: currentUser.$id,
+            email: currentUser.email,
+          })
           
-          if (authError) {
-            console.error('[OAuthCallback] Error exchanging code for session:', authError)
-            setError(authError.message)
-            setStatus('error')
-            return
-          }
-          
-          if (authData.session) {
-            console.log('[OAuthCallback] Successfully exchanged code for session:', {
-              userId: authData.session.user.id,
-              email: authData.session.user.email,
-              expiresAt: authData.session.expires_at
-            })
-            
-            setStatus('success')
-            
-            // Redirect to home page
-            setTimeout(() => {
-              router.push('/')
-            }, 500)
-            return
-          }
-        }
-        
-        // If no code or session established, check if we already have a session
-        const { data, error } = await supabase.auth.getSession()
-        
-        if (error) {
-          console.error('[OAuthCallback] Error getting session:', error)
-          setError(error.message)
-          setStatus('error')
-          return
-        }
-        
-        if (data.session) {
-          console.log('[OAuthCallback] Session exists, authentication successful')
           setStatus('success')
           
           // Redirect to home page
           setTimeout(() => {
             router.push('/')
           }, 500)
-        } else {
-          // No session yet, but no error either - normal state
-          setStatus('loading')
-          console.log('[OAuthCallback] No session yet, normal state')
-          
-          // Clear any URL parameters
-          if (window.location.search) {
-            window.history.replaceState({}, document.title, window.location.pathname)
-          }
+          return
         }
-      } catch (err) {
+        
+        // No session yet, but no error either - normal state
+        setStatus('loading')
+        console.log('[OAuthCallback] No session yet, normal state')
+        
+        // Clear any URL parameters
+        if (window.location.search) {
+          window.history.replaceState({}, document.title, window.location.pathname)
+        }
+      } catch (err: any) {
         console.error('[OAuthCallback] Error checking session:', err)
-        setError(err instanceof Error ? err.message : 'Unknown error')
-        setStatus('error')
+        
+        // If 401, session wasn't established
+        if (err?.code === 401 || err?.type === 'general_unauthorized_scope') {
+          setError('Authentication failed. Please try signing in again.')
+          setStatus('error')
+        } else {
+          setError(err instanceof Error ? err.message : 'Unknown error')
+          setStatus('error')
+        }
       }
     }
     
@@ -138,4 +115,4 @@ export function OAuthCallback() {
   }
   
   return null
-} 
+}

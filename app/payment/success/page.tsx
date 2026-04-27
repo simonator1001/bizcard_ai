@@ -33,7 +33,7 @@ export default function PaymentSuccessPage() {
     success, 
     error, 
     attempts,
-    user: user ? { id: user.id, email: user.email } : 'No user',
+    user: user ? { id: user.$id, email: user.email } : 'No user',
     loading,
     sessionId: searchParams?.get('session_id')
   });
@@ -169,7 +169,7 @@ export default function PaymentSuccessPage() {
         }
 
         // First, check if the subscription is already upgraded
-        const isSubscribed = await verifySubscriptionStatus(user!.id);
+        const isSubscribed = await verifySubscriptionStatus(user!.$id);
         if (isSubscribed) {
           console.log('[Payment Success] User already has an active pro subscription');
           setSuccess(true);
@@ -229,7 +229,7 @@ export default function PaymentSuccessPage() {
           // Even if our API call fails, give the webhook some more time to process
           // Set a small delay and check again
           setTimeout(async () => {
-            const isNowSubscribed = await verifySubscriptionStatus(user!.id);
+            const isNowSubscribed = await verifySubscriptionStatus(user!.$id);
             if (isNowSubscribed) {
               console.log('[Payment Success] Subscription activated after delay');
               setSuccess(true);

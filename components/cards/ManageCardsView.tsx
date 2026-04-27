@@ -83,9 +83,8 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
 
     try {
       console.log('Fetching cards for user:', {
-        id: user.id,
-        email: user.email,
-        role: user.role
+        id: user.$id,
+        email: user.email
       });
       setLoading(true);
       
@@ -102,7 +101,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
       const { count, error: countError } = await supabase
         .from('business_cards')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
+        .eq('user_id', user.$id);
 
       if (countError) {
         console.error('Error getting card count:', countError);
@@ -111,7 +110,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
         return;
       }
 
-      console.log('Total cards in database:', count, 'for user:', user.id);
+      console.log('Total cards in database:', count, 'for user:', user.$id);
 
       // Then fetch the actual cards
       const { data, error } = await supabase
@@ -134,7 +133,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
           updated_at,
           user_id
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', user.$id)
         .order(sortField, { ascending: sortDirection === 'asc' });
 
       if (error) {
@@ -211,7 +210,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
         address_zh: mergedCard.address_zh || '',
         notes: mergedCard.notes || '',
         image_url: mergedCard.image_url || '',
-        user_id: user.id,
+        user_id: user.$id,
         last_modified: new Date().toISOString(),
         merged_from: mergedCard.mergedFrom || [],
       };
@@ -251,7 +250,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
             .from('business_cards')
             .delete()
             .eq('id', id)
-            .eq('user_id', user.id); // Ensure we only delete user's own cards
+            .eq('user_id', user.$id); // Ensure we only delete user's own cards
           
           if (deleteError) {
             console.error(`Error deleting card ${id}:`, deleteError);
@@ -279,7 +278,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
         .from('business_cards')
         .delete()
         .eq('id', cardId)
-        .eq('user_id', user.id);
+        .eq('user_id', user.$id);
       
       if (error) {
         console.error('Error deleting card:', error);
