@@ -25,6 +25,8 @@ export function OAuthCallback() {
     const processAuth = async () => {
       try {
         console.log('[OAuthCallback] Processing auth callback')
+        console.log('[OAuthCallback] URL:', window.location.href)
+        console.log('[OAuthCallback] Search params:', Object.fromEntries(url.searchParams))
         
         // AppWrite's createOAuth2Session handles the code exchange automatically
         // during the redirect. We just need to verify the session was created.
@@ -55,15 +57,27 @@ export function OAuthCallback() {
         }
       } catch (err: any) {
         console.error('[OAuthCallback] Error checking session:', err)
+        console.error('[OAuthCallback] Error details:', {
+          code: err?.code,
+          type: err?.type,
+          message: err?.message,
+          response: err?.response,
+        })
         
-        // If 401, session wasn't established
-        if (err?.code === 401 || err?.type === 'general_unauthorized_scope') {
-          setError('Authentication failed. Please try signing in again.')
-          setStatus('error')
-        } else {
-          setError(err instanceof Error ? err.message : 'Unknown error')
-          setStatus('error')
-        }
+        // Build detailed error message for debugging
+        const errorParts: string[] = []
+        if (err?.code) errorParts.push(`Code: ${err.code}`)
+        if (err?.type) errorParts.push(`Type: ${err.type}`)
+        if (err?.message) errorParts.push(`Message: ${err.message}`)
+        if (errorParam) errorParts.push(`OAuth: ${errorParam}`)
+        if (errorDescription) errorParts.push(`Description: ${errorDescription}`)
+        
+        const detailError = errorParts.length > 0 
+          ? errorParts.join(' | ') 
+          : (err instanceof Error ? err.message : 'Unknown error')
+        
+        setError(detailError)
+        setStatus('error')
       }
     }
     
