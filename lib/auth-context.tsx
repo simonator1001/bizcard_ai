@@ -192,17 +192,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown'
             })
 
-            // Direct URL redirect — bypasses AppWrite SDK popup issues on mobile
-            const redirectTo = encodeURIComponent(`${window.location.origin}/auth/callback`)
-            const oauthUrl = `https://sgp.cloud.appwrite.io/v1/account/sessions/oauth2/google?success=${redirectTo}&failure=${redirectTo}&scopes[]=profile&scopes[]=email`
+            const redirectTo = `${window.location.origin}/auth/callback`;
             
-            console.debug('[AuthContext] Direct OAuth redirect to:', oauthUrl)
+            console.debug('[AuthContext] Starting OAuth flow with redirectTo:', redirectTo);
+
+            // Use AppWrite SDK but with explicit window.location as fallback for mobile
+            try {
+              account.createOAuth2Session(
+                OAuthProvider.Google,
+                redirectTo,
+                redirectTo,
+                ['profile', 'email']
+              )
+            } catch (sdkError) {
+              // Fallback: direct redirect for browsers where SDK fails
+              console.warn('[AuthContext] SDK redirect failed, using direct:', sdkError)
+              const encoded = encodeURIComponent(redirectTo)
+              window.location.href = `https://sgp.cloud.appwrite.io/v1/account/sessions/oauth2/google?success=${encoded}&failure=${encoded}&scopes[]=profile&scopes[]=email`
+            }
             
-            // Use direct location redirect for max compatibility (especially iOS Safari)
-            window.location.href = oauthUrl
-            
-            // Return a never-resolving promise since we're leaving the page
-            return new Promise(() => {})
+            return undefined
           } catch (error) {
             console.error('[AuthContext] Provider sign in error:', error)
             throw error
