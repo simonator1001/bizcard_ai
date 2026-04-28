@@ -24,6 +24,7 @@ const PUBLIC_ROUTES = [
   '/companies',
   '/companies/',
   '/intel',
+  '/voice',
 ]
 
 // API routes that always pass through (handle their own auth)
