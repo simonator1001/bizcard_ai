@@ -192,22 +192,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown'
             })
 
-            // Use the direct, fully-qualified callback URL for consistency
-            const redirectTo = `${window.location.origin}/auth/callback`;
+            // Direct URL redirect — bypasses AppWrite SDK popup issues on mobile
+            const redirectTo = encodeURIComponent(`${window.location.origin}/auth/callback`)
+            const oauthUrl = `https://sgp.cloud.appwrite.io/v1/account/sessions/oauth2/google?success=${redirectTo}&failure=${redirectTo}&scopes[]=profile&scopes[]=email`
             
-            console.debug('[AuthContext] Starting OAuth flow with redirectTo:', redirectTo);
-
-            // AppWrite OAuth — createOAuth2Session handles the full redirect flow
-            account.createOAuth2Session(
-              OAuthProvider.Google,
-              redirectTo,  // success URL
-              redirectTo,  // failure URL (same page handles errors)
-              ['profile', 'email']
-            )
+            console.debug('[AuthContext] Direct OAuth redirect to:', oauthUrl)
             
-            // AppWrite's createOAuth2Session handles the redirect internally
-            // so we don't get a data object back like Supabase
-            return undefined
+            // Use direct location redirect for max compatibility (especially iOS Safari)
+            window.location.href = oauthUrl
+            
+            // Return a never-resolving promise since we're leaving the page
+            return new Promise(() => {})
           } catch (error) {
             console.error('[AuthContext] Provider sign in error:', error)
             throw error
