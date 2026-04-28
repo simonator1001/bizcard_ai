@@ -1,3 +1,4 @@
+'use client'
 import React, { useState, useRef, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -392,8 +393,8 @@ export default function HomePage() {
 
   return (
     <div className="h-full bg-background">
-      {(window.location.hash.includes('access_token=') || 
-        window.location.search.includes('error=')) && (
+      {(typeof window !== 'undefined' && (window.location.hash.includes('access_token=') || 
+        window.location.search.includes('error='))) && (
         <OAuthCallback />
       )}
       
@@ -405,6 +406,7 @@ export default function HomePage() {
           { text: "Network", to: "/?tab=network" },
           { text: "Companies", to: "/companies" },
           { text: "News", to: "/?tab=news" },
+          { text: "Intel", to: "/intel" },
           { text: "Settings", to: "/?tab=settings" },
           { text: "Pricing", to: "/?tab=pricing" },
         ]}

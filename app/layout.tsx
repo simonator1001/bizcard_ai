@@ -1,7 +1,6 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
 import { Providers } from '@/components/layout/providers'
-import { Header } from '@/components/ui/header'
 import { I18nProvider } from '@/components/i18n-provider'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -34,16 +33,6 @@ export const metadata = {
   },
 }
 
-const menuItems = [
-  { text: 'Scan', to: '/' },
-  { text: 'Manage', to: '/?tab=manage' },
-  { text: 'Network', to: '/?tab=network' },
-  { text: 'Companies', to: '/companies' },
-  { text: 'News', to: '/?tab=news' },
-  { text: 'Settings', to: '/?tab=settings' },
-  { text: 'Pricing', to: '/?tab=pricing' },
-];
-
 export default function RootLayout({
   children,
 }: {
@@ -61,10 +50,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <I18nProvider>
           <Providers>
-            <Header logo={<span className="text-xl font-bold">BizCard</span>} menuItems={menuItems} />
-            <main className="flex-1 w-full px-2 sm:px-4 md:px-8 max-w-full">
-              {children}
-            </main>
+            {children}
           </Providers>
         </I18nProvider>
       </body>
