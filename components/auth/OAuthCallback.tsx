@@ -7,78 +7,97 @@ import { useRouter } from 'next/navigation'
 export function OAuthCallback() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [error, setError] = useState<string | null>(null)
+  const [debugInfo, setDebugInfo] = useState<string>('')
   const router = useRouter()
 
   useEffect(() => {
-    // Check for error parameters in the URL
-    const url = new URL(window.location.href)
-    const errorParam = url.searchParams.get('error')
-    const errorDescription = url.searchParams.get('error_description')
-    
-    if (errorParam) {
-      console.error('OAuth error:', { error: errorParam, description: errorDescription })
-      setError(errorDescription || errorParam)
-      setStatus('error')
-      return
-    }
-    
     const processAuth = async () => {
-      try {
-        console.log('[OAuthCallback] Processing auth callback')
-        console.log('[OAuthCallback] URL:', window.location.href)
-        console.log('[OAuthCallback] Search params:', Object.fromEntries(url.searchParams))
-        
-        // AppWrite's createOAuth2Session handles the code exchange automatically
-        // during the redirect. We just need to verify the session was created.
-        const currentUser = await account.get()
-        
-        if (currentUser) {
-          console.log('[OAuthCallback] Successfully authenticated:', {
-            userId: currentUser.$id,
-            email: currentUser.email,
-          })
-          
-          setStatus('success')
-          
-          // Redirect to home page
-          setTimeout(() => {
-            router.push('/')
-          }, 500)
-          return
-        }
-        
-        // No session yet, but no error either - normal state
-        setStatus('loading')
-        console.log('[OAuthCallback] No session yet, normal state')
-        
-        // Clear any URL parameters
-        if (window.location.search) {
-          window.history.replaceState({}, document.title, window.location.pathname)
-        }
-      } catch (err: any) {
-        console.error('[OAuthCallback] Error checking session:', err)
-        console.error('[OAuthCallback] Error details:', {
-          code: err?.code,
-          type: err?.type,
-          message: err?.message,
-          response: err?.response,
-        })
-        
-        // Build detailed error message for debugging
-        const errorParts: string[] = []
-        if (err?.code) errorParts.push(`Code: ${err.code}`)
-        if (err?.type) errorParts.push(`Type: ${err.type}`)
-        if (err?.message) errorParts.push(`Message: ${err.message}`)
-        if (errorParam) errorParts.push(`OAuth: ${errorParam}`)
-        if (errorDescription) errorParts.push(`Description: ${errorDescription}`)
-        
-        const detailError = errorParts.length > 0 
-          ? errorParts.join(' | ') 
-          : (err instanceof Error ? err.message : 'Unknown error')
-        
-        setError(detailError)
+      const url = new URL(window.location.href)
+      const allParams: Record<string, string> = {}
+      url.searchParams.forEach((value, key) => {
+        allParams[key] = value
+      })
+      
+      console.log('[OAuthCallback] Full URL:', window.location.href)
+      console.log('[OAuthCallback] All search params:', allParams)
+      console.log('[OAuthCallback] Hash:', window.location.hash)
+      
+      // Check for error parameters
+      const errorParam = url.searchParams.get('error')
+      const errorDescription = url.searchParams.get('error_description')
+      
+      if (errorParam) {
+        console.error('[OAuthCallback] OAuth error from provider:', { error: errorParam, description: errorDescription })
+        setError(`OAuth Error: ${errorDescription || errorParam}`)
         setStatus('error')
+        return
       }
+
+      // Check localStorage for existing session
+      const localStorageKeys = Object.keys(localStorage).filter(k => k.includes('appwrite') || k.includes('session') || k.includes('cookie'))
+      console.log('[OAuthCallback] localStorage appwrite keys:', localStorageKeys)
+      
+      // Check cookies
+      const cookieStr = document.cookie
+      const hasAppwriteCookie = cookieStr.includes('appwrite') || cookieStr.includes('a_session')
+      console.log('[OAuthCallback] Has AppWrite cookie:', hasAppwriteCookie)
+      console.log('[OAuthCallback] All cookies:', cookieStr.substring(0, 500))
+      
+      // Build debug info
+      const debugLines = [
+        `URL params: ${Object.keys(allParams).length ? JSON.stringify(allParams) : '(none)'}`,
+        `Hash: ${window.location.hash || '(none)'}`,
+        `AppWrite cookie: ${hasAppwriteCookie ? 'YES' : 'NO'}`,
+        `localStorage keys: ${localStorageKeys.join(', ') || '(none)'}`,
+        `Hostname: ${window.location.hostname}`,
+        `User-Agent: ${navigator.userAgent.substring(0, 80)}`,
+      ]
+      setDebugInfo(debugLines.join('\n'))
+      
+      // Try to get session with retries
+      let lastError: any = null
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          if (attempt > 0) {
+            console.log(`[OAuthCallback] Retry attempt ${attempt + 1}...`)
+            await new Promise(resolve => setTimeout(resolve, 1500))
+          }
+          
+          console.log(`[OAuthCallback] Attempt ${attempt + 1}: calling account.get()`)
+          const currentUser = await account.get()
+          
+          if (currentUser) {
+            console.log('[OAuthCallback] ✅ Successfully authenticated:', {
+              userId: currentUser.$id,
+              email: currentUser.email,
+              name: (currentUser as any).name,
+            })
+            
+            setStatus('success')
+            setTimeout(() => router.push('/'), 800)
+            return
+          }
+        } catch (err: any) {
+          lastError = err
+          console.error(`[OAuthCallback] Attempt ${attempt + 1} failed:`, {
+            code: err?.code,
+            type: err?.type,
+            message: err?.message,
+            status: err?.response?.status,
+          })
+        }
+      }
+      
+      // All attempts failed
+      console.error('[OAuthCallback] ❌ All attempts failed')
+      const fullError = [
+        lastError?.code && `Code: ${lastError.code}`,
+        lastError?.type && `Type: ${lastError.type}`,
+        lastError?.message && `Msg: ${lastError.message}`,
+      ].filter(Boolean).join(' | ')
+      
+      setError(`${fullError}\n\n--- Debug ---\n${debugLines}`)
+      setStatus('error')
     }
     
     processAuth()
@@ -89,7 +108,7 @@ export function OAuthCallback() {
       <div className="flex min-h-[200px] items-center justify-center">
         <div className="flex flex-col items-center gap-2">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="text-sm text-muted-foreground">Processing authentication...</p>
+          <p className="text-sm text-muted-foreground">Connecting to Google...</p>
         </div>
       </div>
     )
@@ -97,18 +116,20 @@ export function OAuthCallback() {
   
   if (status === 'error') {
     return (
-      <div className="flex min-h-[200px] items-center justify-center">
-        <div className="flex flex-col items-center gap-2 text-center max-w-md">
+      <div className="flex min-h-[200px] items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 text-center max-w-md w-full">
           <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
             <span className="text-red-600 text-xl">!</span>
           </div>
-          <h3 className="text-lg font-semibold">Authentication Error</h3>
-          <p className="text-sm text-muted-foreground">{error || 'An unexpected error occurred'}</p>
+          <h3 className="text-lg font-semibold">Authentication Failed</h3>
+          <div className="text-xs text-left text-muted-foreground bg-slate-100 dark:bg-slate-800 rounded-md p-3 w-full whitespace-pre-wrap font-mono">
+            {error || 'Unknown error'}
+          </div>
           <button 
-            className="mt-4 px-4 py-2 rounded-md bg-primary text-primary-foreground"
+            className="mt-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm"
             onClick={() => router.push('/signin')}
           >
-            Back to Sign In
+            Try Again
           </button>
         </div>
       </div>
@@ -122,7 +143,7 @@ export function OAuthCallback() {
           <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
             <span className="text-green-600">✓</span>
           </div>
-          <p className="text-sm text-muted-foreground">Authentication successful! Redirecting...</p>
+          <p className="text-sm text-muted-foreground">Signed in! Redirecting...</p>
         </div>
       </div>
     )
