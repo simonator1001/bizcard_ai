@@ -15,10 +15,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { trackCompany as trackCompanyAction } from '@/app/actions/company-tracking';
-
 export function CompanyTrackingList() {
-    const { state, untrackCompany, updateTrackingPreference } = useCompanyTracking();
+    const { state, untrackCompany, updateTrackingPreference, trackCompany } = useCompanyTracking();
     const [newCompany, setNewCompany] = useState({
         company_name: '',
         company_website: '',
@@ -29,14 +27,7 @@ export function CompanyTrackingList() {
     const handleTrackCompany = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            // Use the server action instead of context
-            const { data, error } = await trackCompanyAction(newCompany);
-            
-            if (error) {
-                console.error('[CompanyTrackingList] Error tracking company:', error);
-                toast.error(`Failed to track company: ${error}`);
-                return;
-            }
+            await trackCompany(newCompany);
             
             setNewCompany({
                 company_name: '',
@@ -45,9 +36,6 @@ export function CompanyTrackingList() {
                 importance_level: 1,
             });
             toast.success('Company tracked successfully');
-            
-            // Refresh the page to update the list with the new company
-            window.location.reload();
         } catch (error) {
             console.error('[CompanyTrackingList] Exception tracking company:', error);
             toast.error('Failed to track company');

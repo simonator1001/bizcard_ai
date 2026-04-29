@@ -1,9 +1,16 @@
 'use client';
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import { databases, ID, DATABASE_ID } from '@/lib/appwrite';
+import { Query } from 'appwrite';
 import { CompanyTrackingContextType, CompanyTrackingState, TrackedCompany, TrackingPreference, NewsArticle } from '@/types/company-tracking';
 import { useAuth } from '@/lib/auth-context';
+
+// AppWrite collection IDs (same as Supabase table names)
+const TRACKED_COLLECTION = 'tracked_companies';
+const PREFERENCES_COLLECTION = 'tracking_preferences';
+const ALERTS_COLLECTION = 'user_news_alerts';
+const NEWS_COLLECTION = 'news_articles';
 
 const initialState: CompanyTrackingState = {
     trackedCompanies: [],
@@ -72,9 +79,12 @@ function reducer(state: CompanyTrackingState, action: Action): CompanyTrackingSt
 
 const CompanyTrackingContext = createContext<CompanyTrackingContextType | undefined>(undefined);
 
+function mapDocument<T>(doc: any): T {
+    return { ...doc, id: doc.$id, created_at: doc.$createdAt, updated_at: doc.$updatedAt } as unknown as T;
+}
+
 export function CompanyTrackingProvider({ children }: { children: React.ReactNode }) {
     const [state, dispatch] = useReducer(reducer, initialState);
-    const supabase = useSupabaseClient();
     const { user, loading: authLoading, initialized: authInitialized } = useAuth();
 
     useEffect(() => {
@@ -82,7 +92,7 @@ export function CompanyTrackingProvider({ children }: { children: React.ReactNod
             console.log('[CompanyTrackingProvider] loadInitialData called', {
                 authLoading,
                 authInitialized,
-                user
+                user: user?.$id,
             });
             if (authLoading || !authInitialized) {
                 console.log('[CompanyTrackingProvider] Auth not initialized yet, skipping data load');
@@ -98,32 +108,53 @@ export function CompanyTrackingProvider({ children }: { children: React.ReactNod
 
             try {
                 dispatch({ type: 'SET_LOADING', payload: true });
-                console.log('[CompanyTrackingProvider] Loading tracked companies from Supabase...');
+
                 // Load tracked companies
-                const { data: companies, error: companiesError } = await supabase
-                    .from('tracked_companies')
-                    .select(`*, tracking_preferences (*)`)
-                    .order('created_at', { ascending: false });
-                if (companiesError) {
-                    console.error('[CompanyTrackingProvider] Supabase companiesError:', companiesError);
-                    throw companiesError;
+                console.log('[CompanyTrackingProvider] Loading tracked companies from AppWrite...');
+                try {
+                    const companiesRes = await databases.listDocuments(
+                        DATABASE_ID, TRACKED_COLLECTION,
+                        [Query.equal('user_id', user.$id), Query.orderDesc('$createdAt')]
+                    );
+                    const companies = companiesRes.documents.map(mapDocument<TrackedCompany>);
+                    console.log('[CompanyTrackingProvider] Tracked companies loaded:', companies.length);
+                    dispatch({ type: 'SET_TRACKED_COMPANIES', payload: companies });
+
+                    // Load tracking preferences for each company
+                    const prefs: Record<string, TrackingPreference> = {};
+                    for (const company of companies) {
+                        try {
+                            const prefRes = await databases.listDocuments(
+                                DATABASE_ID, PREFERENCES_COLLECTION,
+                                [Query.equal('company_id', company.id)]
+                            );
+                            if (prefRes.documents.length > 0) {
+                                prefs[company.id] = mapDocument<TrackingPreference>(prefRes.documents[0]);
+                            }
+                        } catch (e) {
+                            // Preferences collection may not exist yet — skip
+                            console.log('[CompanyTrackingProvider] No preferences for', company.id);
+                        }
+                    }
+                    dispatch({ type: 'SET_TRACKING_PREFERENCES', payload: prefs });
+                } catch (e: any) {
+                    console.log('[CompanyTrackingProvider] Tracked companies collection not available:', e?.message);
+                    dispatch({ type: 'SET_TRACKED_COMPANIES', payload: [] });
                 }
-                console.log('[CompanyTrackingProvider] Tracked companies loaded:', companies);
-                dispatch({ type: 'SET_TRACKED_COMPANIES', payload: companies });
 
                 // Load news alerts
-                console.log('[CompanyTrackingProvider] Loading news alerts from Supabase...');
-                const { data: alerts, error: alertsError } = await supabase
-                    .from('user_news_alerts')
-                    .select('*')
-                    .eq('is_read', false)
-                    .order('created_at', { ascending: false });
-                if (alertsError) {
-                    console.error('[CompanyTrackingProvider] Supabase alertsError:', alertsError);
-                    throw alertsError;
+                try {
+                    const alertsRes = await databases.listDocuments(
+                        DATABASE_ID, ALERTS_COLLECTION,
+                        [Query.equal('user_id', user.$id), Query.equal('is_read', false), Query.orderDesc('$createdAt')]
+                    );
+                    const alerts = alertsRes.documents.map(mapDocument);
+                    console.log('[CompanyTrackingProvider] News alerts loaded:', alerts.length);
+                    dispatch({ type: 'SET_NEWS_ALERTS', payload: alerts });
+                } catch (e: any) {
+                    console.log('[CompanyTrackingProvider] Alerts collection not available:', e?.message);
+                    dispatch({ type: 'SET_NEWS_ALERTS', payload: [] });
                 }
-                console.log('[CompanyTrackingProvider] News alerts loaded:', alerts);
-                dispatch({ type: 'SET_NEWS_ALERTS', payload: alerts });
             } catch (error) {
                 console.error('[CompanyTrackingProvider] Error loading company tracking data:', error);
                 dispatch({
@@ -136,21 +167,19 @@ export function CompanyTrackingProvider({ children }: { children: React.ReactNod
         }
 
         loadInitialData();
-    }, [supabase, user, authLoading, authInitialized]);
+    }, [user, authLoading, authInitialized]);
 
     const trackCompany = async (company: Omit<TrackedCompany, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
         try {
             dispatch({ type: 'SET_LOADING', payload: true });
-            
-            const { data, error } = await supabase
-                .from('tracked_companies')
-                .insert(company)
-                .select()
-                .single();
 
-            if (error) throw error;
+            const doc = await databases.createDocument(
+                DATABASE_ID, TRACKED_COLLECTION, ID.unique(),
+                { ...company, user_id: user?.$id }
+            );
+            const tracked = mapDocument<TrackedCompany>(doc);
 
-            dispatch({ type: 'ADD_TRACKED_COMPANY', payload: data });
+            dispatch({ type: 'ADD_TRACKED_COMPANY', payload: tracked });
         } catch (error) {
             console.error('Error tracking company:', error);
             dispatch({
@@ -166,13 +195,8 @@ export function CompanyTrackingProvider({ children }: { children: React.ReactNod
     const untrackCompany = async (companyId: string) => {
         try {
             dispatch({ type: 'SET_LOADING', payload: true });
-            
-            const { error } = await supabase
-                .from('tracked_companies')
-                .delete()
-                .eq('id', companyId);
 
-            if (error) throw error;
+            await databases.deleteDocument(DATABASE_ID, TRACKED_COLLECTION, companyId);
 
             dispatch({ type: 'REMOVE_TRACKED_COMPANY', payload: companyId });
         } catch (error) {
@@ -190,16 +214,36 @@ export function CompanyTrackingProvider({ children }: { children: React.ReactNod
     const updateTrackingPreference = async (preference: Omit<TrackingPreference, 'id' | 'created_at' | 'updated_at'>) => {
         try {
             dispatch({ type: 'SET_LOADING', payload: true });
-            
-            const { data, error } = await supabase
-                .from('tracking_preferences')
-                .upsert(preference)
-                .select()
-                .single();
 
-            if (error) throw error;
+            // Try to find existing preference
+            let existingId: string | null = null;
+            try {
+                const existing = await databases.listDocuments(
+                    DATABASE_ID, PREFERENCES_COLLECTION,
+                    [Query.equal('company_id', preference.company_id)]
+                );
+                if (existing.documents.length > 0) {
+                    existingId = existing.documents[0].$id;
+                }
+            } catch (e) {
+                // Collection may not exist
+            }
 
-            dispatch({ type: 'UPDATE_TRACKING_PREFERENCE', payload: data });
+            let doc;
+            if (existingId) {
+                doc = await databases.updateDocument(
+                    DATABASE_ID, PREFERENCES_COLLECTION, existingId,
+                    preference as any
+                );
+            } else {
+                doc = await databases.createDocument(
+                    DATABASE_ID, PREFERENCES_COLLECTION, ID.unique(),
+                    preference as any
+                );
+            }
+
+            const pref = mapDocument<TrackingPreference>(doc);
+            dispatch({ type: 'UPDATE_TRACKING_PREFERENCE', payload: pref });
         } catch (error) {
             console.error('Error updating tracking preference:', error);
             dispatch({
@@ -215,13 +259,11 @@ export function CompanyTrackingProvider({ children }: { children: React.ReactNod
     const markAlertAsRead = async (alertId: string) => {
         try {
             dispatch({ type: 'SET_LOADING', payload: true });
-            
-            const { error } = await supabase
-                .from('user_news_alerts')
-                .update({ is_read: true })
-                .eq('id', alertId);
 
-            if (error) throw error;
+            await databases.updateDocument(
+                DATABASE_ID, ALERTS_COLLECTION, alertId,
+                { is_read: true }
+            );
 
             dispatch({ type: 'MARK_ALERT_AS_READ', payload: alertId });
         } catch (error) {
@@ -236,37 +278,35 @@ export function CompanyTrackingProvider({ children }: { children: React.ReactNod
         }
     };
 
-    const getNewsFeed = async (companyId?: string) => {
+    const getNewsFeed = async (companyId?: string): Promise<NewsArticle[]> => {
         try {
             dispatch({ type: 'SET_LOADING', payload: true });
             console.log('[CompanyTrackingContext] Fetching news feed for company:', companyId || 'all companies');
-            
-            let query = supabase
-                .from('news_articles')
-                .select('*')
-                .order('published_at', { ascending: false });
 
+            const queries = [Query.orderDesc('published_at'), Query.limit(50)];
+            const res = await databases.listDocuments(
+                DATABASE_ID, NEWS_COLLECTION,
+                queries
+            );
+
+            let articles = res.documents.map(mapDocument<NewsArticle>);
+
+            // Client-side filter by company if specified (AppWrite doesn't support array 'contains' query)
             if (companyId) {
-                query = query.contains('related_companies', [companyId]);
+                articles = articles.filter(a =>
+                    a.related_companies?.includes(companyId)
+                );
             }
 
-            console.log('[CompanyTrackingContext] Executing Supabase query for news articles');
-            const { data, error } = await query;
-
-            if (error) {
-                console.error('[CompanyTrackingContext] Supabase error fetching news:', error);
-                throw error;
-            }
-
-            console.log('[CompanyTrackingContext] Successfully fetched news articles:', data);
-            return data;
+            console.log('[CompanyTrackingContext] Successfully fetched news articles:', articles.length);
+            return articles;
         } catch (error) {
             console.error('[CompanyTrackingContext] Error fetching news feed:', error);
             dispatch({
                 type: 'SET_ERROR',
                 payload: 'Failed to fetch news feed',
             });
-            throw error;
+            return [];
         } finally {
             dispatch({ type: 'SET_LOADING', payload: false });
         }
@@ -294,4 +334,4 @@ export function useCompanyTracking() {
         throw new Error('useCompanyTracking must be used within a CompanyTrackingProvider');
     }
     return context;
-} 
+}

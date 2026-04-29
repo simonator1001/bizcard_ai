@@ -7,90 +7,68 @@ import { useRouter } from 'next/navigation'
 export function OAuthCallback() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [error, setError] = useState<string | null>(null)
-  const [debugInfo, setDebugInfo] = useState<string>('')
   const router = useRouter()
 
   useEffect(() => {
     const processAuth = async () => {
       const url = new URL(window.location.href)
-      const allParams: Record<string, string> = {}
-      url.searchParams.forEach((value, key) => {
-        allParams[key] = value
-      })
-      
-      console.log('[OAuthCallback] Full URL:', window.location.href)
-      console.log('[OAuthCallback] All search params:', allParams)
-      console.log('[OAuthCallback] Hash:', window.location.hash)
       
       // Check for error parameters
       const errorParam = url.searchParams.get('error')
-      const errorDescription = url.searchParams.get('error_description')
-      
       if (errorParam) {
-        console.error('[OAuthCallback] OAuth error from provider:', { error: errorParam, description: errorDescription })
-        setError(`OAuth Error: ${errorDescription || errorParam}`)
+        setError(`OAuth Error: ${url.searchParams.get('error_description') || errorParam}`)
         setStatus('error')
         return
       }
 
-      // Check localStorage for existing session
-      const localStorageKeys = Object.keys(localStorage).filter(k => k.includes('appwrite') || k.includes('session') || k.includes('cookie'))
-      console.log('[OAuthCallback] localStorage appwrite keys:', localStorageKeys)
+      // Check for server-side OAuth session params (new flow)
+      const secret = url.searchParams.get('secret')
+      const userId = url.searchParams.get('userId')
       
-      // Check cookies
-      const cookieStr = document.cookie
-      const hasAppwriteCookie = cookieStr.includes('appwrite') || cookieStr.includes('a_session')
-      console.log('[OAuthCallback] Has AppWrite cookie:', hasAppwriteCookie)
-      console.log('[OAuthCallback] All cookies:', cookieStr.substring(0, 500))
-      
-      // Build debug info
-      const debugLines = [
-        `URL params: ${Object.keys(allParams).length ? JSON.stringify(allParams) : '(none)'}`,
-        `Hash: ${window.location.hash || '(none)'}`,
-        `AppWrite cookie: ${hasAppwriteCookie ? 'YES' : 'NO'}`,
-        `localStorage keys: ${localStorageKeys.join(', ') || '(none)'}`,
-        `Hostname: ${window.location.hostname}`,
-        `User-Agent: ${navigator.userAgent.substring(0, 80)}`,
-      ]
-      setDebugInfo(debugLines.join('\n'))
-      
-      // Try to get session with retries — token-based OAuth may need time to propagate
+      if (secret && userId) {
+        // Server-side OAuth completed — create session client-side using AppWrite SDK
+        console.log('[OAuthCallback] Creating session from server-provided token...')
+        try {
+          await account.createSession(userId, secret)
+          console.log('[OAuthCallback] ✅ Session created client-side')
+          
+          // Verify the session works
+          const user = await account.get()
+          console.log('[OAuthCallback] ✅ Authenticated as:', user.email)
+          
+          setStatus('success')
+          // Clean URL params and redirect
+          setTimeout(() => router.replace('/'), 800)
+          return
+        } catch (err: any) {
+          console.error('[OAuthCallback] Session creation failed:', err)
+          setError(`Session failed: ${err?.message || 'Unknown error'}`)
+          setStatus('error')
+          return
+        }
+      }
+
+      // Legacy flow: try account.get() with retries (for AppWrite SDK OAuth)
+      console.log('[OAuthCallback] Trying account.get() (legacy flow)...')
       let lastError: any = null
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
           const delay = attempt === 0 ? 500 : 1500 + (attempt * 1000)
-          if (attempt > 0) {
-            console.log(`[OAuthCallback] Retry attempt ${attempt + 1} (delay=${delay}ms)...`)
-            await new Promise(resolve => setTimeout(resolve, delay))
-          } else {
-            console.log(`[OAuthCallback] Attempt ${attempt + 1}: waiting ${delay}ms then calling account.get()`)
-            await new Promise(resolve => setTimeout(resolve, delay))
-          }
+          await new Promise(resolve => setTimeout(resolve, delay))
           
           const currentUser = await account.get()
-          
           if (currentUser) {
-            console.log('[OAuthCallback] ✅ Successfully authenticated:', {
-              userId: currentUser.$id,
-              email: currentUser.email,
-              name: (currentUser as any).name,
-            })
-            
+            console.log('[OAuthCallback] ✅ Authenticated via legacy flow:', currentUser.email)
             setStatus('success')
             setTimeout(() => router.push('/'), 800)
             return
           }
         } catch (err: any) {
           lastError = err
-          console.error(`[OAuthCallback] Attempt ${attempt + 1} failed:`, {
-            code: err?.code,
-            type: err?.type,
-            message: err?.message,
-          })
+          console.error(`[OAuthCallback] Attempt ${attempt + 1} failed:`, err?.message)
         }
       }
       
-      // All attempts failed
       console.error('[OAuthCallback] ❌ All attempts failed')
       const fullError = [
         lastError?.code && `Code: ${lastError.code}`,
@@ -98,7 +76,7 @@ export function OAuthCallback() {
         lastError?.message && `Msg: ${lastError.message}`,
       ].filter(Boolean).join(' | ')
       
-      setError(`${fullError}\n\n--- Debug ---\n${debugLines}`)
+      setError(fullError || 'Authentication failed')
       setStatus('error')
     }
     
@@ -110,7 +88,7 @@ export function OAuthCallback() {
       <div className="flex min-h-[200px] items-center justify-center">
         <div className="flex flex-col items-center gap-2">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="text-sm text-muted-foreground">Connecting to Google...</p>
+          <p className="text-sm text-muted-foreground">Signing you in...</p>
         </div>
       </div>
     )

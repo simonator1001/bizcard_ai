@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
-// DISABLED: Supabase removed
+import { useBusinessCards } from '@/lib/hooks/useBusinessCards';
 import { 
   Mail, 
   Phone, 
@@ -60,8 +60,7 @@ interface ManageCardsViewProps {
 }
 
 export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
-  const [cards, setCards] = useState<BusinessCard[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { cards, loading, addCard, updateCard, deleteCard, refresh } = useBusinessCards();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
@@ -73,115 +72,35 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
   const [filterType, setFilterType] = useState<'company' | 'name' | 'title' | null>(null);
   const [filterValue, setFilterValue] = useState<string | null>(null);
 
-  const fetchCards = useCallback(async () => {
-    if (!user) {
-      console.log('No user found, skipping card fetch');
-      setLoading(false);
-      setCards([]);
-      return;
-    }
-
-    try {
-      console.log('Fetching cards for user:', {
-        id: user.$id,
-        email: user.email
-      });
-      setLoading(true);
-      
-      // DISABLED: Supabase removed - stub
-      
-      // First, try to get the total count of cards
-      // DISABLED: Supabase removed
-      console.log('[DISABLED] fetchCards: Supabase removed');
-      
-      setCards([]);
-    } catch (err) {
-      console.error('Error in fetchCards:', err);
-      toast.error('Failed to load business cards. Please check your connection.');
-    } finally {
-      setLoading(false);
-    }
-  }, [user, sortField, sortDirection]);
-
-  // Add connection status check
-  useEffect(() => {
-    const checkConnection = async () => {
-      // DISABLED: Supabase removed
-      console.log('[DISABLED] checkConnection: Supabase removed');
-    };
-    
-    checkConnection();
-  }, []);
-
-  useEffect(() => {
-    fetchCards();
-  }, [fetchCards]);
+  // Use the AppWrite hook — cards fetched automatically
 
   const handleMergeCard = useCallback(async (mergedCard: BusinessCard) => {
     if (!user) {
       toast.error('You must be signed in to merge cards');
       return;
     }
-
     try {
-      // Debug log: show merged card
-      console.log('[Merge] Upserting merged card:', mergedCard);
-      
-      // Prepare the card for upsert
-      const cardToUpsert = {
-        id: mergedCard.id,
-        name: mergedCard.name || '',
-        name_zh: mergedCard.name_zh || '',
-        company: mergedCard.company || '',
-        company_zh: mergedCard.company_zh || '',
-        title: mergedCard.title || '',
-        title_zh: mergedCard.title_zh || '',
-        email: mergedCard.email || '',
-        phone: mergedCard.phone || '',
-        address: mergedCard.address || '',
-        address_zh: mergedCard.address_zh || '',
-        notes: mergedCard.notes || '',
-        image_url: mergedCard.image_url || '',
-        user_id: user.$id,
-        last_modified: new Date().toISOString(),
-        merged_from: mergedCard.mergedFrom || [],
-      };
-
-      // Remove fields that shouldn't be in the database
-      // (no-op now, all fields are DB fields)
-
-      // Debug: log card to upsert
-      console.log('[Merge] Card to upsert:', cardToUpsert);
-
-      // DISABLED: Supabase removed
-      // First, update the merged card
-      const upsertedCard = mergedCard;
-      
-      console.log('[DISABLED] handleMergeCard: Supabase removed');
+      await updateCard(mergedCard.id, mergedCard);
       toast.success('Cards merged successfully');
-      await fetchCards(); // Refresh the cards list
     } catch (err) {
       console.error('Error in merge operation:', err);
       toast.error('Failed to merge cards');
     }
-  }, [user, fetchCards]);
+  }, [user, updateCard]);
 
   const handleDeleteCard = useCallback(async (cardId: string) => {
     if (!user) {
       toast.error('You must be signed in to delete cards');
       return;
     }
-
     try {
-      // DISABLED: Supabase removed
-      console.log('[DISABLED] handleDeleteCard: Supabase removed');
-      setCards(prev => prev.filter(card => card.id !== cardId));
+      await deleteCard(cardId);
       toast.success('Card deleted successfully');
     } catch (error) {
       console.error('Error deleting card:', error);
       toast.error('Failed to delete card');
     }
-  }, [user]);
+  }, [user, deleteCard]);
 
   const handleExportCSV = useCallback(() => {
     downloadCSV(cards);
@@ -368,8 +287,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
               onClose={() => setSelectedCard(null)}
               onDelete={handleDeleteCard}
               onEdit={(updatedCard) => {
-                // Update the card in the cards list
-                setCards(prevCards => prevCards.map(c => c.id === updatedCard.id ? updatedCard : c));
+                // Card updated by AppWrite hook — just close detail view
                 setSelectedCard(null);
               }}
             />

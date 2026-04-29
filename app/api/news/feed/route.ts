@@ -1,70 +1,64 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+
+const APPWRITE_ENDPOINT = 'https://sgp.cloud.appwrite.io/v1';
+const PROJECT_ID = '69efa226000db23fcd89';
+const DATABASE_ID = 'bizcard_ai';
+const NEWS_COLLECTION = 'news_articles';
+const ALERTS_COLLECTION = 'user_news_alerts';
+
+function appwriteHeaders() {
+    return {
+        'X-Appwrite-Project': PROJECT_ID,
+        'X-Appwrite-Key': process.env.APPWRITE_API_KEY || '',
+        'Content-Type': 'application/json',
+    };
+}
 
 export async function GET(request: Request) {
     try {
-        const supabase = createServerComponentClient({ cookies });
-        
-        // Check authentication
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Get URL parameters
         const { searchParams } = new URL(request.url);
         const companyId = searchParams.get('companyId');
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '10');
         const offset = (page - 1) * limit;
 
-        // Check subscription for news history access
-        const { data: subscription } = await supabase
-            .from('subscriptions')
-            .select('plan_type')
-            .eq('user_id', session.user.id)
-            .single();
+        // Fetch news articles from AppWrite
+        const res = await fetch(
+            `${APPWRITE_ENDPOINT}/databases/${DATABASE_ID}/collections/${NEWS_COLLECTION}/documents?orderField=$createdAt&orderType=DESC&limit=${limit}&offset=${offset}`,
+            { headers: appwriteHeaders() }
+        );
 
-        const daysLimit = subscription?.plan_type === 'pro' ? 30 : 7;
-        const dateLimit = new Date();
-        dateLimit.setDate(dateLimit.getDate() - daysLimit);
-
-        // Build query
-        let query = supabase
-            .from('news_articles')
-            .select(`
-                *,
-                user_news_alerts!inner (
-                    id,
-                    is_read
-                )
-            `, { count: 'exact' })
-            .eq('user_news_alerts.user_id', session.user.id)
-            .gte('published_at', dateLimit.toISOString())
-            .order('published_at', { ascending: false })
-            .range(offset, offset + limit - 1);
-
-        // Filter by company if specified
-        if (companyId) {
-            query = query.contains('related_companies', [companyId]);
+        const data = await res.json();
+        if (!res.ok) {
+            console.error('[API] Error fetching news feed:', data);
+            return NextResponse.json(
+                { error: data.message || 'Failed to fetch — check API key scopes (needs databases.read)' },
+                { status: res.status }
+            );
         }
 
-        const { data: articles, error, count } = await query;
+        let articles = data.documents || [];
 
-        if (error) throw error;
+        // Filter by company if specified (AppWrite REST API doesn't support array contains)
+        if (companyId) {
+            articles = articles.filter((a: any) =>
+                a.related_companies?.includes?.(companyId)
+            );
+        }
+
+        const total = data.total || articles.length;
 
         return NextResponse.json({
             articles,
             pagination: {
-                total: count || 0,
+                total,
                 page,
                 limit,
-                totalPages: Math.ceil((count || 0) / limit)
-            }
+                totalPages: Math.ceil(total / limit),
+            },
         });
     } catch (error) {
-        console.error('Error fetching news feed:', error);
+        console.error('[API] Error fetching news feed:', error);
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
@@ -74,61 +68,52 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const supabase = createServerComponentClient({ cookies });
-        
-        // Check authentication
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Check if user is admin
-        const { data: user } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
-
-        if (user?.role !== 'admin') {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
-
-        // Validate and insert news article
         const body = await request.json();
-        const { data: article, error } = await supabase
-            .from('news_articles')
-            .insert(body)
-            .select()
-            .single();
 
-        if (error) throw error;
-
-        // Create alerts for users tracking related companies
-        const { data: usersToAlert } = await supabase
-            .from('tracked_companies')
-            .select('user_id')
-            .contains('related_companies', body.related_companies);
-
-        if (usersToAlert?.length) {
-            const alerts = usersToAlert.map(user => ({
-                user_id: user.user_id,
-                article_id: article.id,
-                is_read: false
-            }));
-
-            const { error: alertError } = await supabase
-                .from('user_news_alerts')
-                .insert(alerts);
-
-            if (alertError) throw alertError;
+        // Validate required fields
+        if (!body.title || !body.source) {
+            return NextResponse.json(
+                { error: 'title and source are required' },
+                { status: 400 }
+            );
         }
 
-        return NextResponse.json(article);
+        const docId = `news_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const res = await fetch(
+            `${APPWRITE_ENDPOINT}/databases/${DATABASE_ID}/collections/${NEWS_COLLECTION}/documents`,
+            {
+                method: 'POST',
+                headers: appwriteHeaders(),
+                body: JSON.stringify({
+                    documentId: docId,
+                    data: {
+                        title: body.title,
+                        content: body.content || '',
+                        source: body.source,
+                        url: body.url || '',
+                        published_at: body.published_at || new Date().toISOString(),
+                        categories: body.categories || [],
+                        related_companies: body.related_companies || [],
+                    },
+                }),
+            }
+        );
+
+        const result = await res.json();
+        if (!res.ok) {
+            console.error('[API] Error creating news article:', result);
+            return NextResponse.json(
+                { error: result.message || 'Failed to create article' },
+                { status: res.status }
+            );
+        }
+
+        return NextResponse.json({ ...result, id: docId });
     } catch (error) {
-        console.error('Error creating news article:', error);
+        console.error('[API] Error creating news article:', error);
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         );
     }
-} 
+}

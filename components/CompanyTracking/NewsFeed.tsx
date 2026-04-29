@@ -14,10 +14,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { getNewsFeed } from '@/app/actions/company-tracking';
-
 export function NewsFeed() {
-    const { state, markAlertAsRead } = useCompanyTracking();
+    const { state, markAlertAsRead, getNewsFeed } = useCompanyTracking();
     const [articles, setArticles] = useState<NewsArticle[]>([]);
     const [selectedCompany, setSelectedCompany] = useState<string>('');
     const [page, setPage] = useState(1);
@@ -32,14 +30,7 @@ export function NewsFeed() {
             setLoading(true);
             console.log('[NewsFeed] Fetching news feed for company:', selectedCompany || 'all companies');
             
-            const { data, error } = await getNewsFeed(selectedCompany || undefined);
-            
-            if (error) {
-                console.error('[NewsFeed] Error fetching news:', error);
-                toast.error(`Failed to load news feed: ${error}`);
-                return;
-            }
-            
+            const data = await getNewsFeed(selectedCompany || undefined);
             console.log('[NewsFeed] Successfully fetched news feed:', data);
             setArticles(data || []);
         } catch (error) {

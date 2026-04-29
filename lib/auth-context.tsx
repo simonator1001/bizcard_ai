@@ -186,34 +186,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
         signInWithProvider: async (provider) => {
           try {
-            console.debug('[AuthContext] Signing in with provider:', {
-              provider,
-              hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
-              protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown'
-            })
+            console.debug('[AuthContext] Signing in with provider:', provider)
 
-            const redirectTo = `${window.location.origin}/auth/callback`;
+            // Server-side OAuth proxy — bypasses iOS Safari third-party cookie blocking
+            // Redirects to our API route which handles Google OAuth entirely server-side
+            window.location.href = '/api/auth/google'
             
-            console.debug('[AuthContext] Starting OAuth flow with redirectTo:', redirectTo);
-
-            // Use createOAuth2Token instead of createOAuth2Session
-            // createOAuth2Session relies on cross-domain cookies (blocked by iOS Safari ITP)
-            // createOAuth2Token returns a JWT token in the URL that we handle client-side
-            try {
-              await account.createOAuth2Token(
-                OAuthProvider.Google,
-                redirectTo,
-                redirectTo,
-                ['profile', 'email']
-              )
-            } catch (sdkError) {
-              // Fallback: direct redirect for browsers where SDK fails
-              console.warn('[AuthContext] SDK redirect failed, using direct:', sdkError)
-              const encoded = encodeURIComponent(redirectTo)
-              window.location.href = `https://sgp.cloud.appwrite.io/v1/account/sessions/oauth2/google?success=${encoded}&failure=${encoded}&scopes[]=profile&scopes[]=email`
-            }
-            
-            return undefined
+            // Return a never-resolving promise since we're navigating away
+            return new Promise(() => {})
           } catch (error) {
             console.error('[AuthContext] Provider sign in error:', error)
             throw error
