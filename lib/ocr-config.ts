@@ -1,6 +1,10 @@
-export const TOGETHER_API_KEY = process.env.NEXT_PUBLIC_TOGETHER_API_KEY || '';
-export const VISION_MODEL = 'meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo';
+// Deepbrick API — OpenAI-compatible, free tier
+// Claude Sonnet 4.5 handles vision (OCR) via image_url content blocks
+export const DEEPBRICK_API_KEY = process.env.DEEPBRICK_API_KEY || '';
+export const DEEPBRICK_API_KEY_2 = process.env.DEEPBRICK_API_KEY_2 || '';
+export const VISION_MODEL = 'claude-sonnet-4.5';
 
+// OCR prompt template for business card extraction
 export const OCR_PROMPT = `You are a business card information extractor specializing in bilingual (English and Chinese) business cards. Your task is to:
 
 1. Carefully examine the image for both English and Chinese text
@@ -64,4 +68,4 @@ Important:
 - Do not translate between languages - only extract what is actually on the card
 - Keep all numbers and special characters in contact information
 - Maintain original formatting of phone numbers
-- Return ONLY the JSON object, no additional text or explanations`; 
+- Return ONLY the JSON object, no additional text or explanations`;

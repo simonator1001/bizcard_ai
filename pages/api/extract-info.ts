@@ -1,13 +1,20 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
-import { TOGETHER_API_KEY } from '@/lib/ocr-config';
+import { DEEPBRICK_API_KEY, DEEPBRICK_API_KEY_2 } from '@/lib/ocr-config';
+
+function getApiKey(): string {
+  const keys = [DEEPBRICK_API_KEY, DEEPBRICK_API_KEY_2].filter(k => k);
+  if (keys.length === 0) throw new Error('No Deepbrick API key configured');
+  const idx = Math.floor(Date.now() / 1000) % keys.length;
+  return keys[idx];
+}
 
 const axiosInstance = axios.create({
-  baseURL: 'https://api.together.xyz/v1',
+  baseURL: 'https://api.deepbricks.ai/v1',
   headers: {
-    'Authorization': `Bearer ${TOGETHER_API_KEY}`,
-    'Content-Type': 'application/json'
-  }
+    'Authorization': `Bearer ${getApiKey()}`,
+    'Content-Type': 'application/json',
+  },
 });
 
 export default async function handler(
@@ -35,16 +42,15 @@ export default async function handler(
         return res.status(200).json(parsedInput);
       }
     } catch (e) {
-      // Not JSON, proceed with extraction
       console.log('[EXTRACT] Input is not JSON, proceeding with extraction');
     }
 
     const requestBody = {
-      model: 'meta-llama/Llama-2-70b-chat',
+      model: 'claude-sonnet-4.5',
       messages: [
         {
           role: "system",
-          content: "You are a precise business card information extractor. Extract only the information that is clearly visible in the text. If a field is uncertain, mark it as 'N/A'."
+          content: "You are a precise business card information extractor. Extract only the information that is clearly visible in the text. If a field is uncertain, mark it as 'N/A'.",
         },
         {
           role: "user",
@@ -60,15 +66,15 @@ export default async function handler(
 Original text:
 ${text}
 
-Return ONLY the JSON object with no additional text.`
-        }
+Return ONLY the JSON object with no additional text.`,
+        },
       ],
       temperature: 0.1,
       max_tokens: 1000,
-      top_p: 0.9
+      top_p: 0.9,
     };
 
-    console.log('[EXTRACT] Calling Together.ai API...');
+    console.log('[EXTRACT] Calling Deepbrick API...');
     const response = await axiosInstance.post('/chat/completions', requestBody);
 
     if (!response.data?.choices?.[0]?.message?.content) {
@@ -95,10 +101,10 @@ Return ONLY the JSON object with no additional text.`
     res.status(200).json(parsedResult);
   } catch (error: any) {
     console.error('[EXTRACT] Error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to process the text',
       message: error.message,
-      details: error.response?.data
+      details: error.response?.data,
     });
   }
-} 
+}
