@@ -54,16 +54,19 @@ export function OAuthCallback() {
       ]
       setDebugInfo(debugLines.join('\n'))
       
-      // Try to get session with retries
+      // Try to get session with retries — token-based OAuth may need time to propagate
       let lastError: any = null
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < 5; attempt++) {
         try {
+          const delay = attempt === 0 ? 500 : 1500 + (attempt * 1000)
           if (attempt > 0) {
-            console.log(`[OAuthCallback] Retry attempt ${attempt + 1}...`)
-            await new Promise(resolve => setTimeout(resolve, 1500))
+            console.log(`[OAuthCallback] Retry attempt ${attempt + 1} (delay=${delay}ms)...`)
+            await new Promise(resolve => setTimeout(resolve, delay))
+          } else {
+            console.log(`[OAuthCallback] Attempt ${attempt + 1}: waiting ${delay}ms then calling account.get()`)
+            await new Promise(resolve => setTimeout(resolve, delay))
           }
           
-          console.log(`[OAuthCallback] Attempt ${attempt + 1}: calling account.get()`)
           const currentUser = await account.get()
           
           if (currentUser) {
@@ -83,7 +86,6 @@ export function OAuthCallback() {
             code: err?.code,
             type: err?.type,
             message: err?.message,
-            status: err?.response?.status,
           })
         }
       }

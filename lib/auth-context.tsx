@@ -196,9 +196,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             console.debug('[AuthContext] Starting OAuth flow with redirectTo:', redirectTo);
 
-            // Use AppWrite SDK but with explicit window.location as fallback for mobile
+            // Use createOAuth2Token instead of createOAuth2Session
+            // createOAuth2Session relies on cross-domain cookies (blocked by iOS Safari ITP)
+            // createOAuth2Token returns a JWT token in the URL that we handle client-side
             try {
-              account.createOAuth2Session(
+              await account.createOAuth2Token(
                 OAuthProvider.Google,
                 redirectTo,
                 redirectTo,
