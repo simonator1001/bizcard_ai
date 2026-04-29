@@ -148,7 +148,7 @@ export function CompanyTrackingProvider({ children }: { children: React.ReactNod
                         DATABASE_ID, ALERTS_COLLECTION,
                         [Query.equal('user_id', user.$id), Query.equal('is_read', false), Query.orderDesc('$createdAt')]
                     );
-                    const alerts = alertsRes.documents.map(mapDocument);
+                    const alerts = alertsRes.documents.map(doc => mapDocument<import('@/types/company-tracking').UserNewsAlert>(doc));
                     console.log('[CompanyTrackingProvider] News alerts loaded:', alerts.length);
                     dispatch({ type: 'SET_NEWS_ALERTS', payload: alerts });
                 } catch (e: any) {
