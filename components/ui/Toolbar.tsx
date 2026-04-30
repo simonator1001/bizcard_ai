@@ -154,7 +154,7 @@ function Toolbar({
         {/* Sort Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="h-9 w-9 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors min-w-[44px] flex-shrink-0" aria-label="Sort">
+            <button className="h-9 w-9 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-zinc-200 rounded-lg flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-w-[44px] flex-shrink-0 border border-gray-200 dark:border-gray-600" aria-label="Sort">
               <LayoutList className="w-5 h-5" />
             </button>
           </DropdownMenuTrigger>
@@ -174,21 +174,21 @@ function Toolbar({
         </DropdownMenu>
 
         {/* Export Button */}
-        <button className="h-9 w-9 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors min-w-[44px] flex-shrink-0" onClick={onExport} aria-label="Export">
+        <button className="h-9 w-9 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-zinc-200 rounded-lg flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-w-[44px] flex-shrink-0 border border-gray-200 dark:border-gray-600" onClick={onExport} aria-label="Export">
           <FileDown className="w-5 h-5" />
         </button>
 
         {/* Duplicate Manager Button */}
-        <button className="h-9 w-9 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors min-w-[44px] flex-shrink-0" onClick={onManageDuplicates} aria-label="Duplicates">
+        <button className="h-9 w-9 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-zinc-200 rounded-lg flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-w-[44px] flex-shrink-0 border border-gray-200 dark:border-gray-600" onClick={onManageDuplicates} aria-label="Duplicates">
           <Copy className="w-5 h-5" />
         </button>
 
         {/* View Mode Toggle */}
-        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 border border-gray-200 dark:border-gray-700">
           <button
             className={cn(
               "h-8 w-8 flex items-center justify-center rounded-md transition-all duration-200",
-              viewMode === "list" ? "bg-white dark:bg-gray-700 text-indigo-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+              viewMode === "list" ? "bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
             )}
             onClick={() => onViewModeChange("list")}
             aria-label="List view"
@@ -198,7 +198,7 @@ function Toolbar({
           <button
             className={cn(
               "h-8 w-8 flex items-center justify-center rounded-md transition-all duration-200",
-              viewMode === "grid" ? "bg-white dark:bg-gray-700 text-indigo-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+              viewMode === "grid" ? "bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
             )}
             onClick={() => onViewModeChange("grid")}
             aria-label="Grid view"

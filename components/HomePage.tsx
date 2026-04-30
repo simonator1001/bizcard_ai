@@ -92,9 +92,9 @@ const TopBar = ({ onSettingsClick }: { onSettingsClick: () => void }) => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                  <Avatar className="h-8 w-8 ring-2 ring-indigo-100 dark:ring-indigo-900">
+                  <Avatar className="h-8 w-8 ring-2 ring-indigo-300 dark:ring-indigo-500/50">
                     <AvatarImage src={user.prefs?.avatar || ''} />
-                    <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-500 text-white text-xs">
+                    <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-500 text-white text-xs font-bold">
                       {user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
@@ -572,7 +572,7 @@ const FABMenu = ({ onScan }: { onScan: () => void }) => {
       <button
         onClick={() => setExpanded(!expanded)}
         onBlur={() => setTimeout(() => setExpanded(false), 200)}
-        className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center ${
+        className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25 dark:shadow-violet-600/30 ring-1 ring-white/20 hover:shadow-xl hover:shadow-indigo-500/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center ${
           !pulsed ? 'animate-pulse' : ''
         }`}
       >

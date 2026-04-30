@@ -289,34 +289,27 @@ export function CardItem({
             )}
           </button>
         </div>
-        <div className="flex items-center gap-4">
-          <div className={`relative w-24 h-16 rounded-md overflow-hidden flex-shrink-0 ${thumbGradient} ${thumbBorder}`}>
+        <div className="flex items-center gap-3">
+          <div className={`relative w-16 h-12 rounded-lg overflow-hidden flex-shrink-0 ${thumbGradient} ${thumbBorder}`}>
             {renderThumbnail('sm')}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 overflow-hidden">
-                <p className="font-medium truncate">{card.name || card.name_zh}</p>
-                <p className="text-sm text-muted-foreground truncate">{card.title || card.title_zh}</p>
-                <p className="text-sm truncate">{card.company || card.company_zh}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate">{card.name || card.name_zh}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {[card.company, card.title].filter(Boolean).join(' · ') || card.company_zh || card.title_zh}
+                </p>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 {card.email && (
-                  <a
-                    href={`mailto:${card.email}`}
-                    className="text-muted-foreground hover:text-primary"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Mail className="h-4 w-4" />
+                  <a href={`mailto:${card.email}`} className="text-muted-foreground hover:text-indigo-500 transition-colors" onClick={(e) => e.stopPropagation()}>
+                    <Mail className="h-3.5 w-3.5" />
                   </a>
                 )}
                 {card.phone && (
-                  <a
-                    href={`tel:${card.phone}`}
-                    className="text-muted-foreground hover:text-primary"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Phone className="h-4 w-4" />
+                  <a href={`tel:${card.phone}`} className="text-muted-foreground hover:text-emerald-500 transition-colors" onClick={(e) => e.stopPropagation()}>
+                    <Phone className="h-3.5 w-3.5" />
                   </a>
                 )}
                 {dropdown}
