@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, Fragment, useRef } from 'react';
 import { BusinessCard } from '@/types/business-card';
 import { Button } from '@/components/ui/button';
-import { Mail, Phone, MoreVertical, Pencil, Trash } from 'lucide-react';
+import { Mail, Phone, MoreVertical, Pencil, Trash, Linkedin, Share2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,10 +22,10 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Checkbox } from '@/components/ui/checkbox';
 import { getImageUrl } from '@/lib/supabase-storage';
 import Image from 'next/image';
-import { ImageIcon } from 'lucide-react';
+
+const THUMBNAIL_PLACEHOLDER = "flex items-center justify-center w-full h-full";
 
 interface CardItemProps {
   card: BusinessCard;
@@ -49,19 +49,38 @@ export function CardItem({
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const touchStartX = useRef(0);
+  const touchCurrentX = useRef(0);
+
+  // Swipe handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchCurrentX.current = e.touches[0].clientX;
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchCurrentX.current = e.touches[0].clientX;
+    const diff = touchCurrentX.current - touchStartX.current;
+    setSwipeOffset(Math.max(Math.min(diff, 0), -200));
+  };
+  const handleTouchEnd = () => {
+    if (swipeOffset < -80) {
+      setSwipeOffset(-160);
+    } else {
+      setSwipeOffset(0);
+    }
+  };
+  const closeSwipe = () => setSwipeOffset(0);
 
   useEffect(() => {
     async function loadImage() {
       if (card.image_url && !imageError) {
         try {
-          // If the URL is already a full URL from our domain, use it directly
-          if (card.image_url.startsWith(process.env.NEXT_PUBLIC_SUPABASE_URL || '')) {
+          if (card.image_url.startsWith('https://') || card.image_url.startsWith('http://')) {
             setImageUrl(card.image_url);
             setImageError(false);
             return;
           }
-
-          // Otherwise, get the URL through our storage utility
           const url = await getImageUrl(card.image_url);
           if (url) {
             setImageUrl(url);
@@ -134,44 +153,145 @@ export function CardItem({
         .toUpperCase()
     : '?';
 
-  // List view
+  const thumbGradient = "bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-950/50 dark:to-violet-950/50";
+  const thumbBorder = "border border-indigo-100/50 dark:border-indigo-900/30";
+
+  const renderThumbnail = (size: 'sm' | 'lg') => {
+    const dims = size === 'sm' 
+      ? "w-24 h-16 rounded-md" 
+      : "w-full aspect-[3/2] rounded-lg";
+    const textSize = size === 'sm' ? "text-lg" : "text-3xl";
+    
+    if (imageUrl && !imageError) {
+      return (
+        <Image
+          src={imageUrl}
+          alt={card.name || 'Business Card'}
+          fill
+          className="object-cover"
+          onError={handleImageError}
+        />
+      );
+    }
+    return (
+      <div className={`${THUMBNAIL_PLACEHOLDER}`}>
+        <span className={`${textSize} font-bold text-indigo-400 dark:text-indigo-500`}>{initials}</span>
+      </div>
+    );
+  };
+
+  // ─── Swipe action buttons ───
+  const swipeActionsRow = (
+    <div className={cn(
+      "flex items-center justify-end gap-2 px-4 py-2 transition-all duration-200",
+      swipeOffset < -40 ? "opacity-100 max-h-12" : "opacity-0 max-h-0 py-0 overflow-hidden"
+    )}>
+      {card.email && (
+        <a href={`mailto:${card.email}`} onClick={(e) => e.stopPropagation()}
+          className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 transition-colors">
+          <Mail className="w-4 h-4" />
+        </a>
+      )}
+      {card.phone && (
+        <a href={`tel:${card.phone}`} onClick={(e) => e.stopPropagation()}
+          className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 transition-colors">
+          <Phone className="w-4 h-4" />
+        </a>
+      )}
+      {card.name && card.company && (
+        <a href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent([card.name, card.company].filter(Boolean).join(' '))}`}
+          target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+          className="w-9 h-9 rounded-full bg-[#0A66C2]/10 flex items-center justify-center text-[#0A66C2] hover:bg-[#0A66C2]/20 transition-colors">
+          <Linkedin className="w-4 h-4" />
+        </a>
+      )}
+      <button onClick={(e) => { e.stopPropagation(); if (navigator.share && card.name) { navigator.share({ title: card.name, text: `${card.name} - ${card.title || ''} at ${card.company || ''}` }).catch(() => {}); } }}
+        className="w-9 h-9 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400 hover:bg-violet-200 transition-colors">
+        <Share2 className="w-4 h-4" />
+      </button>
+    </div>
+  );
+
+  const deleteDialog = (
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Business Card</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete the card for <strong>{card.name || card.name_zh}</strong>? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
+  const dropdown = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+        <Button variant="ghost" size="sm">
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+          <Pencil className="mr-2 h-4 w-4" /> Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setDeleteDialogOpen(true); }} className="text-destructive">
+          <Trash className="mr-2 h-4 w-4" /> Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  // ─── List view ──────────────────────────────────────────
   if (viewMode === 'list') {
     return (
       <>
-      <div 
-        className={cn(
-          "relative p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors cursor-pointer",
-          "hover:shadow-md transition-all",
-          isSelected && "ring-2 ring-primary"
-        )}
-        onClick={onClick}
-        onKeyDown={handleKeyDown}
-        tabIndex={0}
-        role="button"
-        aria-label={`Business card for ${card.name || card.name_zh}`}
-      >
-        <div className="absolute right-2 top-2">
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={() => onSelect()}
-            onClick={(e) => e.stopPropagation()}
-          />
+      <div className="relative overflow-hidden rounded-lg">
+        <div 
+          className={cn(
+            "relative p-4 border bg-card hover:bg-accent/5 transition-all cursor-pointer",
+            isSelected && "border-l-4 border-l-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20",
+          )}
+          style={{ 
+            transform: `translateX(${swipeOffset}px)`,
+            transition: swipeOffset === 0 ? 'transform 0.2s ease' : 'none',
+          }}
+          onClick={() => { if (swipeOffset < 0) closeSwipe(); else onClick(); }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onKeyDown={handleKeyDown}
+          tabIndex={0}
+          role="button"
+          aria-label={`Business card for ${card.name || card.name_zh}`}
+        >
+        <div className="absolute right-3 top-3 z-10">
+          <button
+            onClick={(e) => { e.stopPropagation(); onSelect(); }}
+            className={cn(
+              "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+              isSelected 
+                ? "border-indigo-500 bg-indigo-500" 
+                : "border-gray-300 dark:border-gray-600 hover:border-indigo-400"
+            )}
+          >
+            {isSelected && (
+              <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </button>
         </div>
         <div className="flex items-center gap-4">
-          <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-muted">
-            {imageUrl && !imageError ? (
-              <Image
-                src={imageUrl}
-                alt={card.name || 'Business Card'}
-                fill
-                className="object-cover"
-                onError={handleImageError}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-muted">
-                <ImageIcon className="h-8 w-8 text-muted-foreground" />
-              </div>
-            )}
+          <div className={`relative w-24 h-16 rounded-md overflow-hidden flex-shrink-0 ${thumbGradient} ${thumbBorder}`}>
+            {renderThumbnail('sm')}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-4">
@@ -199,55 +319,27 @@ export function CardItem({
                     <Phone className="h-4 w-4" />
                   </a>
                 )}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="sm">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                      <Pencil className="mr-2 h-4 w-4" /> Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setDeleteDialogOpen(true); }} className="text-destructive">
-                      <Trash className="mr-2 h-4 w-4" /> Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {dropdown}
               </div>
             </div>
           </div>
         </div>
+        </div>
       </div>
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Business Card</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete the card for <strong>{card.name || card.name_zh}</strong>? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {swipeActionsRow}
+      {deleteDialog}
       </>
     );
   }
 
-  // Grid view
+  // ─── Grid view ──────────────────────────────────────────
   if (viewMode === 'grid') {
     return (
       <>
       <div 
         className={cn(
-          "relative p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors cursor-pointer",
-          "hover:shadow-md transition-all",
-          isSelected && "ring-2 ring-primary"
+          "relative p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors cursor-pointer hover:shadow-md",
+          isSelected && "border-l-4 border-l-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20"
         )}
         onClick={onClick}
         onKeyDown={handleKeyDown}
@@ -255,27 +347,25 @@ export function CardItem({
         role="button"
         aria-label={`Business card for ${card.name || card.name_zh}`}
       >
-        <div className="absolute right-2 top-2 z-10">
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={() => onSelect()}
-            onClick={(e) => e.stopPropagation()}
-          />
+        <div className="absolute right-3 top-3 z-10">
+          <button
+            onClick={(e) => { e.stopPropagation(); onSelect(); }}
+            className={cn(
+              "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm",
+              isSelected 
+                ? "border-indigo-500 bg-indigo-500" 
+                : "border-gray-300 dark:border-gray-600 hover:border-indigo-400"
+            )}
+          >
+            {isSelected && (
+              <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </button>
         </div>
-        <div className="relative w-full aspect-[3/2] rounded-lg overflow-hidden bg-muted mb-4">
-          {imageUrl && !imageError ? (
-            <Image
-              src={imageUrl}
-              alt={card.name || 'Business Card'}
-              fill
-              className="object-cover"
-              onError={handleImageError}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-muted">
-              <ImageIcon className="h-8 w-8 text-muted-foreground" />
-            </div>
-          )}
+        <div className={`relative w-full aspect-[3/2] rounded-lg overflow-hidden mb-4 ${thumbGradient} ${thumbBorder}`}>
+          {renderThumbnail('lg')}
         </div>
         <div className="space-y-1">
           <p className="font-medium truncate">{card.name || card.name_zh}</p>
@@ -283,51 +373,21 @@ export function CardItem({
           <p className="text-sm truncate">{card.company || card.company_zh}</p>
         </div>
         <div className="absolute bottom-4 right-4 flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="sm">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                <Pencil className="mr-2 h-4 w-4" /> Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setDeleteDialogOpen(true); }} className="text-destructive">
-                <Trash className="mr-2 h-4 w-4" /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {dropdown}
         </div>
       </div>
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Business Card</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete the card for <strong>{card.name || card.name_zh}</strong>? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {deleteDialog}
       </>
     );
   }
 
-  // Carousel (default)
+  // ─── Carousel (default) ─────────────────────────────────
   return (
     <>
     <div 
       className={cn(
-        "relative p-6 rounded-lg border bg-card hover:bg-accent/5 transition-colors cursor-pointer",
-        "hover:shadow-md transition-all",
-        isSelected && "ring-2 ring-primary"
+        "relative p-6 rounded-lg border bg-card hover:bg-accent/5 transition-colors cursor-pointer hover:shadow-md",
+        isSelected && "border-l-4 border-l-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20"
       )}
       onClick={onClick}
       onKeyDown={handleKeyDown}
@@ -335,27 +395,25 @@ export function CardItem({
       role="button"
       aria-label={`Business card for ${card.name || card.name_zh}`}
     >
-      <div className="absolute right-2 top-2 z-10">
-        <Checkbox
-          checked={isSelected}
-          onCheckedChange={() => onSelect()}
-          onClick={(e) => e.stopPropagation()}
-        />
-      </div>
-      <div className="relative w-full aspect-[3/2] rounded-lg overflow-hidden bg-muted mb-4">
-        {imageUrl && !imageError ? (
-          <Image
-            src={imageUrl}
-            alt={card.name || 'Business Card'}
-            fill
-            className="object-cover"
-            onError={handleImageError}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-muted">
-            <ImageIcon className="h-8 w-8 text-muted-foreground" />
-          </div>
-        )}
+      <div className="absolute right-3 top-3 z-10">
+          <button
+            onClick={(e) => { e.stopPropagation(); onSelect(); }}
+            className={cn(
+              "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm",
+              isSelected 
+                ? "border-indigo-500 bg-indigo-500" 
+                : "border-gray-300 dark:border-gray-600 hover:border-indigo-400"
+            )}
+          >
+            {isSelected && (
+              <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </button>
+        </div>
+      <div className={`relative w-full aspect-[3/2] rounded-lg overflow-hidden mb-4 ${thumbGradient} ${thumbBorder}`}>
+        {renderThumbnail('lg')}
       </div>
       <div className="space-y-2">
         <p className="text-xl font-medium truncate">{card.name || card.name_zh}</p>
@@ -381,39 +439,10 @@ export function CardItem({
             <Phone className="h-4 w-4" />
           </a>
         )}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-            <Button variant="ghost" size="sm">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-              <Pencil className="mr-2 h-4 w-4" /> Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setDeleteDialogOpen(true); }} className="text-destructive">
-              <Trash className="mr-2 h-4 w-4" /> Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {dropdown}
       </div>
     </div>
-    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete Business Card</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete the card for <strong>{card.name || card.name_zh}</strong>? This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    {deleteDialog}
     </>
   );
-} 
+}

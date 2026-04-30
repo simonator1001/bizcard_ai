@@ -11,7 +11,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { 
   ScanLine, Camera, Upload, User, Settings, LogOut, LogIn,
   QrCode, Share2, Download, Search, Filter, MoreHorizontal,
-  Mail, Phone, MapPin, Building2, Briefcase, Globe,
+  Mail, Phone, MapPin, Building2, Briefcase, Globe, Linkedin,
   Plus, Edit3, Trash2, X, Check, Copy, ExternalLink
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -31,7 +31,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
 // ─── Types ───────────────────────────────────────────────
-type Tab = 'scan' | 'mycard' | 'contacts'
+type Tab = 'contacts' | 'scan' | 'mycard'
 
 interface MyCardData {
   name: string
@@ -51,9 +51,9 @@ interface MyCardData {
 const TabBar = ({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) => (
   <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center h-16 bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-100 dark:border-gray-800 pb-[env(safe-area-inset-bottom,0px)]">
     {([
+      { id: 'contacts' as Tab, icon: User, label: 'Contacts' },
       { id: 'scan' as Tab, icon: ScanLine, label: 'Scan' },
       { id: 'mycard' as Tab, icon: QrCode, label: 'My Card' },
-      { id: 'contacts' as Tab, icon: User, label: 'Contacts' },
     ]).map(({ id, icon: Icon, label }) => (
       <button
         key={id}
@@ -500,11 +500,89 @@ const ScanTab = () => {
                 {lastScannedCard.email && <span className="text-xs text-indigo-500">✉ {lastScannedCard.email}</span>}
                 {lastScannedCard.phone && <span className="text-xs text-gray-500">📞 {lastScannedCard.phone}</span>}
               </div>
+              {/* LinkedIn Search */}
+              <div className="pt-2">
+                <a
+                  href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent([lastScannedCard.name, lastScannedCard.company].filter(Boolean).join(' '))}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#0A66C2] hover:bg-[#004182] rounded-full transition-colors shadow-sm"
+                >
+                  <Linkedin className="w-3.5 h-3.5" />
+                  Find on LinkedIn
+                </a>
+              </div>
             </div>
           </CardContent>
         </Card>
       )}
     </div>
+  )
+}
+
+// ─── FAB Menu ────────────────────────────────────────────
+const FABMenu = ({ onScan }: { onScan: () => void }) => {
+  const [expanded, setExpanded] = useState(false)
+  const [pulsed, setPulsed] = useState(false)
+
+  // Pulse animation on first render
+  useEffect(() => {
+    const timer = setTimeout(() => setPulsed(true), 800)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const menuItems = [
+    { icon: Camera, label: 'Scan Card', action: () => { onScan(); setExpanded(false) } },
+    { icon: Upload, label: 'Import Photo', action: () => { 
+      const input = document.createElement('input')
+      input.type = 'file'; input.accept = 'image/*'; input.multiple = true
+      input.onchange = (e) => {
+        const files = (e.target as HTMLInputElement).files
+        if (files?.length) {
+          // Navigate to scan tab with the files would need a refactor,
+          // for now just switch to scan tab
+          onScan()
+        }
+      }
+      input.click()
+      setExpanded(false)
+    }},
+    { icon: Edit3, label: 'Add Manually', action: () => { setExpanded(false); /* future */ } },
+  ]
+
+  return (
+    <>
+      {/* Menu items (appear above FAB when expanded) */}
+      {expanded && (
+        <div className="flex flex-col gap-1.5 mb-1 animate-fade-in-up">
+          {menuItems.map((item, i) => (
+            <button
+              key={i}
+              onClick={item.action}
+              className="flex items-center gap-2.5 px-4 py-2.5 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-750 transition-all whitespace-nowrap"
+            >
+              <item.icon className="w-4 h-4 text-indigo-500" />
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Main FAB */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        onBlur={() => setTimeout(() => setExpanded(false), 200)}
+        className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center ${
+          !pulsed ? 'animate-pulse' : ''
+        }`}
+      >
+        {expanded ? (
+          <X className="w-6 h-6" />
+        ) : (
+          <Camera className="w-6 h-6" />
+        )}
+      </button>
+    </>
   )
 }
 
@@ -524,7 +602,7 @@ const SettingsDialog = ({ open, onClose }: { open: boolean; onClose: () => void 
 export default function HomePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState<Tab>('scan')
+  const [activeTab, setActiveTab] = useState<Tab>('contacts')
   const [showSettings, setShowSettings] = useState(false)
   const { t } = useTranslation()
 
@@ -532,10 +610,11 @@ export default function HomePage() {
   useEffect(() => {
     const tab = searchParams?.get('tab')
     if (tab === 'manage' || tab === 'contacts') setActiveTab('contacts')
+    else if (tab === 'scan') setActiveTab('scan')
     else if (tab === 'mycard') setActiveTab('mycard')
     else if (tab === 'settings') setShowSettings(true)
     else if (tab === 'pricing') {} // handled elsewhere
-    else setActiveTab('scan')
+    else setActiveTab('contacts')
   }, [searchParams])
 
   // Handle old tab param for backward compatibility
@@ -569,6 +648,14 @@ export default function HomePage() {
       <TabBar active={activeTab} onChange={handleTabChange} />
       
       <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
+
+      {/* FAB — Floating Action Button (Contacts tab only) */}
+      {activeTab === 'contacts' && (
+        <div className="fixed bottom-20 right-5 z-40 flex flex-col items-end gap-2">
+          {/* Expandable menu (long press or tap on +) */}
+          <FABMenu onScan={() => handleTabChange('scan')} />
+        </div>
+      )}
       
       {/* Safe area padding for bottom bar */}
       <div className="h-20" />

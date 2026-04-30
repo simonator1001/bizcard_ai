@@ -6,7 +6,7 @@ import { I18nProvider } from '@/components/i18n-provider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'Simon.AI BizCard Digital Archive',
+  title: 'BizCard AI — Digital Contact Manager',
   description: 'Digitize and manage your business cards with AI',
   viewport: {
     width: 'device-width',

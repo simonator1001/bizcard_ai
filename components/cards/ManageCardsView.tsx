@@ -21,7 +21,8 @@ import {
   Filter,
   SlidersHorizontal,
   LayoutGrid,
-  LayoutList
+  LayoutList,
+  Camera
 } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -207,17 +208,27 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
                     />
 
       {filteredCards.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
-            <ImageIcon className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+          <div className="w-24 h-16 rounded-lg bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-950/40 dark:to-violet-950/40 border-2 border-dashed border-indigo-200 dark:border-indigo-800 flex items-center justify-center mb-6">
+            <Camera className="w-8 h-8 text-indigo-400 dark:text-indigo-500" />
           </div>
-          <h3 className="text-lg font-semibold mb-2">No business cards found</h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
-            {searchTerm ? 'Try adjusting your search terms' : 'Start by scanning some business cards'}
+          <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">
+            {searchTerm ? 'No matching contacts' : 'Your Digital Rolodex'}
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-xs">
+            {searchTerm 
+              ? 'Try adjusting your search or filters.'
+              : 'Scan your first business card and start building your contact network.'}
           </p>
-          <Button onClick={() => setActiveTab('scan')}>
-            Scan Business Card
-          </Button>
+          {!searchTerm && (
+            <Button 
+              onClick={() => setActiveTab('scan')}
+              className="rounded-full bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white shadow-lg hover:shadow-xl transition-all px-6"
+            >
+              <Camera className="mr-2 h-4 w-4" />
+              Scan First Card
+            </Button>
+          )}
         </div>
       ) : (
         <>
