@@ -25,7 +25,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-mo
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useBusinessCards } from '@/lib/hooks/useBusinessCards'
 import { BusinessCard } from '@/types/business-card'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ManageCardsView } from '@/components/cards/ManageCardsView'
 import { SettingsTab } from '@/components/shared/SettingsTab'
 import { toast } from 'sonner'
@@ -195,25 +195,26 @@ function UpgradePrompt({ open, onOpenChange }: { open: boolean; onOpenChange: (o
 
 export default function HomePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('scan');
   const { t } = useTranslation();
   
-  // Get the tab from URL parameters
+  // Reactively sync tab from URL search params (works on every navigation, not just mount)
   React.useEffect(() => {
-    const tab = new URLSearchParams(window.location.search).get('tab');
+    const tab = searchParams?.get('tab');
     if (tab) {
       setActiveTab(tab);
     }
     
     // Handle auth error parameters if present
-    const error = new URLSearchParams(window.location.search).get('error');
-    const errorDescription = new URLSearchParams(window.location.search).get('error_description');
+    const error = searchParams?.get('error');
+    const errorDescription = searchParams?.get('error_description');
     if (error) {
       toast.error(errorDescription || error);
       // Remove the error parameters from the URL to avoid showing the error again on refresh
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, []);
+  }, [searchParams]);
 
   // Update URL when tab changes
   const handleTabChange = (tab: string) => {
