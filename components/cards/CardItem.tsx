@@ -276,7 +276,7 @@ export function CardItem({
           <button
             onClick={(e) => { e.stopPropagation(); onSelect(); }}
             className={cn(
-              "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+              "w-5 h-5 min-h-0 rounded-full border-2 flex items-center justify-center transition-all",
               isSelected 
                 ? "border-indigo-500 bg-indigo-500" 
                 : "border-gray-300 dark:border-gray-600 hover:border-indigo-400"
@@ -351,7 +351,7 @@ export function CardItem({
           <button
             onClick={(e) => { e.stopPropagation(); onSelect(); }}
             className={cn(
-              "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm",
+              "w-5 h-5 min-h-0 rounded-full border-2 flex items-center justify-center transition-all bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm",
               isSelected 
                 ? "border-indigo-500 bg-indigo-500" 
                 : "border-gray-300 dark:border-gray-600 hover:border-indigo-400"
@@ -399,7 +399,7 @@ export function CardItem({
           <button
             onClick={(e) => { e.stopPropagation(); onSelect(); }}
             className={cn(
-              "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm",
+              "w-5 h-5 min-h-0 rounded-full border-2 flex items-center justify-center transition-all bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm",
               isSelected 
                 ? "border-indigo-500 bg-indigo-500" 
                 : "border-gray-300 dark:border-gray-600 hover:border-indigo-400"
