@@ -52,4 +52,49 @@ export const downloadCSV = (cards: BusinessCard[]) => {
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
+}
+
+export const convertToVCard = (card: BusinessCard) => {
+  const lines = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `FN:${card.name || card.name_zh || ''}`,
+    card.name && `N:${card.name};;;;`,
+    card.name_zh && `X-PHONETIC-LAST-NAME:${card.name_zh}`,
+    card.title && `TITLE:${card.title}`,
+    card.company && `ORG:${card.company}`,
+    card.email && `EMAIL:${card.email}`,
+    card.phone && `TEL:${card.phone}`,
+    card.address && `ADR:;;${card.address};;;;`,
+    card.notes && `NOTE:${card.notes}`,
+    'END:VCARD'
+  ].filter(Boolean).join('\n')
+  return lines
+}
+
+export const downloadVCard = (card: BusinessCard) => {
+  const vcf = convertToVCard(card)
+  const blob = new Blob([vcf], { type: 'text/vcard;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  const name = (card.name || card.name_zh || 'contact').replace(/\s+/g, '_')
+  link.setAttribute('href', url)
+  link.setAttribute('download', `${name}.vcf`)
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+export const downloadAllVCards = (cards: BusinessCard[]) => {
+  const allVcf = cards.map(c => convertToVCard(c)).join('\n\n')
+  const blob = new Blob([allVcf], { type: 'text/vcard;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  link.setAttribute('href', url)
+  link.setAttribute('download', `business_cards_${new Date().toISOString().split('T')[0]}.vcf`)
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
 } 

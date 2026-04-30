@@ -37,8 +37,12 @@ export function OAuthCallback() {
           console.log('[OAuthCallback] ✅ Authenticated as:', user.email)
           
           setStatus('success')
-          // Clean URL params and redirect
-          setTimeout(() => router.replace('/'), 800)
+          // Force full page reload to ensure auth context picks up the new session
+          // Using window.location instead of router.replace to avoid Next.js soft navigation
+          // which can prevent the auth provider from re-detecting the session
+          setTimeout(() => {
+            window.location.replace('/')
+          }, 800)
           return
         } catch (err: any) {
           console.error('[OAuthCallback] Session creation failed:', err)
@@ -60,7 +64,9 @@ export function OAuthCallback() {
           if (currentUser) {
             console.log('[OAuthCallback] ✅ Authenticated via legacy flow:', currentUser.email)
             setStatus('success')
-            setTimeout(() => router.push('/'), 800)
+            setTimeout(() => {
+              window.location.replace('/')
+            }, 800)
             return
           }
         } catch (err: any) {
@@ -107,7 +113,7 @@ export function OAuthCallback() {
           </div>
           <button 
             className="mt-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm"
-            onClick={() => router.push('/signin')}
+            onClick={() => window.location.href = '/signin'}
           >
             Try Again
           </button>

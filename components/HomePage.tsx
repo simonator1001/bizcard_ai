@@ -1,676 +1,577 @@
 'use client'
 import React, { useState, useRef, useEffect } from 'react'
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
-import { 
-  ScanLine, 
-  LayoutGrid, 
-  Star, 
-  Settings, 
-  Camera, 
-  Edit2,
-  Trash2,
-  Mail,
-  Phone,
-  HelpCircle,
-  Upload,
-  type LucideIcon
-} from 'lucide-react'
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useAuth } from '@/lib/auth-context'
 import { useBusinessCards } from '@/lib/hooks/useBusinessCards'
 import { BusinessCard } from '@/types/business-card'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
+import { 
+  ScanLine, Camera, Upload, User, Settings, LogOut, LogIn,
+  QrCode, Share2, Download, Search, Filter, MoreHorizontal,
+  Mail, Phone, MapPin, Building2, Briefcase, Globe,
+  Plus, Edit3, Trash2, X, Check, Copy, ExternalLink
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
+import imageCompression from 'browser-image-compression'
 import { ManageCardsView } from '@/components/cards/ManageCardsView'
 import { SettingsTab } from '@/components/shared/SettingsTab'
-import { toast } from 'sonner'
-import { ExpandableTabs } from "@/components/ui/expandable-tabs"
-import { Footerdemo } from "@/components/ui/footer-section"
-import { useTranslation } from 'react-i18next'
-import imageCompression from 'browser-image-compression';
-import { SubscriptionPage } from '@/components/subscription/SubscriptionPage';
-import { Header } from "@/components/ui/header";
-import { OAuthCallback } from '@/components/auth/OAuthCallback';
-import Image from 'next/image'
+import { SubscriptionPage } from '@/components/subscription/SubscriptionPage'
+import { OAuthCallback } from '@/components/auth/OAuthCallback'
+import { 
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
+  DropdownMenuSeparator, DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
-type ViewMode = 'list' | 'grid' | 'carousel' | 'stack';
+// ─── Types ───────────────────────────────────────────────
+type Tab = 'scan' | 'mycard' | 'contacts'
 
-type NavigationItem = {
-  title: string;
-  icon: LucideIcon;
-  type?: never;
-} | {
-  type: "separator";
-  title?: never;
-  icon?: never;
-};
-
-const navigationItems: NavigationItem[] = [
-  { title: "Scan", icon: ScanLine },
-  { title: "Manage", icon: LayoutGrid },
-  { title: "Settings", icon: Settings },
-  { title: "Pricing", icon: Star },
-];
-
-const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: { 
-  card: BusinessCard; 
-  onEdit: (card: BusinessCard) => void; 
-  onDelete: (card: BusinessCard) => void; 
-  viewMode: ViewMode; 
-  onDragEnd?: (direction: 'left' | 'right') => void 
-}) => {
-  const x = useMotionValue(0)
-  const background = useTransform(
-    x,
-    [-100, 0, 100],
-    ['rgb(239, 68, 68)', 'rgb(255, 255, 255)', 'rgb(34, 197, 94)']
-  )
-
-  const handleDragEnd = (event: any, info: any) => {
-    const offset = info.offset.x
-    const velocity = info.velocity.x
-
-    if (offset < -100 || (offset < -50 && velocity < -500)) {
-      onDelete(card)
-    } else if (offset > 100 || (offset > 50 && velocity > 500)) {
-      onEdit(card)
-    }
-
-    if (onDragEnd) {
-      if (offset < -100) onDragEnd('left')
-      else if (offset > 100) onDragEnd('right')
-    }
-  }
-
-  return (
-    <motion.div
-      style={{ x, background }}
-      drag={viewMode === 'carousel' ? 'x' : false}
-      dragConstraints={{ left: 0, right: 0 }}
-      onDragEnd={handleDragEnd}
-      whileHover={{ y: -5, boxShadow: '0 10px 20px rgba(0, 0, 0, 0.12)' }}
-      className={`relative p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 bg-gradient-to-b from-white dark:from-gray-800 to-gray-50/50 dark:to-gray-900/50 backdrop-blur-sm transition-all duration-300 ${
-        viewMode === 'grid' ? 'w-full' : 'w-full max-w-md'
-      }`}
-      tabIndex={0}
-      role="button"
-      aria-label={`Business card for ${card.name || card.name_zh}`}
-    >
-      <div className="flex flex-col sm:flex-row items-start gap-3 md:gap-4">
-        <Avatar className="h-10 w-10 md:h-12 md:w-12 ring-2 ring-purple-100 flex-shrink-0">
-          <AvatarFallback className="bg-gradient-to-br from-purple-600 to-pink-600 text-white">
-            {card.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '??'}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 space-y-2 min-w-0 w-full">
-          <div className="flex items-start justify-between">
-            <div className="min-w-0 pr-2">
-              <h3 className="font-semibold text-base md:text-lg truncate">
-                {card.name || card.name_zh}
-                {card.name && card.name_zh && (
-                  <span className="ml-2 text-xs md:text-sm text-gray-500 dark:text-gray-400">({card.name_zh})</span>
-                )}
-              </h3>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 truncate">
-                {card.title || card.title_zh}
-                {card.title && card.title_zh && (
-                  <span className="ml-2">({card.title_zh})</span>
-                )}
-              </p>
-              <p className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
-                {card.company || card.company_zh}
-                {card.company && card.company_zh && (
-                  <span className="ml-2">({card.company_zh})</span>
-                )}
-              </p>
-            </div>
-            <div className="flex gap-1 flex-shrink-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 md:h-8 md:w-8 text-gray-500 dark:text-gray-400 hover:text-purple-600"
-                onClick={() => onEdit(card)}
-                title="Edit card"
-              >
-                <Edit2 className="h-3 w-3 md:h-4 md:w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 md:h-8 md:w-8 text-gray-500 dark:text-gray-400 hover:text-red-600"
-                onClick={() => onDelete(card)}
-                title="Delete card"
-              >
-                <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
-              </Button>
-            </div>
-          </div>
-          <div className="space-y-1">
-            {card.email && (
-              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1 md:gap-2">
-                <Mail className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-                <a href={`mailto:${card.email}`} className="truncate hover:text-purple-600">
-                  {card.email}
-                </a>
-              </p>
-            )}
-            {card.phone && (
-              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1 md:gap-2">
-                <Phone className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-                <a href={`tel:${card.phone}`} className="truncate hover:text-purple-600">
-                  {card.phone}
-                </a>
-              </p>
-            )}
-            {(card.address || card.address_zh) && (
-              <p className="text-xs md:text-sm text-gray-600 flex items-center gap-1 md:gap-2">
-                <HelpCircle className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-                <span className="truncate">
-                  {card.address || card.address_zh}
-                  {card.address && card.address_zh && (
-                    <span className="ml-2 text-xs text-gray-500">({card.address_zh})</span>
-                  )}
-                </span>
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  )
+interface MyCardData {
+  name: string
+  title: string
+  company: string
+  email: string
+  phone: string
+  website: string
+  address: string
+  photo: string
+  linkedin: string
+  twitter: string
+  wechat: string
 }
 
-function UpgradePrompt({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+// ─── Bottom Tab Bar ──────────────────────────────────────
+const TabBar = ({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) => (
+  <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center h-16 bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-100 dark:border-gray-800 pb-[env(safe-area-inset-bottom,0px)]">
+    {([
+      { id: 'scan' as Tab, icon: ScanLine, label: 'Scan' },
+      { id: 'mycard' as Tab, icon: QrCode, label: 'My Card' },
+      { id: 'contacts' as Tab, icon: User, label: 'Contacts' },
+    ]).map(({ id, icon: Icon, label }) => (
+      <button
+        key={id}
+        onClick={() => onChange(id)}
+        className={`relative flex flex-col items-center gap-0.5 px-5 py-1.5 rounded-xl transition-all duration-200 ${
+          active === id 
+            ? 'text-indigo-600 dark:text-indigo-400 scale-105' 
+            : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+        }`}
+      >
+        <Icon className={`w-5 h-5 ${active === id ? 'fill-indigo-100 dark:fill-indigo-900/30' : ''}`} 
+          strokeWidth={active === id ? 2.5 : 1.5} />
+        <span className="text-[10px] font-medium">{label}</span>
+        {active === id && (
+          <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
+        )}
+      </button>
+    ))}
+  </nav>
+)
+
+// ─── Minimal Top Bar ─────────────────────────────────────
+const TopBar = ({ onSettingsClick }: { onSettingsClick: () => void }) => {
+  const { user, signOut } = useAuth()
   const router = useRouter()
   
   return (
-    <></>
+    <header className="sticky top-0 z-40 w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-100 dark:border-gray-800">
+      <div className="flex items-center justify-between px-4 h-14 max-w-4xl mx-auto">
+        <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+          BizCard
+        </span>
+        
+        <div className="flex items-center gap-2">
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                  <Avatar className="h-8 w-8 ring-2 ring-indigo-100 dark:ring-indigo-900">
+                    <AvatarImage src={user.prefs?.avatar || ''} />
+                    <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-500 text-white text-xs">
+                      {user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
+                    {user.name || user.email}
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-3 py-2">
+                  <p className="text-sm font-medium truncate">{user.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onSettingsClick}>
+                  <Settings className="mr-2 h-4 w-4" /> Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOut().then(() => router.push('/'))}>
+                  <LogOut className="mr-2 h-4 w-4" /> Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button size="sm" className="rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white shadow-md" onClick={() => router.push('/signin')}>
+              <LogIn className="mr-1.5 h-3.5 w-3.5" /> Sign In
+            </Button>
+          )}
+        </div>
+      </div>
+    </header>
   )
 }
 
-export default function HomePage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState('scan');
-  const { t } = useTranslation();
-  
-  // Reactively sync tab from URL search params (works on every navigation, not just mount)
-  React.useEffect(() => {
-    const tab = searchParams?.get('tab');
-    if (tab) {
-      setActiveTab(tab);
-    }
-    
-    // Handle auth error parameters if present
-    const error = searchParams?.get('error');
-    const errorDescription = searchParams?.get('error_description');
-    if (error) {
-      toast.error(errorDescription || error);
-      // Remove the error parameters from the URL to avoid showing the error again on refresh
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, [searchParams]);
+// ─── My Card Editor ──────────────────────────────────────
+const MyCardTab = () => {
+  const { user } = useAuth()
+  const [card, setCard] = useState<MyCardData>({
+    name: user?.name || '',
+    title: '',
+    company: '',
+    email: user?.email || '',
+    phone: '',
+    website: '',
+    address: '',
+    photo: '',
+    linkedin: '',
+    twitter: '',
+    wechat: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [showQR, setShowQR] = useState(false)
 
-  // Update URL when tab changes
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    router.push(`/?tab=${tab}`);
-  };
-
-  const selectedIndex = navigationItems.findIndex(
-    (tab) =>
-      tab.title && tab.title.toLowerCase() === activeTab.toLowerCase()
-  );
-
-  const [newsFilter, setNewsFilter] = useState<string>('all')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
-  const { cards, loading, error, addCard, updateCard, deleteCard, user } = useBusinessCards()
-  const [currentCardIndex, setCurrentCardIndex] = useState(0)
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<string>('');
-  const [currentFileIndex, setCurrentFileIndex] = useState(0);
-  const [totalFiles, setTotalFiles] = useState(0);
-  const [progressPercent, setProgressPercent] = useState(0);
-
-  // Filter cards based on search term
-  const filteredCards = cards.filter(card => 
-    card.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    card.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    card.title?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const totalContacts = cards.length
-
-  const handleEdit = (card: BusinessCard) => {
-    // console.log('Edit card:', card)
-  }
-
-  const handleDelete = async (card: BusinessCard) => {
-    try {
-      await deleteCard(card.id)
-    } catch (error) {
-      // console.error('Error deleting card:', error)
-    }
-  }
-
-  const handleDragEnd = (direction: 'left' | 'right') => {
-    if (direction === 'left') {
-      setCurrentCardIndex((prevIndex) => (prevIndex + 1) % filteredCards.length)
-    } else if (direction === 'right') {
-      setCurrentCardIndex((prevIndex) => (prevIndex - 1 + filteredCards.length) % filteredCards.length)
-    }
-  }
-
-  const compressImage = async (file: File) => {
-    // console.log('[DEBUG] Original file:', {
-    //   size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-    //   type: file.type
-    // });
-
-    const options = {
-      maxSizeMB: 1,
-      maxWidthOrHeight: 1920,
-      useWebWorker: true,
-      fileType: 'image/jpeg'
-    };
-
-    try {
-      const compressedFile = await imageCompression(file, options);
-      // console.log('[DEBUG] Compressed file:', {
-      //   size: `${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`,
-      //   type: compressedFile.type
-      // });
-      return compressedFile;
-    } catch (error) {
-      // console.error('[DEBUG] Compression error:', error);
-      throw error;
-    }
-  };
-
+  // Sync user data
   useEffect(() => {
-    // Handle OAuth code if present in URL
-    const handleOAuthCallback = async () => {
-      try {
-        const url = new URL(window.location.href);
-        const code = url.searchParams.get('code');
-        
-        if (code) {
-          console.log('[HomePage] Found OAuth code in URL, Supabase removed');
-          // DISABLED: Supabase removed - exchangeCodeForSession not available
-          // Clean up URL parameters
-          window.history.replaceState({}, document.title, '/');
-        }
-      } catch (err) {
-        console.error('[HomePage] Error handling OAuth callback:', err);
-      }
-    };
-    
-    handleOAuthCallback();
-  }, []); // Run once on mount
+    if (user) {
+      setCard(prev => ({
+        ...prev,
+        name: user.name || prev.name,
+        email: user.email || prev.email,
+      }))
+    }
+  }, [user])
+
+  const updateField = (field: keyof MyCardData, value: string) => {
+    setCard(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      // Save to AppWrite user prefs for now
+      // Future: dedicated collection
+      toast.success('Card saved!')
+    } catch (err: any) {
+      toast.error('Failed to save card')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const cardUrl = typeof window !== 'undefined' 
+    ? `${window.location.origin}/share/${user?.$id || 'me'}`
+    : ''
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(cardUrl)
+    toast.success('Link copied!')
+  }
+
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(cardUrl)}`
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 px-4">
+        <div className="w-20 h-20 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mb-4">
+          <User className="w-10 h-10 text-indigo-500" />
+        </div>
+        <h2 className="text-xl font-bold mb-2">Create Your Digital Card</h2>
+        <p className="text-gray-500 text-center mb-4">Sign in to create your personalized digital business card</p>
+        <Button className="rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white" onClick={() => {}}>
+          Sign In to Start
+        </Button>
+      </div>
+    )
+  }
 
   return (
-    <div className="h-full bg-background">
-      {(typeof window !== 'undefined' && (window.location.hash.includes('access_token=') || 
-        window.location.search.includes('error='))) && (
-        <OAuthCallback />
-      )}
-      
-      <Header
-        logo={<span className="text-xl font-bold">BizCard</span>}
-        menuItems={[
-          { text: "Scan", to: "/?tab=scan" },
-          { text: "Manage", to: "/?tab=manage" },
-          { text: "Settings", to: "/?tab=settings" },
-          { text: "Pricing", to: "/?tab=pricing" },
-        ]}
-      />
-      <main className="flex-1 flex flex-col">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <div className="flex-1 overflow-y-auto pb-16">
-            <TabsContent value="scan" className="h-full p-4 md:p-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 h-auto md:h-[calc(100vh-200px)]">
-                <Card className="w-full">
-                  <CardHeader>
-                    <CardTitle className="text-2xl md:text-4xl font-bold text-center mb-2">
-                      {t('scan.title')}
-                    </CardTitle>
-                    <CardDescription className="text-base md:text-lg text-center text-gray-600">
-                      {t('scan.description')}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <Button 
-                        className="w-full py-4 md:py-6 text-base md:text-lg font-semibold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-                        disabled={isUploading}
-                        onClick={() => {
-                          const input = document.createElement('input');
-                          input.type = 'file';
-                          input.accept = 'image/*';
-                          input.multiple = true;
-                          input.onchange = async (e) => {
-                            const files = (e.target as HTMLInputElement).files;
-                            if (files && files.length > 0) {
-                              setIsUploading(true);
-                              setTotalFiles(files.length);
-                              setCurrentFileIndex(0);
-                              setProgressPercent(0);
-                              
-                              // Process each file
-                              for (let i = 0; i < files.length; i++) {
-                                setCurrentFileIndex(i);
-                                setProgressPercent((i / files.length) * 100);
-                                const file = files[i];
-                                try {
-                                  setUploadProgress('Compressing image...');
-                                  const compressedFile = await compressImage(file);
-                                  
-                                  setUploadProgress('Converting to base64...');
-                                  
-                                  // Debug file info
-                                  // console.log('[DEBUG] File details:', {
-                                  //   name: compressedFile.name,
-                                  //   type: compressedFile.type,
-                                  //   size: `${(compressedFile.size / 1024).toFixed(2)} KB`
-                                  // });
-                                  
-                                  // Convert to base64
-                                  const reader = new FileReader();
-                                  const base64Promise = new Promise<string>((resolve, reject) => {
-                                    reader.onload = () => {
-                                      const result = reader.result as string;
-                                      // console.log('[DEBUG] Base64 conversion:', {
-                                      //   length: result.length,
-                                      //   preview: result.substring(0, 50) + '...',
-                                      //   isDataUrl: result.startsWith('data:')
-                                      // });
-                                      resolve(result);
-                                    };
-                                    reader.onerror = (error) => {
-                                      // console.error('[DEBUG] FileReader error:', error);
-                                      reject(error);
-                                    };
-                                  });
-                                  reader.readAsDataURL(compressedFile);
-                                  const base64 = await base64Promise;
+    <div className="p-4 md:p-6 max-w-lg mx-auto pb-20">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+          My Digital Card
+        </h2>
+        <p className="text-gray-500 text-sm mt-1">Your shareable digital business card</p>
+      </div>
 
-                                  setUploadProgress('Authenticating...');
-                                  // Use AppWrite user ID
-                                  if (!user) {
-                                    throw new Error('Please sign in to upload cards');
-                                  }
-                                  const userId = user.$id;
+      {/* Card Preview */}
+      <Card className="mb-6 overflow-hidden border-2 border-indigo-100 dark:border-indigo-900/30">
+        <div className="bg-gradient-to-r from-indigo-500 to-violet-500 p-6 text-white text-center">
+          {card.photo ? (
+            <Avatar className="h-20 w-20 mx-auto ring-4 ring-white/30 mb-3">
+              <AvatarImage src={card.photo} />
+              <AvatarFallback className="text-xl bg-white/20">
+                {card.name?.split(' ').map(n => n[0]).join('') || 'U'}
+              </AvatarFallback>
+            </Avatar>
+          ) : (
+            <div className="h-20 w-20 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-3 ring-4 ring-white/30">
+              <User className="w-10 h-10 text-white/70" />
+            </div>
+          )}
+          <h3 className="text-xl font-bold">{card.name || 'Your Name'}</h3>
+          <p className="text-white/80 text-sm">{card.title || 'Your Title'}</p>
+          <p className="text-white/60 text-xs mt-1">{card.company || 'Your Company'}</p>
+        </div>
+        <CardContent className="p-4 space-y-2">
+          {card.email && <p className="text-xs text-gray-600 flex items-center gap-2"><Mail className="w-3.5 h-3.5" /> {card.email}</p>}
+          {card.phone && <p className="text-xs text-gray-600 flex items-center gap-2"><Phone className="w-3.5 h-3.5" /> {card.phone}</p>}
+          {card.website && <p className="text-xs text-gray-600 flex items-center gap-2"><Globe className="w-3.5 h-3.5" /> {card.website}</p>}
+          {card.address && <p className="text-xs text-gray-600 flex items-center gap-2"><MapPin className="w-3.5 h-3.5" /> {card.address}</p>}
+        </CardContent>
+      </Card>
 
-                                  // console.log('[DEBUG] Session data:', {
-                                  //   hasSession: !!refreshedSession,
-                                  //   userId: refreshedSession.user.id,
-                                  //   tokenLength: accessToken.length,
-                                  //   expiresAt: new Date(refreshedSession.expires_at! * 1000).toISOString()
-                                  // });
+      {/* Quick Actions */}
+      <div className="flex gap-2 mb-6">
+        <Button variant="outline" className="flex-1 rounded-full" onClick={() => setShowQR(true)}>
+          <QrCode className="w-4 h-4 mr-1.5" /> QR Code
+        </Button>
+        <Button variant="outline" className="flex-1 rounded-full" onClick={copyUrl}>
+          <Copy className="w-4 h-4 mr-1.5" /> Copy Link
+        </Button>
+        <Button variant="outline" className="flex-1 rounded-full" onClick={() => {
+          if (navigator.share) navigator.share({ title: card.name, url: cardUrl })
+          else copyUrl()
+        }}>
+          <Share2 className="w-4 h-4 mr-1.5" /> Share
+        </Button>
+      </div>
 
-                                  setUploadProgress('Processing card...');
-                                  // Call scan API with AppWrite user ID
-                                  const response = await fetch('/api/scan', {
-                                    method: 'POST',
-                                    headers: {
-                                      'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify({ 
-                                      image: base64,
-                                      userId: userId,
-                                      debug: true,
-                                      options: {
-                                        extractAllText: true,
-                                        detectLanguage: true,
-                                        enhancedChineseExtraction: true,
-                                        ocrPrompt: `Extract all business card information from this image. Pay special attention to:
-                                          1. Name in both English (鄧潔瑩) and Chinese if present
-                                          2. Title in both languages (副總監 | 市務及傳訊部)
-                                          3. Company name in both languages (太興環球發展有限公司 / TAI HING)
-                                          4. Complete contact details:
-                                             - Email (christina.tang@taihing.com)
-                                             - Phone numbers (D: 3710 9802, M: 9288 3752)
-                                             - Website (www.taihing.com)
-                                          5. Full address in both languages
-                                          6. Any additional identifiers or department information
-                                          7. Look for text in both vertical and horizontal orientations
-                                          8. Check for text in both purple and black colors`,
-                                        textDetectionParams: {
-                                          allowedRotations: [0, 90, 270, 180],
-                                          detectOrientation: true,
-                                          multipleLanguages: true,
-                                          enhancedLayout: true,
-                                          minConfidence: 60
-                                        }
-                                      }
-                                    })
-                                  });
-
-                                  if (!response.ok) {
-                                    const errorText = await response.text();
-                                    // console.error('[DEBUG] API Error:', {
-                                    //   status: response.status,
-                                    //   statusText: response.statusText,
-                                    //   headers: Object.fromEntries(response.headers.entries()),
-                                    //   error: errorText
-                                    // });
-                                    throw new Error(`Failed to process image: ${errorText}`);
-                                  }
-
-                                  const result = await response.json();
-                                  // console.log('[DEBUG] API Success:', result);
-                                  toast.success(`Card ${i + 1} processed successfully`);
-                                } catch (error: any) {
-                                  // console.error('[DEBUG] Error details:', {
-                                  //   message: error.message,
-                                  //   stack: error.stack,
-                                  //   name: error.name
-                                  // });
-                                  toast.error(`Failed to process card ${i + 1}: ${error.message}`);
-                                }
-                              }
-                              setProgressPercent(100);
-                              setIsUploading(false);
-                              setUploadProgress('');
-                              setCurrentFileIndex(0);
-                              setTotalFiles(0);
-                            }
-                          };
-                          input.click();
-                        }}
-                      >
-                        {isUploading ? (
-                          <div className="w-full space-y-2">
-                            <div className="flex items-center justify-between text-sm text-white">
-                              <span>{uploadProgress}</span>
-                              <span>{currentFileIndex + 1} of {totalFiles}</span>
-                            </div>
-                            <div className="w-full bg-white/20 rounded-full h-2">
-                              <div 
-                                className="bg-white h-2 rounded-full transition-all duration-300 ease-in-out"
-                                style={{ width: `${progressPercent}%` }}
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center">
-                            <Upload className="h-5 w-5 md:h-8 md:w-8 mr-2 md:mr-3" />
-                            Upload Images
-                          </div>
-                        )}
-                      </Button>
-
-                      <Button 
-                        variant="outline"
-                        className="w-full py-4 md:py-6 text-base md:text-lg font-semibold rounded-full border-2 hover:bg-gray-50"
-                        disabled={isUploading}
-                        onClick={() => {
-                          const input = document.createElement('input');
-                          input.type = 'file';
-                          input.accept = 'image/*';
-                          input.capture = 'environment';
-                          input.onchange = async (e) => {
-                            const files = (e.target as HTMLInputElement).files;
-                            if (files && files.length > 0) {
-                              setIsUploading(true);
-                              setTotalFiles(1);
-                              setCurrentFileIndex(0);
-                              setProgressPercent(0);
-                              
-                              const file = files[0];
-                              try {
-                                setUploadProgress('Compressing image...');
-                                setProgressPercent(10);
-                                const compressedFile = await compressImage(file);
-                                
-                                setUploadProgress('Converting to base64...');
-                                setProgressPercent(20);
-                                
-                                // Convert to base64
-                                const reader = new FileReader();
-                                const base64Promise = new Promise<string>((resolve, reject) => {
-                                  reader.onload = () => resolve(reader.result as string);
-                                  reader.onerror = reject;
-                                });
-                                reader.readAsDataURL(compressedFile);
-                                const base64 = await base64Promise;
-
-                                setUploadProgress('Authenticating...');
-                                if (!user) {
-                                  throw new Error('Please sign in to upload cards');
-                                }
-                                const userId = user.$id;
-
-                                // console.log('[DEBUG] Session data:', {
-                                //   userId: userId,
-                                //   tokenLength: accessToken.length,
-                                //   expiresAt: new Date(refreshedSession.expires_at! * 1000).toISOString()
-                                // });
-
-                                setUploadProgress('Processing card...');
-                                // Call scan API with AppWrite user ID
-                                const response = await fetch('/api/scan', {
-                                  method: 'POST',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                  },
-                                  body: JSON.stringify({ 
-                                    image: base64,
-                                    userId: userId,
-                                    debug: true,
-                                    options: {
-                                      extractAllText: true,
-                                      detectLanguage: true,
-                                      enhancedChineseExtraction: true,
-                                      ocrPrompt: `Extract all business card information from this image. Pay special attention to:
-                                        1. Name in both English (鄧潔瑩) and Chinese if present
-                                        2. Title in both languages (副總監 | 市務及傳訊部)
-                                        3. Company name in both languages (太興環球發展有限公司 / TAI HING)
-                                        4. Complete contact details:
-                                           - Email (christina.tang@taihing.com)
-                                           - Phone numbers (D: 3710 9802, M: 9288 3752)
-                                           - Website (www.taihing.com)
-                                        5. Full address in both languages
-                                        6. Any additional identifiers or department information
-                                        7. Look for text in both vertical and horizontal orientations
-                                        8. Check for text in both purple and black colors`,
-                                      textDetectionParams: {
-                                        allowedRotations: [0, 90, 270, 180],
-                                        detectOrientation: true,
-                                        multipleLanguages: true,
-                                        enhancedLayout: true,
-                                        minConfidence: 60
-                                      }
-                                    }
-                                  })
-                                });
-
-                                if (!response.ok) {
-                                  throw new Error('Failed to process image');
-                                }
-
-                                setProgressPercent(100);
-                                const result = await response.json();
-                                toast.success('Card processed successfully');
-                              } catch (error: any) {
-                                // console.error('Error processing file:', error);
-                                toast.error('Failed to process card');
-                              } finally {
-                                setIsUploading(false);
-                                setUploadProgress('');
-                                setCurrentFileIndex(0);
-                                setTotalFiles(0);
-                                setProgressPercent(0);
-                              }
-                            }
-                          };
-                          input.click();
-                        }}
-                      >
-                        {isUploading ? (
-                          <div className="w-full space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>{uploadProgress}</span>
-                              <span>1 of 1</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-primary h-2 rounded-full transition-all duration-300 ease-in-out"
-                                style={{ width: `${progressPercent}%` }}
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center">
-                            <Camera className="h-5 w-5 md:h-8 md:w-8 mr-2 md:mr-3" />
-                            Take a Photo
-                          </div>
-                        )}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="flex flex-col w-full">
-                  <CardHeader>
-                    <CardTitle className="text-2xl md:text-4xl font-bold text-center mb-2">
-                      My Cards
-                    </CardTitle>
-                    <CardDescription className="text-base md:text-lg text-center text-gray-600">
-                      {totalContacts} business cards scanned
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                      <p className="text-4xl font-bold text-purple-600">{totalContacts}</p>
-                      <p className="text-gray-500 mt-2">Total Contacts</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="manage" className="h-full p-4 md:p-8">
-              <ManageCardsView setActiveTab={setActiveTab} />
-            </TabsContent>
-
-            <TabsContent value="settings" className="h-full p-4 md:p-8">
-              <SettingsTab />
-            </TabsContent>
-
-            <TabsContent value="pricing" className="h-full p-4 md:p-8">
-              <SubscriptionPage />
-            </TabsContent>
+      {/* Edit Form */}
+      <div className="space-y-3">
+        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Edit Card Details</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Name</Label>
+            <Input value={card.name} onChange={e => updateField('name', e.target.value)} placeholder="Your full name" className="h-9 text-sm" />
           </div>
-        </Tabs>
-      </main>
-      <Footerdemo />
+          <div className="space-y-1.5">
+            <Label className="text-xs">Title</Label>
+            <Input value={card.title} onChange={e => updateField('title', e.target.value)} placeholder="e.g. CEO" className="h-9 text-sm" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Company</Label>
+            <Input value={card.company} onChange={e => updateField('company', e.target.value)} placeholder="Company name" className="h-9 text-sm" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Email</Label>
+            <Input value={card.email} onChange={e => updateField('email', e.target.value)} placeholder="you@company.com" className="h-9 text-sm" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Phone</Label>
+            <Input value={card.phone} onChange={e => updateField('phone', e.target.value)} placeholder="+852 ..." className="h-9 text-sm" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Website</Label>
+            <Input value={card.website} onChange={e => updateField('website', e.target.value)} placeholder="https://..." className="h-9 text-sm" />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Address</Label>
+          <Input value={card.address} onChange={e => updateField('address', e.target.value)} placeholder="Your address" className="h-9 text-sm" />
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">LinkedIn</Label>
+            <Input value={card.linkedin} onChange={e => updateField('linkedin', e.target.value)} placeholder="username" className="h-9 text-sm" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Twitter</Label>
+            <Input value={card.twitter} onChange={e => updateField('twitter', e.target.value)} placeholder="@handle" className="h-9 text-sm" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">WeChat</Label>
+            <Input value={card.wechat} onChange={e => updateField('wechat', e.target.value)} placeholder="WeChat ID" className="h-9 text-sm" />
+          </div>
+        </div>
+        <Button onClick={handleSave} disabled={saving} className="w-full mt-3 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white">
+          {saving ? 'Saving...' : 'Save Card'}
+        </Button>
+      </div>
+
+      {/* QR Dialog */}
+      <Dialog open={showQR} onOpenChange={setShowQR}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Your QR Code</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div className="bg-white p-4 rounded-xl shadow-sm">
+              <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48" />
+            </div>
+            <p className="text-xs text-gray-500 text-center">Scan to view my digital business card</p>
+            <div className="flex gap-2 w-full">
+              <Button variant="outline" className="flex-1 rounded-full text-xs" onClick={copyUrl}>
+                <Copy className="w-3.5 h-3.5 mr-1" /> Copy Link
+              </Button>
+              <Button variant="outline" className="flex-1 rounded-full text-xs" onClick={() => {
+                const link = document.createElement('a')
+                link.href = qrCodeUrl
+                link.download = 'bizcard-qr.png'
+                link.click()
+              }}>
+                <Download className="w-3.5 h-3.5 mr-1" /> Download
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+// ─── Scan Tab ────────────────────────────────────────────
+const ScanTab = () => {
+  const { t } = useTranslation()
+  const { user } = useAuth()
+  const { cards } = useBusinessCards()
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState('')
+  const [progressPercent, setProgressPercent] = useState(0)
+  const [currentFileIndex, setCurrentFileIndex] = useState(0)
+  const [totalFiles, setTotalFiles] = useState(0)
+  const [lastScannedCard, setLastScannedCard] = useState<any>(null)
+
+  const compressImage = async (file: File) => {
+    const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true, fileType: 'image/jpeg' as const }
+    return await imageCompression(file, options)
+  }
+
+  const processFiles = async (files: FileList, isCamera = false) => {
+    setIsUploading(true)
+    setTotalFiles(isCamera ? 1 : files.length)
+    setCurrentFileIndex(0)
+    setProgressPercent(0)
+
+    const fileList = isCamera ? [files[0]] : Array.from(files)
+    for (let i = 0; i < fileList.length; i++) {
+      setCurrentFileIndex(i)
+      setProgressPercent((i / fileList.length) * 100)
+      const file = fileList[i]
+      try {
+        setUploadProgress('Compressing...')
+        const compressedFile = await compressImage(file)
+
+        setUploadProgress('Processing...')
+        const reader = new FileReader()
+        const base64 = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(compressedFile)
+        })
+
+        if (!user) throw new Error('Please sign in')
+        setUploadProgress('Scanning...')
+
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 60000) // 60s timeout
+        
+        const response = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64, userId: user.$id }),
+          signal: controller.signal,
+        })
+        clearTimeout(timeoutId)
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}))
+          throw new Error(errData.message || errData.error || `Scan failed (${response.status})`)
+        }
+        
+        const scanResult = await response.json()
+        setLastScannedCard(scanResult)
+        toast.success(`Card ${i + 1} scanned! Tap to view →`)
+      } catch (err: any) {
+        toast.error(err.message || 'Failed')
+      }
+    }
+    setProgressPercent(100)
+    setTimeout(() => {
+      setIsUploading(false)
+      setUploadProgress('')
+      setCurrentFileIndex(0)
+      setTotalFiles(0)
+      setProgressPercent(0)
+    }, 500)
+  }
+
+  const openFilePicker = (camera = false) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.multiple = !camera
+    if (camera) input.capture = 'environment'
+    input.onchange = (e) => {
+      const files = (e.target as HTMLInputElement).files
+      if (files?.length) processFiles(files, camera)
+    }
+    input.click()
+  }
+
+  return (
+    <div className="p-4 md:p-8 max-w-lg mx-auto pb-20">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+          {t('scan.title')}
+        </h2>
+        <p className="text-gray-500 text-sm mt-1">AI-powered business card scanner</p>
+      </div>
+
+      {/* Upload Area */}
+      <Card className="mb-4 border-2 border-dashed border-indigo-200 dark:border-indigo-900/30 bg-indigo-50/50 dark:bg-indigo-950/10">
+        <CardContent className="p-8 text-center">
+          <div className="w-16 h-16 mx-auto rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mb-4">
+            <ScanLine className="w-8 h-8 text-indigo-500" />
+          </div>
+          <h3 className="font-semibold mb-2">Tap to Scan</h3>
+          <p className="text-sm text-gray-500 mb-4">Take a photo or upload business card images</p>
+          
+          {isUploading ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-indigo-600 font-medium">{uploadProgress}</span>
+                <span className="text-gray-400">{currentFileIndex + 1}/{totalFiles}</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                <div className="bg-gradient-to-r from-indigo-500 to-violet-500 h-2 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }} />
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-3 justify-center">
+              <Button onClick={() => openFilePicker(true)} className="rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-lg hover:shadow-xl transition-shadow">
+                <Camera className="mr-2 h-4 w-4" /> Take Photo
+              </Button>
+              <Button variant="outline" onClick={() => openFilePicker(false)} className="rounded-full">
+                <Upload className="mr-2 h-4 w-4" /> Upload
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Stats */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-2xl font-bold text-indigo-600">{cards.length}</p>
+              <p className="text-xs text-gray-500">Total Contacts</p>
+            </div>
+            {user && (
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate max-w-[160px]">{user.name}</p>
+                <p className="text-xs text-gray-500">{user.email}</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Last Scanned Card Preview */}
+      {lastScannedCard && (
+        <Card className="mt-3 border-2 border-indigo-300 dark:border-indigo-700 bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/20 dark:to-violet-950/20 animate-fade-in-up shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full uppercase tracking-wider">Just Scanned</span>
+              <button className="text-gray-400 hover:text-gray-600 text-sm p-1" onClick={() => setLastScannedCard(null)}>✕</button>
+            </div>
+            <div className="space-y-1 text-sm">
+              {lastScannedCard.name && <p className="font-semibold">{lastScannedCard.name} {lastScannedCard.name_zh && <span className="text-gray-500 font-normal">({lastScannedCard.name_zh})</span>}</p>}
+              {lastScannedCard.title && <p className="text-gray-600 dark:text-gray-400">{lastScannedCard.title}</p>}
+              {lastScannedCard.company && <p className="text-gray-500 text-xs">{lastScannedCard.company}</p>}
+              <div className="flex gap-3 pt-1">
+                {lastScannedCard.email && <span className="text-xs text-indigo-500">✉ {lastScannedCard.email}</span>}
+                {lastScannedCard.phone && <span className="text-xs text-gray-500">📞 {lastScannedCard.phone}</span>}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+// ─── Settings Dialog ─────────────────────────────────────
+const SettingsDialog = ({ open, onClose }: { open: boolean; onClose: () => void }) => (
+  <Dialog open={open} onOpenChange={onClose}>
+    <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>Settings</DialogTitle>
+      </DialogHeader>
+      <SettingsTab />
+    </DialogContent>
+  </Dialog>
+)
+
+// ─── Main HomePage ───────────────────────────────────────
+export default function HomePage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<Tab>('scan')
+  const [showSettings, setShowSettings] = useState(false)
+  const { t } = useTranslation()
+
+  // Sync tab from URL
+  useEffect(() => {
+    const tab = searchParams?.get('tab')
+    if (tab === 'manage' || tab === 'contacts') setActiveTab('contacts')
+    else if (tab === 'mycard') setActiveTab('mycard')
+    else if (tab === 'settings') setShowSettings(true)
+    else if (tab === 'pricing') {} // handled elsewhere
+    else setActiveTab('scan')
+  }, [searchParams])
+
+  // Handle old tab param for backward compatibility
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab)
+    router.push(`/?tab=${tab}`, { scroll: false })
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* OAuth callback handler */}
+      {(typeof window !== 'undefined' && (window.location.hash.includes('access_token=') || 
+        window.location.search.includes('error='))) && <OAuthCallback />}
+
+      <TopBar onSettingsClick={() => setShowSettings(true)} />
+
+      <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as Tab)}>
+        <TabsContent value="scan" className="mt-0">
+          <ScanTab />
+        </TabsContent>
+        <TabsContent value="mycard" className="mt-0">
+          <MyCardTab />
+        </TabsContent>
+        <TabsContent value="contacts" className="mt-0">
+          <div className="p-4 md:p-6 pb-20">
+            <ManageCardsView setActiveTab={(t: string) => handleTabChange(t as Tab)} />
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <TabBar active={activeTab} onChange={handleTabChange} />
+      
+      <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
+      
+      {/* Safe area padding for bottom bar */}
+      <div className="h-20" />
     </div>
   )
 }

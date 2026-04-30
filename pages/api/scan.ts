@@ -1,11 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { Client, Storage, Databases, ID, Permission, Role } from 'node-appwrite'
+import { recognizeBusinessCard } from '@/lib/ocr-service'
 
 export const config = {
   api: {
     bodyParser: {
       sizeLimit: '10mb',
     },
+    maxDuration: 60, // 60 seconds for Vercel Pro
   },
 }
 
@@ -53,23 +55,16 @@ export default async function handler(
     console.log('[SCAN] Image received, size:', Math.ceil(image.length / 1024), 'KB')
     console.log('[SCAN] User ID:', userId)
 
-    // Step 1: Perform OCR via the existing /api/ocr endpoint
-    console.log('[SCAN] Calling OCR endpoint...')
-    const origin = req.headers.origin || `https://${req.headers.host}`
-    const ocrResponse = await fetch(`${origin}/api/ocr`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image }),
-    })
-
-    if (!ocrResponse.ok) {
-      const ocrError = await ocrResponse.json().catch(() => ({ message: 'OCR failed' }))
-      console.error('[SCAN] OCR failed:', ocrError)
-      return res.status(502).json({ error: 'OCR processing failed', details: ocrError })
+    // Step 1: Perform OCR directly (inline instead of HTTP call to avoid double timeout)
+    console.log('[SCAN] Running OCR recognition...')
+    let ocrResult
+    try {
+      ocrResult = await recognizeBusinessCard(image)
+      console.log('[SCAN] OCR successful')
+    } catch (ocrError: any) {
+      console.error('[SCAN] OCR failed:', ocrError.message)
+      return res.status(502).json({ error: 'OCR processing failed', message: ocrError.message })
     }
-
-    const ocrResult = await ocrResponse.json()
-    console.log('[SCAN] OCR successful')
 
     // Step 2: Upload image to AppWrite Storage
     console.log('[SCAN] Uploading image to AppWrite Storage...')
@@ -80,16 +75,16 @@ export default async function handler(
     console.log('[SCAN] Saving card to AppWrite Database...')
     const cardData = {
       user_id: userId,
-      name: ocrResult.name?.english || '',
-      name_zh: ocrResult.name?.chinese || '',
-      company: ocrResult.company?.english || '[No Company]',
-      company_zh: ocrResult.company?.chinese || '',
-      title: ocrResult.title?.english || '',
-      title_zh: ocrResult.title?.chinese || '',
-      email: ocrResult.email || '',
-      phone: (ocrResult.phone || '').replace(/\s+/g, ' ').trim().substring(0, 50),
-      address: ocrResult.address?.english || '',
-      address_zh: ocrResult.address?.chinese || '',
+      name: ocrResult.words_result?.NAME?.words || '',
+      name_zh: ocrResult.words_result?.NAME_ZH?.words || '',
+      company: ocrResult.words_result?.COMPANY?.words || '[No Company]',
+      company_zh: ocrResult.words_result?.COMPANY_ZH?.words || '',
+      title: ocrResult.words_result?.TITLE?.words || '',
+      title_zh: ocrResult.words_result?.TITLE_ZH?.words || '',
+      email: ocrResult.words_result?.EMAIL?.words || '',
+      phone: (ocrResult.words_result?.MOBILE?.words || '').replace(/\s+/g, ' ').trim().substring(0, 50),
+      address: ocrResult.words_result?.ADDR?.words || '',
+      address_zh: ocrResult.words_result?.ADDR_ZH?.words || '',
       image_url: imageUrl,
       raw_text: ocrResult.raw_text || '',
       lastModified: new Date().toISOString(),
