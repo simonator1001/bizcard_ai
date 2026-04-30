@@ -1,11 +1,18 @@
 import axios from 'axios';
 import sharp from 'sharp';
-import { DEEPBRICK_API_KEY, DEEPBRICK_API_KEY_2, VISION_MODEL, OCR_PROMPT } from './ocr-config';
+import { OPENROUTER_API_KEY, VISION_MODEL, FALLBACK_VISION_MODEL, OCR_PROMPT } from './ocr-config';
 
 const MAX_RETRIES = 3;
 const INITIAL_DELAY = 1000;
 const MAX_DELAY = 5000;
 const TIMEOUT = 60000;
+
+// OpenRouter API
+const OPENROUTER_BASE = 'https://openrouter.ai/api/v1';
+
+// Deepbrick fallback
+const DEEPBRICK_BASE = 'https://api.deepbricks.ai/v1';
+const DEEPBRICK_API_KEY = process.env.DEEPBRICK_API_KEY || '';
 
 interface OCRResponse {
   words_result: {
@@ -23,25 +30,29 @@ interface OCRResponse {
   raw_text: string;
 }
 
-// Deepbrick is OpenAI-compatible
-const DEEPBRICK_BASE = 'https://api.deepbricks.ai/v1';
-
-function getApiKey(): string {
-  // Rotate between two keys
-  const keys = [DEEPBRICK_API_KEY, DEEPBRICK_API_KEY_2].filter(k => k);
-  if (keys.length === 0) throw new Error('No Deepbrick API key configured');
-  // Pick key based on timestamp even/odd for simple rotation
-  const idx = Math.floor(Date.now() / 1000) % keys.length;
-  return keys[idx];
+function getApiKey(): { key: string; endpoint: string; model: string } {
+  // Primary: OpenRouter with Qwen VL Plus
+  if (OPENROUTER_API_KEY) {
+    return { key: OPENROUTER_API_KEY, endpoint: OPENROUTER_BASE, model: VISION_MODEL };
+  }
+  // Fallback: Deepbrick with Claude Sonnet
+  return { key: DEEPBRICK_API_KEY, endpoint: DEEPBRICK_BASE, model: FALLBACK_VISION_MODEL };
 }
 
-function createAxiosInstance() {
+function createAxiosInstance(endpoint: string, key: string) {
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${key}`,
+    'Content-Type': 'application/json',
+  };
+  // OpenRouter requires HTTP-Referer and X-Title headers
+  if (endpoint === OPENROUTER_BASE) {
+    headers['HTTP-Referer'] = 'https://bizcardai.vercel.app';
+    headers['X-Title'] = 'BizCard AI';
+  }
+  
   return axios.create({
-    baseURL: DEEPBRICK_BASE,
-    headers: {
-      'Authorization': `Bearer ${getApiKey()}`,
-      'Content-Type': 'application/json',
-    },
+    baseURL: endpoint,
+    headers,
     timeout: TIMEOUT,
     maxContentLength: 10 * 1024 * 1024,
     maxBodyLength: 10 * 1024 * 1024,
@@ -172,7 +183,8 @@ export async function recognizeBusinessCard(imageBase64: string): Promise<OCRRes
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      console.log(`[OCR] Attempt ${attempt + 1}: Starting OCR request via Deepbrick...`);
+      const { key, endpoint, model } = getApiKey();
+      console.log(`[OCR] Attempt ${attempt + 1}: Using ${model} via ${endpoint.includes('openrouter') ? 'OpenRouter' : 'Deepbrick'}...`);
 
       // Compress image before processing
       console.log('[OCR] Compressing image...');
@@ -189,7 +201,7 @@ export async function recognizeBusinessCard(imageBase64: string): Promise<OCRRes
       const mimeType = compressedImage.includes('png') ? 'image/png' : 'image/jpeg';
 
       const requestBody = {
-        model: VISION_MODEL,
+        model,
         messages: [
           {
             role: 'system',
@@ -216,7 +228,7 @@ export async function recognizeBusinessCard(imageBase64: string): Promise<OCRRes
         top_p: 0.9,
       };
 
-      const axiosInstance = createAxiosInstance();
+      const axiosInstance = createAxiosInstance(endpoint, key);
 
       const response = await axiosInstance.post('/chat/completions', requestBody, {
         timeout: TIMEOUT * (attempt + 1),

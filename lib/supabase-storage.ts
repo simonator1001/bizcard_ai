@@ -1,27 +1,9 @@
-// DISABLED: Supabase removed
+// Stub: Supabase removed, using AppWrite
+// getImageUrl now returns null - images are served via AppWrite Storage
 
-const BUSINESS_CARDS_BUCKET = 'business-cards';
-
-export async function getImageUrl(path: string): Promise<string | null> {
-  // DISABLED: Supabase removed
-  console.log('[DISABLED] getImageUrl: Supabase removed');
+export async function getImageUrl(imagePath: string | null | undefined): Promise<string | null> {
+  if (!imagePath) return null;
+  // AppWrite storage images are accessed via their file preview API
+  // This stub returns the raw path for now; actual AppWrite integration handles this
   return null;
 }
-
-export async function uploadImage(file: File, userId: string): Promise<string | null> {
-  // DISABLED: Supabase removed
-  console.log('[DISABLED] uploadImage: Supabase removed');
-  return null;
-}
-
-export async function deleteImage(path: string): Promise<boolean> {
-  // DISABLED: Supabase removed
-  console.log('[DISABLED] deleteImage: Supabase removed');
-  return false;
-}
-
-export async function validateImageUrl(url: string): Promise<boolean> {
-  // DISABLED: Supabase removed
-  console.log('[DISABLED] validateImageUrl: Supabase removed');
-  return false;
-} 

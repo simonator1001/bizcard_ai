@@ -162,7 +162,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
         <h2 className="text-2xl font-semibold mb-4">Sign in to manage your business cards</h2>
-        <p className="text-gray-600 mb-8">You need to be signed in to view and manage your business cards.</p>
+        <p className="text-gray-600 dark:text-gray-300 mb-8">You need to be signed in to view and manage your business cards.</p>
         <Button onClick={() => window.location.href = '/signin'}>
           Sign In
         </Button>
@@ -175,7 +175,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-4">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="text-sm text-gray-500">Loading your business cards...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Loading your business cards...</p>
         </div>
       </div>
     );
@@ -208,11 +208,11 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
 
       {filteredCards.length === 0 ? (
         <div className="text-center py-12">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 mb-4">
-            <ImageIcon className="h-6 w-6 text-gray-400" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
+            <ImageIcon className="h-6 w-6 text-gray-400 dark:text-gray-500" />
           </div>
           <h3 className="text-lg font-semibold mb-2">No business cards found</h3>
-          <p className="text-gray-500 mb-4">
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
             {searchTerm ? 'Try adjusting your search terms' : 'Start by scanning some business cards'}
           </p>
           <Button onClick={() => setActiveTab('scan')}>
@@ -296,7 +296,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
       </Dialog>
 
       <Dialog open={showDuplicateManager} onOpenChange={handleDuplicateManagerChange}>
-        <DialogContent className="max-w-4xl max-h-[80vh] bg-white/95 backdrop-blur-md border border-gray-200 overflow-hidden flex flex-col">
+        <DialogContent className="max-w-4xl max-h-[80vh] bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
           <DuplicateManager
             cards={cards}
             onClose={handleDuplicateManagerClose}

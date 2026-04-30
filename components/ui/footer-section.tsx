@@ -12,21 +12,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Facebook, Instagram, Linkedin, Moon, Send, Sun, Twitter } from "lucide-react"
+import { Facebook, Instagram, Linkedin, Send, Twitter } from "lucide-react"
 import NewsletterForm from "@/components/ui/newsletter-form"
+import Link from "next/link"
 
 function Footerdemo() {
-  const [isDarkMode, setIsDarkMode] = React.useState(true)
-  const [isChatOpen, setIsChatOpen] = React.useState(false)
-
-  React.useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark")
-    } else {
-      document.documentElement.classList.remove("dark")
-    }
-  }, [isDarkMode])
-
   return (
     <footer className="relative border-t bg-gradient-to-br from-primary/10 via-secondary/10 to-muted/20 text-foreground transition-colors duration-300">
       <div className="container mx-auto px-4 py-12 md:px-6 lg:px-8">
@@ -41,20 +31,23 @@ function Footerdemo() {
           <div>
             <h3 className="mb-4 text-lg font-semibold text-primary">Quick Links</h3>
             <nav className="space-y-2 text-sm">
-              <a href="#" className="block transition-colors hover:text-primary">Home</a>
-              <a href="#" className="block transition-colors hover:text-primary">About</a>
-              <a href="#" className="block transition-colors hover:text-primary">Features</a>
-              <a href="#" className="block transition-colors hover:text-primary">Pricing</a>
-              <a href="#" className="block transition-colors hover:text-primary">Contact</a>
+              <Link href="/" className="block transition-colors hover:text-primary">Home</Link>
+              <Link href="/about" className="block transition-colors hover:text-primary">About</Link>
+              <Link href="/features" className="block transition-colors hover:text-primary">Features</Link>
+              <Link href="/pricing" className="block transition-colors hover:text-primary">Pricing</Link>
+              <Link href="/contact" className="block transition-colors hover:text-primary">Contact</Link>
             </nav>
           </div>
           <div>
             <h3 className="mb-4 text-lg font-semibold text-primary">Contact</h3>
             <address className="space-y-2 text-sm not-italic">
-              <p>123 Innovation Street</p>
-              <p>Tech City, TC 12345</p>
-              <p>Phone: (123) 456-7890</p>
-              <p>Email: hello@example.com</p>
+              <p>Contact us for inquiries</p>
+              <p>Available worldwide</p>
+              <p>
+                <a href="mailto:support@bizcard.ai" className="transition-colors hover:text-primary">
+                  support@bizcard.ai
+                </a>
+              </p>
             </address>
           </div>
           <div className="relative">
@@ -81,12 +74,12 @@ function Footerdemo() {
         </div>
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t pt-8 text-center md:flex-row">
           <p className="text-sm text-muted-foreground">
-            © 2024 Simon.AI BizCard. All rights reserved.
+            © 2026 Simon.AI BizCard. All rights reserved.
           </p>
           <nav className="flex gap-4 text-sm">
-            <a href="#" className="transition-colors hover:text-primary">Privacy Policy</a>
-            <a href="#" className="transition-colors hover:text-primary">Terms</a>
-            <a href="#" className="transition-colors hover:text-primary">Cookies</a>
+            <Link href="/privacy" className="transition-colors hover:text-primary">Privacy Policy</Link>
+            <Link href="/terms" className="transition-colors hover:text-primary">Terms</Link>
+            <Link href="/cookies" className="transition-colors hover:text-primary">Cookies</Link>
           </nav>
         </div>
       </div>

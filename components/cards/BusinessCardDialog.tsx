@@ -29,7 +29,7 @@ export function BusinessCardDialog({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl p-0">
+        <DialogContent className="max-w-4xl p-0 bg-white text-gray-900">
           <div className="flex">
             <div className="w-1/2 p-6 border-r border-gray-200">
               <div className="aspect-[1.586/1] relative bg-gray-100 rounded-lg overflow-hidden">

@@ -1,18 +1,32 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
-import { DEEPBRICK_API_KEY, DEEPBRICK_API_KEY_2 } from '@/lib/ocr-config';
+import { OPENROUTER_API_KEY } from '@/lib/ocr-config';
+
+const DEEPBRICK_API_KEY = process.env.DEEPBRICK_API_KEY || '';
+const DEEPBRICK_API_KEY_2 = process.env.DEEPBRICK_API_KEY_2 || '';
 
 function getApiKey(): string {
+  // Primary: OpenRouter
+  if (OPENROUTER_API_KEY) return OPENROUTER_API_KEY;
+  // Fallback: Deepbrick key rotation
   const keys = [DEEPBRICK_API_KEY, DEEPBRICK_API_KEY_2].filter(k => k);
-  if (keys.length === 0) throw new Error('No Deepbrick API key configured');
+  if (keys.length === 0) throw new Error('No API key configured');
   const idx = Math.floor(Date.now() / 1000) % keys.length;
   return keys[idx];
 }
 
+function getEndpoint(): string {
+  return OPENROUTER_API_KEY ? 'https://openrouter.ai/api/v1' : 'https://api.deepbricks.ai/v1';
+}
+
 const axiosInstance = axios.create({
-  baseURL: 'https://api.deepbricks.ai/v1',
+  baseURL: getEndpoint(),
   headers: {
     'Authorization': `Bearer ${getApiKey()}`,
+    ...(OPENROUTER_API_KEY ? {
+      'HTTP-Referer': 'https://bizcardai.vercel.app',
+      'X-Title': 'BizCard AI'
+    } : {}),
     'Content-Type': 'application/json',
   },
 });

@@ -201,7 +201,7 @@ const FileUpload = ({
 
   return (
     <div
-      className={`relative block border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-primary transition-all duration-300 bg-gray-50 ${isProcessing ? 'pointer-events-none opacity-50' : ''}`}
+      className={`relative block border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-12 text-center cursor-pointer hover:border-primary transition-all duration-300 bg-gray-50 dark:bg-gray-800 dark:text-gray-200 ${isProcessing ? 'pointer-events-none opacity-50' : ''}`}
       style={{ 
         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
         transition: 'all 0.3s ease'
@@ -251,16 +251,16 @@ const FileUpload = ({
           {isProcessing ? (
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="w-12 h-12 animate-spin text-primary" />
-              <div className="text-lg font-medium text-gray-700">{processingStage}</div>
+              <div className="text-lg font-medium text-gray-700 dark:text-gray-300">{processingStage}</div>
               {totalFiles > 0 && (
                 <div className="w-full max-w-xs">
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-primary transition-all duration-300"
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
-                  <div className="text-sm text-gray-600 mt-2">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                     {processedFiles} of {totalFiles} cards processed
                   </div>
                 </div>
@@ -268,12 +268,12 @@ const FileUpload = ({
             </div>
           ) : (
             <>
-              <Upload className="w-12 h-12 text-gray-400" />
+              <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500" />
               <div>
-                <p className="text-lg font-medium text-gray-700">
+                <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
                   {t('scan.dropzone.title')}
                 </p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   {t('scan.dropzone.description')}
                 </p>
               </div>
@@ -403,51 +403,24 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
     setProcessingStage('Scanning business card...');
 
     try {
-      console.log('[Scan] Starting image processing...');
+      console.log('[Scan] Starting image processing with AppWrite user:', user.$id);
 
-      // DISABLED: Supabase removed - session stub
-      // Get the authentication token - stub
-      console.log('[Scan] Session stub: Supabase removed');
-      
-      const session = { access_token: 'disabled', user: { id: 'disabled', email: 'disabled@example.com' }, expires_at: Date.now() + 3600 };
-      
-      if (!session.access_token) {
-        console.error('[Scan] Still no session after refresh attempts');
-        throw new Error('Unable to authenticate. Please sign in again.');
-      }
-      
-      console.log('[Scan] Session found:', { 
-        userId: session.user?.id,
-        email: session.user?.email,
-        expires: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'unknown',
-        tokenLength: session.access_token?.length || 0
-      });
-      
-      if (!session.access_token) {
-        console.error('[Scan] No access token in session');
-        throw new Error('No authentication token found. Please sign in again.');
-      }
-
-      // Upload the image to our API with enhanced headers
-      console.log('[Scan] Sending image to API with auth token');
+      // Upload the image to our API with AppWrite user ID
+      console.log('[Scan] Sending image to API with user ID:', user.$id);
       const response = await fetch('/api/scan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'X-Session-Id': session.user?.id || '',
-          'X-Auth-Token': session.access_token.substring(0, 15) + '...',
-          'X-User-Email': session.user?.email || ''
         },
-        body: JSON.stringify({ image: base64Image }),
-        credentials: 'include' // Important: include cookies
+        body: JSON.stringify({ 
+          image: base64Image, 
+          userId: user.$id 
+        }),
+        credentials: 'include',
       });
 
       // Check response with enhanced error handling
       console.log(`[Scan] API response received: status=${response.status}`);
-      
-      // After any API call, verify the session is still intact
-      // DISABLED: Supabase removed - session check stub
       
       if (!response.ok) {
         let errorMessage = 'Failed to scan business card';
@@ -456,23 +429,8 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
           const errorData = await response.json();
           console.error('[Scan] API error:', errorData);
           errorMessage = errorData.message || errorData.details || errorData.error || errorMessage;
-          
-          // Handle specific error types
-          if (response.status === 401 || 
-              response.status === 403 || 
-              errorMessage.includes('Authentication') || 
-              errorMessage.includes('Unauthorized') || 
-              errorMessage.includes('session')) {
-            console.error('[Scan] Authentication error:', { status: response.status, message: errorMessage });
-            
-            // Supabase removed — skip retry, just fail
-            throw new Error('Session expired. Please sign in again.');
-          }
         } catch (parseError) {
-          if (parseError instanceof Error && parseError.message.includes('Session expired')) {
-            throw parseError;
-          }
-          console.error('[Scan] Failed to parse error response:', await response.text());
+          console.error('[Scan] Failed to parse error response');
         }
         
         throw new Error(errorMessage);
@@ -583,7 +541,7 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
             <CardTitle className="text-4xl font-bold text-center mb-2">
               {t('scan.title')}
             </CardTitle>
-            <CardDescription className="text-lg text-center text-gray-600">
+            <CardDescription className="text-lg text-center text-gray-600 dark:text-gray-400">
               {t('scan.description')}
             </CardDescription>
           </CardHeader>
@@ -613,7 +571,7 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
 
               <Button 
                 variant="outline"
-                className="w-full py-6 text-lg font-semibold rounded-full border-2 hover:bg-gray-50"
+                className="w-full py-6 text-lg font-semibold rounded-full border-2 hover:bg-gray-50 dark:hover:bg-gray-800"
                 onClick={() => {
                   const input = document.createElement('input');
                   input.type = 'file';
@@ -637,7 +595,7 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
 
             {preview && (
               <div className="mt-6">
-                <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4">
+                <div className="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
                   <img src={preview} alt="Preview" className="max-w-full h-auto rounded-lg" />
                   {!isProcessing && (
                     <Button
@@ -659,18 +617,18 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
 
             {isProcessing && (
               <div className="mt-6">
-                <div className="flex flex-col items-center space-y-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex flex-col items-center space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm font-medium text-gray-600">{processingStage}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{processingStage}</p>
                   {totalFiles > 0 && (
                     <div className="w-full">
-                      <div className="h-2 bg-gray-200 rounded-full">
+                      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
                         <div
                           className="h-2 bg-primary rounded-full transition-all duration-300"
                           style={{ width: `${uploadProgress}%` }}
                         />
                       </div>
-                      <p className="text-xs text-gray-500 text-center mt-2">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
                         Processing {processedFiles} of {totalFiles} files
                       </p>
                     </div>
@@ -685,7 +643,7 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="mt-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-center font-medium shadow-sm"
+                  className="mt-4 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-lg text-center font-medium shadow-sm"
                 >
                   Card successfully processed!
                 </motion.div>

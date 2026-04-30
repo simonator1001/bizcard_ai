@@ -8,48 +8,31 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { 
-  Check, 
   ScanLine, 
-  LayoutList, 
-  Network, 
-  Newspaper, 
+  LayoutGrid, 
   Star, 
   Settings, 
-  Search, 
   Camera, 
-  Users, 
-  LayoutGrid, 
   Edit2,
   Trash2,
   Mail,
-  Bell,
+  Phone,
   HelpCircle,
   Upload,
   type LucideIcon
 } from 'lucide-react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
 import { useBusinessCards } from '@/lib/hooks/useBusinessCards'
-import { useAuth } from '@/lib/auth-context'
 import { BusinessCard } from '@/types/business-card'
 import { useRouter } from 'next/navigation'
-// DISABLED: Supabase removed
 import { ManageCardsView } from '@/components/cards/ManageCardsView'
-import { SubscriptionService } from '@/lib/subscription'
 import { SettingsTab } from '@/components/shared/SettingsTab'
 import { toast } from 'sonner'
-import { NewsView } from '@/components/news/NewsView'
 import { ExpandableTabs } from "@/components/ui/expandable-tabs"
 import { Footerdemo } from "@/components/ui/footer-section"
-import { NewsArticle } from '@/types/news'
-import { ChatInterface } from '@/components/chat/ChatInterface'
 import { useTranslation } from 'react-i18next'
 import imageCompression from 'browser-image-compression';
-import { OrgChartView } from '@/components/org-chart/OrgChartView';
 import { SubscriptionPage } from '@/components/subscription/SubscriptionPage';
 import { Header } from "@/components/ui/header";
 import { OAuthCallback } from '@/components/auth/OAuthCallback';
@@ -70,10 +53,8 @@ type NavigationItem = {
 const navigationItems: NavigationItem[] = [
   { title: "Scan", icon: ScanLine },
   { title: "Manage", icon: LayoutGrid },
-  { type: "separator" },
-  { title: "Network", icon: Network },
-  { title: "News", icon: Newspaper },
   { title: "Settings", icon: Settings },
+  { title: "Pricing", icon: Star },
 ];
 
 const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: { 
@@ -113,7 +94,7 @@ const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: {
       dragConstraints={{ left: 0, right: 0 }}
       onDragEnd={handleDragEnd}
       whileHover={{ y: -5, boxShadow: '0 10px 20px rgba(0, 0, 0, 0.12)' }}
-      className={`relative p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 bg-gradient-to-b from-white to-gray-50/50 backdrop-blur-sm transition-all duration-300 ${
+      className={`relative p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 bg-gradient-to-b from-white dark:from-gray-800 to-gray-50/50 dark:to-gray-900/50 backdrop-blur-sm transition-all duration-300 ${
         viewMode === 'grid' ? 'w-full' : 'w-full max-w-md'
       }`}
       tabIndex={0}
@@ -132,16 +113,16 @@ const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: {
               <h3 className="font-semibold text-base md:text-lg truncate">
                 {card.name || card.name_zh}
                 {card.name && card.name_zh && (
-                  <span className="ml-2 text-xs md:text-sm text-gray-500">({card.name_zh})</span>
+                  <span className="ml-2 text-xs md:text-sm text-gray-500 dark:text-gray-400">({card.name_zh})</span>
                 )}
               </h3>
-              <p className="text-xs md:text-sm text-gray-600 truncate">
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 truncate">
                 {card.title || card.title_zh}
                 {card.title && card.title_zh && (
                   <span className="ml-2">({card.title_zh})</span>
                 )}
               </p>
-              <p className="text-xs md:text-sm font-medium text-gray-700 truncate">
+              <p className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
                 {card.company || card.company_zh}
                 {card.company && card.company_zh && (
                   <span className="ml-2">({card.company_zh})</span>
@@ -152,7 +133,7 @@ const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 md:h-8 md:w-8 text-gray-500 hover:text-purple-600"
+                className="h-6 w-6 md:h-8 md:w-8 text-gray-500 dark:text-gray-400 hover:text-purple-600"
                 onClick={() => onEdit(card)}
                 title="Edit card"
               >
@@ -161,7 +142,7 @@ const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 md:h-8 md:w-8 text-gray-500 hover:text-red-600"
+                className="h-6 w-6 md:h-8 md:w-8 text-gray-500 dark:text-gray-400 hover:text-red-600"
                 onClick={() => onDelete(card)}
                 title="Delete card"
               >
@@ -171,7 +152,7 @@ const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: {
           </div>
           <div className="space-y-1">
             {card.email && (
-              <p className="text-xs md:text-sm text-gray-600 flex items-center gap-1 md:gap-2">
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1 md:gap-2">
                 <Mail className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
                 <a href={`mailto:${card.email}`} className="truncate hover:text-purple-600">
                   {card.email}
@@ -179,8 +160,8 @@ const CardItem = ({ card, onEdit, onDelete, viewMode, onDragEnd }: {
               </p>
             )}
             {card.phone && (
-              <p className="text-xs md:text-sm text-gray-600 flex items-center gap-1 md:gap-2">
-                <Bell className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1 md:gap-2">
+                <Phone className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
                 <a href={`tel:${card.phone}`} className="truncate hover:text-purple-600">
                   {card.phone}
                 </a>
@@ -208,33 +189,7 @@ function UpgradePrompt({ open, onOpenChange }: { open: boolean; onOpenChange: (o
   const router = useRouter()
   
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Upgrade Your Plan</DialogTitle>
-          <DialogDescription>
-            You've reached your monthly scan limit. Upgrade to our Pro plan to get unlimited scans and more features.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <h3 className="font-medium">Pro Plan Features:</h3>
-            <ul className="list-disc list-inside space-y-1 text-sm">
-              <li>Unlimited card scans</li>
-              <li>Advanced OCR with multi-language support</li>
-              <li>Export to CSV/Excel</li>
-              <li>Full news feed access</li>
-              <li>Organization chart view</li>
-              <li>Priority support</li>
-            </ul>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Maybe Later</Button>
-          <Button onClick={() => router.push('/pricing')}>View Plans</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <></>
   )
 }
 
@@ -266,32 +221,15 @@ export default function HomePage() {
     router.push(`/?tab=${tab}`);
   };
 
-  const allTabs = [...navigationItems, { title: 'Pricing', icon: Star }];
-  const handleNavigationChange = (index: number | null) => {
-    if (index === null) return;
-    const item = allTabs[index];
-    if (!item.type && item.title) {
-      handleTabChange(item.title.toLowerCase());
-    }
-  };
-
-  // Compute selectedIndex from activeTab
-  const selectedIndex = allTabs.findIndex(
+  const selectedIndex = navigationItems.findIndex(
     (tab) =>
-      tab.type !== "separator" &&
-      tab.title.toLowerCase() === activeTab.toLowerCase()
+      tab.title && tab.title.toLowerCase() === activeTab.toLowerCase()
   );
 
-  const [isYearly, setIsYearly] = useState(false)
   const [newsFilter, setNewsFilter] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCompany, setSelectedCompany] = useState<string>('')
-  const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
-  const [orgChartViewMode, setOrgChartViewMode] = useState('tree')
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
-  const { cards, loading, error, addCard, updateCard, deleteCard } = useBusinessCards()
-  const { user, signOut } = useAuth()
+  const { cards, loading, error, addCard, updateCard, deleteCard, user } = useBusinessCards()
   const [currentCardIndex, setCurrentCardIndex] = useState(0)
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
@@ -306,23 +244,7 @@ export default function HomePage() {
     card.title?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Group cards by company
-  const companiesMap = new Map<string, BusinessCard[]>()
-  cards.forEach(card => {
-    const company = card.company || 'Unknown'
-    if (!companiesMap.has(company)) {
-      companiesMap.set(company, [])
-    }
-    companiesMap.get(company)?.push(card)
-  })
-  const companies = Array.from(companiesMap.entries()).map(([name, contacts]) => ({
-    id: name,
-    name,
-    contacts
-  }))
-
   const totalContacts = cards.length
-  const selectedCompanyData = companies.find(c => c.id === selectedCompany)
 
   const handleEdit = (card: BusinessCard) => {
     // console.log('Edit card:', card)
@@ -401,12 +323,8 @@ export default function HomePage() {
       <Header
         logo={<span className="text-xl font-bold">BizCard</span>}
         menuItems={[
-          { text: "Scan", to: "/" },
+          { text: "Scan", to: "/?tab=scan" },
           { text: "Manage", to: "/?tab=manage" },
-          { text: "Network", to: "/?tab=network" },
-          { text: "Companies", to: "/companies" },
-          { text: "News", to: "/?tab=news" },
-          { text: "Intel", to: "/intel" },
           { text: "Settings", to: "/?tab=settings" },
           { text: "Pricing", to: "/?tab=pricing" },
         ]}
@@ -482,17 +400,11 @@ export default function HomePage() {
                                   const base64 = await base64Promise;
 
                                   setUploadProgress('Authenticating...');
-                                  // DISABLED: Supabase removed - auth stub
-                                  // Get fresh session token
-                                  const refreshedSession = { access_token: 'disabled', user: { id: 'disabled' }, expires_at: Date.now()/1000 + 3600 };
-                                  const refreshError = null;
-                                  
-                                  if (refreshError || !refreshedSession) {
-                                    // console.error('[DEBUG] Auth error:', refreshError);
-                                    throw new Error('Authentication failed');
+                                  // Use AppWrite user ID
+                                  if (!user) {
+                                    throw new Error('Please sign in to upload cards');
                                   }
-
-                                  const accessToken = refreshedSession.access_token;
+                                  const userId = user.$id;
 
                                   // console.log('[DEBUG] Session data:', {
                                   //   hasSession: !!refreshedSession,
@@ -502,16 +414,15 @@ export default function HomePage() {
                                   // });
 
                                   setUploadProgress('Processing card...');
-                                  // Call scan API with auth token
+                                  // Call scan API with AppWrite user ID
                                   const response = await fetch('/api/scan', {
                                     method: 'POST',
                                     headers: {
                                       'Content-Type': 'application/json',
-                                      'Authorization': `Bearer ${accessToken}`
                                     },
                                     body: JSON.stringify({ 
                                       image: base64,
-                                      userId: refreshedSession.user.id,
+                                      userId: userId,
                                       debug: true,
                                       options: {
                                         extractAllText: true,
@@ -630,36 +541,27 @@ export default function HomePage() {
                                 const base64 = await base64Promise;
 
                                 setUploadProgress('Authenticating...');
-                                // DISABLED: Supabase removed - auth stub
-                                // Get fresh session token
-                                const refreshedSession = { access_token: 'disabled', user: { id: 'disabled' }, expires_at: Date.now()/1000 + 3600 };
-                                const refreshError = null;
-                                
-                                if (refreshError || !refreshedSession) {
-                                  // console.error('[DEBUG] Auth error:', refreshError);
-                                  throw new Error('Authentication failed');
+                                if (!user) {
+                                  throw new Error('Please sign in to upload cards');
                                 }
-
-                                const accessToken = refreshedSession.access_token;
+                                const userId = user.$id;
 
                                 // console.log('[DEBUG] Session data:', {
-                                //   hasSession: !!refreshedSession,
-                                //   userId: refreshedSession.user.id,
+                                //   userId: userId,
                                 //   tokenLength: accessToken.length,
                                 //   expiresAt: new Date(refreshedSession.expires_at! * 1000).toISOString()
                                 // });
 
                                 setUploadProgress('Processing card...');
-                                // Call scan API with auth token
+                                // Call scan API with AppWrite user ID
                                 const response = await fetch('/api/scan', {
                                   method: 'POST',
                                   headers: {
                                     'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${accessToken}`
                                   },
                                   body: JSON.stringify({ 
                                     image: base64,
-                                    userId: refreshedSession.user.id,
+                                    userId: userId,
                                     debug: true,
                                     options: {
                                       extractAllText: true,
@@ -737,14 +639,17 @@ export default function HomePage() {
                 <Card className="flex flex-col w-full">
                   <CardHeader>
                     <CardTitle className="text-2xl md:text-4xl font-bold text-center mb-2">
-                      AI Assistant
+                      My Cards
                     </CardTitle>
                     <CardDescription className="text-base md:text-lg text-center text-gray-600">
-                      Ask questions about your business cards and get instant answers
+                      {totalContacts} business cards scanned
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="flex-1 p-0">
-                    <ChatInterface />
+                  <CardContent className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                      <p className="text-4xl font-bold text-purple-600">{totalContacts}</p>
+                      <p className="text-gray-500 mt-2">Total Contacts</p>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -752,14 +657,6 @@ export default function HomePage() {
 
             <TabsContent value="manage" className="h-full p-4 md:p-8">
               <ManageCardsView setActiveTab={setActiveTab} />
-            </TabsContent>
-
-            <TabsContent value="network" className="h-full p-4 md:p-8">
-              <OrgChartView />
-            </TabsContent>
-
-            <TabsContent value="news" className="h-full p-4 md:p-8">
-              <NewsView />
             </TabsContent>
 
             <TabsContent value="settings" className="h-full p-4 md:p-8">

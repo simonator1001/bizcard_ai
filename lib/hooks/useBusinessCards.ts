@@ -161,5 +161,6 @@ export function useBusinessCards() {
     updateCard,
     deleteCard,
     refresh: fetchCards,
+    user,
   };
 }

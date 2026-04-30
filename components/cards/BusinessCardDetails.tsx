@@ -104,7 +104,7 @@ export function BusinessCardDetails({
 
   return (
     <>
-      <Card className="w-full max-w-2xl mx-auto">
+      <Card className="w-full max-w-2xl mx-auto bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <CardContent className="p-6">
           <div className="flex items-start gap-6">
             <div className="relative">
@@ -149,10 +149,10 @@ export function BusinessCardDetails({
                   <h2 className="text-2xl font-semibold">
                     {card.name}
                     {card.name_zh && (
-                      <span className="ml-2 text-gray-500">({card.name_zh})</span>
+                      <span className="ml-2 text-gray-500 dark:text-gray-400">({card.name_zh})</span>
                     )}
                   </h2>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 dark:text-gray-400">
                     {card.title}
                     {card.title_zh && <span className="ml-2">({card.title_zh})</span>}
                   </p>
@@ -177,7 +177,7 @@ export function BusinessCardDetails({
                     variant="outline"
                     size="sm"
                     onClick={handleDelete}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     {t('actions.delete')}
@@ -188,7 +188,7 @@ export function BusinessCardDetails({
               <div className="mt-6 space-y-4">
                 {card.email && (
                   <div className="flex items-center">
-                    <Mail className="h-5 w-5 text-gray-400 mr-3" />
+                    <Mail className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3" />
                     <a
                       href={`mailto:${card.email}`}
                       className="text-primary hover:underline"
@@ -200,7 +200,7 @@ export function BusinessCardDetails({
 
                 {card.phone && (
                   <div className="flex items-center">
-                    <Phone className="h-5 w-5 text-gray-400 mr-3" />
+                    <Phone className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3" />
                     <a
                       href={`tel:${card.phone}`}
                       className="text-primary hover:underline"
@@ -212,11 +212,11 @@ export function BusinessCardDetails({
 
                 {(card.address || card.address_zh) && (
                   <div className="flex items-center">
-                    <MapPin className="h-5 w-5 text-gray-400 mr-3" />
+                    <MapPin className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3" />
                     <div>
                       {card.address && <div>{card.address}</div>}
                       {card.address_zh && (
-                        <div className="text-gray-600">{card.address_zh}</div>
+                        <div className="text-gray-600 dark:text-gray-400">{card.address_zh}</div>
                       )}
                     </div>
                   </div>
@@ -226,7 +226,7 @@ export function BusinessCardDetails({
               {card.notes && (
                 <div className="mt-6">
                   <h3 className="font-medium mb-2">{t('card.notes')}</h3>
-                  <p className="text-gray-600 whitespace-pre-wrap">{card.notes}</p>
+                  <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{card.notes}</p>
                 </div>
               )}
             </div>
@@ -248,7 +248,7 @@ export function BusinessCardDetails({
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
             >
               {t('dialogs.deleteCard.confirm')}
             </AlertDialogAction>

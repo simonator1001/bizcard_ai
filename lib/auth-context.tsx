@@ -119,19 +119,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const pollInterval = setInterval(async () => {
       try {
         const currentUser = await account.get()
-        if (!ignore) {
-          if (currentUser) {
-            setUser(currentUser as AppWriteUser)
-          } else {
-            setUser(null)
-          }
+        if (!ignore && currentUser) {
+          // Only update if user actually changed (compare by $id)
+          setUser(prev => {
+            if (!prev || prev.$id !== (currentUser as AppWriteUser).$id) {
+              return currentUser as AppWriteUser
+            }
+            return prev // Same user — no update needed, avoids re-render cascade
+          })
         }
       } catch {
         if (!ignore) {
-          setUser(null)
+          setUser(prev => prev ? null : prev) // Only set null if not already null
         }
       }
-    }, 5000)
+    }, 30000) // 30s instead of 5s — less aggressive polling
 
     return () => {
       ignore = true

@@ -4,6 +4,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import Link from "next/link"
 import { 
   User, 
   LogIn, 
@@ -46,7 +47,7 @@ const Navigation: React.FC<{ items: NavItem[] }> = ({ items }) => (
   <nav className="hidden md:block">
     <ul className="flex gap-x-8">
       {items.map(({ to, text, items }, index) => {
-        const Tag = to ? 'a' : 'button'
+        const Tag = to ? Link : 'button'
         const hasSubItems = Array.isArray(items) && items.length > 0;
         return (
           <li
@@ -55,7 +56,7 @@ const Navigation: React.FC<{ items: NavItem[] }> = ({ items }) => (
           >
             <Tag
               className="flex items-center gap-x-1 whitespace-pre text-sm text-foreground"
-              href={to}
+              href={to || ""}
             >
               {text}
               {hasSubItems && <ChevronIcon />}
@@ -74,7 +75,7 @@ const Navigation: React.FC<{ items: NavItem[] }> = ({ items }) => (
                 >
                   {items && items.map(({ text, description, to }, index) => (
                     <li key={index}>
-                      <a
+                      <Link
                         className="group/link relative flex items-center overflow-hidden whitespace-nowrap rounded-lg p-2 hover:bg-muted"
                         href={to}
                       >
@@ -86,7 +87,7 @@ const Navigation: React.FC<{ items: NavItem[] }> = ({ items }) => (
                             </span>
                           )}
                         </div>
-                      </a>
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -201,13 +202,13 @@ export const Header: React.FC<HeaderProps> = ({
                   {menuItems.map((item, index) => (
                     <div key={index} className="flex flex-col gap-3">
                       {item.to ? (
-                        <a 
+                        <Link 
                           href={item.to} 
                           className="text-lg font-medium"
                           onClick={() => setIsMobileMenuOpen(false)}
                         >
                           {item.text}
-                        </a>
+                        </Link>
                       ) : (
                         <span className="text-lg font-medium">{item.text}</span>
                       )}
@@ -215,14 +216,14 @@ export const Header: React.FC<HeaderProps> = ({
                       {item.items && (
                         <div className="flex flex-col gap-2 pl-4">
                           {item.items.map((subItem, subIndex) => (
-                            <a 
+                            <Link 
                               key={subIndex} 
                               href={subItem.to}
                               className="text-sm text-muted-foreground hover:text-foreground"
                               onClick={() => setIsMobileMenuOpen(false)}
                             >
                               {subItem.text}
-                            </a>
+                            </Link>
                           ))}
                         </div>
                       )}

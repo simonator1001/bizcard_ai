@@ -246,7 +246,7 @@ export function DuplicateManager({ cards, onMerge, onDelete, onClose }: Duplicat
         </ScrollArea>
       </div>
       
-      <DialogFooter className="px-6 py-4 border-t shrink-0 bg-white">
+      <DialogFooter className="px-6 py-4 border-t shrink-0 bg-white dark:bg-gray-900">
         <Button variant="ghost" onClick={onClose} type="button">
           <X className="w-4 h-4 mr-2" />
           Close

@@ -173,7 +173,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
   return (
     <>
       <Dialog open={true} onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl h-[90vh] flex flex-col bg-white">
+        <DialogContent className="max-w-3xl h-[90vh] flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
           <DialogHeader className="flex-shrink-0 border-b p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -211,32 +211,32 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                   {showShareMenu && (
                     <div 
                       ref={shareMenuRef}
-                      className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50"
+                      className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <button
-                        className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center"
+                        className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center dark:text-gray-200"
                         onClick={handleEmailShare}
                       >
                         <Mail className="mr-2 h-4 w-4" />
                         Share via Email
                       </button>
                       <button
-                        className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center"
+                        className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center dark:text-gray-200"
                         onClick={handleWhatsAppShare}
                       >
                         <Share2 className="mr-2 h-4 w-4" />
                         Share via WhatsApp
                       </button>
                       <button
-                        className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center"
+                        className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center dark:text-gray-200"
                         onClick={handleCopyLink}
                       >
                         <Copy className="mr-2 h-4 w-4" />
                         Copy Link
                       </button>
                       <button
-                        className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center"
+                        className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center dark:text-gray-200"
                         onClick={handleDownload}
                       >
                         <Download className="mr-2 h-4 w-4" />
@@ -255,27 +255,27 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
               {card.image_url ? (
                 <div className="relative">
                   <div 
-                    className="relative rounded-lg overflow-hidden cursor-pointer bg-gray-50"
+                    className="relative rounded-lg overflow-hidden cursor-pointer bg-gray-50 dark:bg-gray-800 max-h-[40vh]"
                     onClick={() => setIsImageEnlarged(true)}
                   >
                     <img
                       src={card.image_url}
                       alt={`${card.name}'s business card`}
-                      className="w-full h-auto rounded-lg shadow-sm"
+                      className="w-full h-auto max-h-[40vh] object-contain rounded-lg shadow-sm"
                     />
                   </div>
                   <Button
                     size="icon"
                     variant="outline"
-                    className="absolute top-4 right-4 bg-white/80 hover:bg-white"
+                    className="absolute top-4 right-4 bg-white/80 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-gray-800"
                     onClick={handleDownload}
                   >
                     <Download className="h-4 w-4" />
                   </Button>
                 </div>
               ) : (
-                <div className="rounded-lg bg-gray-50 p-8 text-center">
-                  <p className="text-sm text-gray-500">{t('card.noImage', defaultLabels.noImage)}</p>
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-8 text-center">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('card.noImage', defaultLabels.noImage)}</p>
                 </div>
               )}
 
@@ -293,7 +293,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                       value={editedCard.name || ''}
                       onChange={handleInputChange}
                       readOnly={!isEditing}
-                      className={!isEditing ? 'bg-gray-50' : ''}
+                      className={!isEditing ? 'bg-gray-50 dark:bg-gray-800 dark:text-gray-100' : ''}
                     />
                   </div>
                   <div className="space-y-2">
@@ -306,7 +306,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                       value={editedCard.name_zh || ''}
                       onChange={handleInputChange}
                       readOnly={!isEditing}
-                      className={!isEditing ? 'bg-gray-50' : ''}
+                      className={!isEditing ? 'bg-gray-50 dark:bg-gray-800 dark:text-gray-100' : ''}
                     />
                   </div>
                 </div>
@@ -323,7 +323,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                       value={editedCard.company || ''}
                       onChange={handleInputChange}
                       readOnly={!isEditing}
-                      className={!isEditing ? 'bg-gray-50' : ''}
+                      className={!isEditing ? 'bg-gray-50 dark:bg-gray-800 dark:text-gray-100' : ''}
                     />
                   </div>
                   <div className="space-y-2">
@@ -336,7 +336,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                       value={editedCard.company_zh || ''}
                       onChange={handleInputChange}
                       readOnly={!isEditing}
-                      className={!isEditing ? 'bg-gray-50' : ''}
+                      className={!isEditing ? 'bg-gray-50 dark:bg-gray-800 dark:text-gray-100' : ''}
                     />
                   </div>
                 </div>
@@ -353,7 +353,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                       value={editedCard.title || ''}
                       onChange={handleInputChange}
                       readOnly={!isEditing}
-                      className={!isEditing ? 'bg-gray-50' : ''}
+                      className={!isEditing ? 'bg-gray-50 dark:bg-gray-800 dark:text-gray-100' : ''}
                     />
                   </div>
                   <div className="space-y-2">
@@ -366,7 +366,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                       value={editedCard.title_zh || ''}
                       onChange={handleInputChange}
                       readOnly={!isEditing}
-                      className={!isEditing ? 'bg-gray-50' : ''}
+                      className={!isEditing ? 'bg-gray-50 dark:bg-gray-800 dark:text-gray-100' : ''}
                     />
                   </div>
                 </div>
@@ -383,7 +383,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                       value={editedCard.email || ''}
                       onChange={handleInputChange}
                       readOnly={!isEditing}
-                      className={!isEditing ? 'bg-gray-50' : ''}
+                      className={!isEditing ? 'bg-gray-50 dark:bg-gray-800 dark:text-gray-100' : ''}
                       type="email"
                     />
                   </div>
@@ -398,7 +398,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                       value={editedCard.phone || ''}
                       onChange={handleInputChange}
                       readOnly={!isEditing}
-                      className={!isEditing ? 'bg-gray-50' : ''}
+                      className={!isEditing ? 'bg-gray-50 dark:bg-gray-800 dark:text-gray-100' : ''}
                       type="tel"
                     />
                   </div>
@@ -416,7 +416,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                       value={editedCard.address || ''}
                       onChange={handleInputChange}
                       readOnly={!isEditing}
-                      className={!isEditing ? 'bg-gray-50' : ''}
+                      className={!isEditing ? 'bg-gray-50 dark:bg-gray-800 dark:text-gray-100' : ''}
                     />
                   </div>
                   <div className="space-y-2">
@@ -429,7 +429,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                       value={editedCard.address_zh || ''}
                       onChange={handleInputChange}
                       readOnly={!isEditing}
-                      className={!isEditing ? 'bg-gray-50' : ''}
+                      className={!isEditing ? 'bg-gray-50 dark:bg-gray-800 dark:text-gray-100' : ''}
                     />
                   </div>
                 </div>
@@ -444,7 +444,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                     name="notes"
                     value={editedCard.notes || ''}
                     onChange={handleInputChange}
-                    className={cn("min-h-[100px] resize-none", !isEditing && "bg-gray-50")}
+                    className={cn("min-h-[100px] resize-none", !isEditing && "bg-gray-50 dark:bg-gray-800 dark:text-gray-100")}
                     readOnly={!isEditing}
                   />
                 </div>
@@ -477,7 +477,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('card.delete.cancel', 'Cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800">
               {t('card.delete.confirm', 'Delete')}
             </AlertDialogAction>
           </AlertDialogFooter>

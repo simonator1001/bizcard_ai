@@ -1,58 +1,24 @@
 'use client';
 
+// Supabase removed — using AppWrite via auth-context
+import { useAuth } from '@/lib/auth-context';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { User } from '@supabase/supabase-js';
 
+// Re-export useAuth as useUser for backward compatibility
 export function useUser() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
-    // Get initial user data securely
-    const initializeUser = async () => {
-      try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error) {
-          console.error('[useUser] Error getting user:', error);
-          setUser(null);
-        } else {
-          setUser(user);
-        }
-      } catch (err) {
-        console.error('[useUser] Error in getUser:', err);
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeUser();
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session) {
-        // Verify user data on auth state change
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error) {
-          console.error('[useUser] Error getting user on auth change:', error);
-          setUser(null);
-        } else {
-          setUser(user);
-        }
-      } else {
-        setUser(null);
-      }
+    if (!authLoading) {
       setLoading(false);
-    });
+    }
+  }, [authLoading]);
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [supabase.auth]);
-
-  return { user, loading };
-} 
+  // Adapt AppWrite user to match Supabase User shape where needed
+  // AppWrite user.$id maps to Supabase user.id
+  return { 
+    user: user ? { ...user, id: user.$id } : null, 
+    loading 
+  };
+}

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-const https = require('https')
+import { Client, Storage, Databases, ID, Permission, Role } from 'node-appwrite'
 
 export const config = {
   api: {
@@ -21,6 +21,14 @@ function appwriteHeaders() {
     'X-Appwrite-Key': process.env.APPWRITE_API_KEY || '',
     'Content-Type': 'application/json',
   }
+}
+
+function getAppWriteClient(): Client {
+  const client = new Client()
+    .setEndpoint(APPWRITE_ENDPOINT)
+    .setProject(PROJECT_ID)
+    .setKey(process.env.APPWRITE_API_KEY || '')
+  return client
 }
 
 export default async function handler(
@@ -79,7 +87,7 @@ export default async function handler(
       title: ocrResult.title?.english || '',
       title_zh: ocrResult.title?.chinese || '',
       email: ocrResult.email || '',
-      phone: (ocrResult.phone || '').substring(0, 50),
+      phone: (ocrResult.phone || '').replace(/\s+/g, ' ').trim().substring(0, 50),
       address: ocrResult.address?.english || '',
       address_zh: ocrResult.address?.chinese || '',
       image_url: imageUrl,
@@ -140,60 +148,19 @@ async function uploadImageToAppWrite(userId: string, base64Image: string): Promi
   const buffer = Buffer.from(base64Data, 'base64')
   const fileName = `card_${Date.now().toString(36)}_${Math.random().toString(36).substr(2,6)}.jpg`
 
-  // Build multipart/form-data
-  const boundary = `----FormBoundary${Date.now()}`
-  const CRLF = '\r\n'
+  const client = getAppWriteClient()
+  const storage = new Storage(client)
 
-  const parts: Buffer[] = []
-  parts.push(Buffer.from(`--${boundary}${CRLF}`))
-  parts.push(Buffer.from(`Content-Disposition: form-data; name="fileId"${CRLF}${CRLF}`))
-  parts.push(Buffer.from(`${fileName}${CRLF}`))
-  parts.push(Buffer.from(`--${boundary}${CRLF}`))
-  parts.push(Buffer.from(`Content-Disposition: form-data; name="file"; filename="${fileName}"${CRLF}`))
-  parts.push(Buffer.from(`Content-Type: image/jpeg${CRLF}${CRLF}`))
-  parts.push(buffer)
-  parts.push(Buffer.from(`${CRLF}`))
-  parts.push(Buffer.from(`--${boundary}--${CRLF}`))
+  // AppWrite SDK handles multipart internally — pass the Buffer directly
+  const file = await storage.createFile(
+    STORAGE_BUCKET,
+    ID.unique(),
+    new File([buffer], fileName, { type: 'image/jpeg' }),
+    [Permission.read(Role.user(userId))]
+  )
 
-  const body = Buffer.concat(parts)
+  console.log('[SCAN] File uploaded:', file.$id)
 
-  // Use https.request directly (fetch has issues with Buffer/Uint8Array body in Next.js)
-  const url = new URL(`${APPWRITE_ENDPOINT}/storage/buckets/${STORAGE_BUCKET}/files`)
-  
-  const result = await new Promise<any>((resolve, reject) => {
-    const req = https.request({
-      hostname: url.hostname,
-      port: url.port || 443,
-      path: url.pathname,
-      method: 'POST',
-      headers: {
-        'X-Appwrite-Project': PROJECT_ID,
-        'X-Appwrite-Key': process.env.APPWRITE_API_KEY || '',
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        'Content-Length': body.length.toString(),
-      },
-    }, (res: any) => {
-      let data = ''
-      res.on('data', (chunk: any) => { data += chunk.toString() })
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(data))
-        } catch {
-          reject(new Error(`Invalid response: ${data.substring(0, 200)}`))
-        }
-      })
-    })
-
-    req.on('error', reject)
-    req.write(body)
-    req.end()
-  })
-
-  if (!result.$id && result.message) {
-    console.error('[SCAN] Storage upload failed:', result)
-    throw new Error(`Image upload failed: ${result.message || 'Storage error'}`)
-  }
-
-  console.log('[SCAN] File uploaded:', result.$id)
-  return `${APPWRITE_ENDPOINT}/storage/buckets/${STORAGE_BUCKET}/files/${result.$id}/view?project=${PROJECT_ID}`
+  // Return the view URL
+  return `${APPWRITE_ENDPOINT}/storage/buckets/${STORAGE_BUCKET}/files/${file.$id}/view?project=${PROJECT_ID}`
 }

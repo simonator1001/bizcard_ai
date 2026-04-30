@@ -1,8 +1,8 @@
-// Deepbrick API — OpenAI-compatible, free tier
-// Claude Sonnet 4.5 handles vision (OCR) via image_url content blocks
-export const DEEPBRICK_API_KEY = process.env.DEEPBRICK_API_KEY || '';
-export const DEEPBRICK_API_KEY_2 = process.env.DEEPBRICK_API_KEY_2 || '';
-export const VISION_MODEL = 'claude-sonnet-4.5';
+// OpenRouter API — unified LLM gateway (DeepSeek + Qwen VL)
+// Qwen VL Plus: best cost/quality for business card OCR in HK
+export const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
+export const VISION_MODEL = 'qwen/qwen-vl-plus';
+export const FALLBACK_VISION_MODEL = 'claude-sonnet-4.5'; // Deepbrick fallback
 
 // OCR prompt template for business card extraction
 export const OCR_PROMPT = `You are a business card information extractor specializing in bilingual (English and Chinese) business cards. Your task is to:

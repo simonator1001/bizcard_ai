@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { BusinessCard } from '@/types/business-card';
 import { Button } from '@/components/ui/button';
 import { Mail, Phone, MoreVertical, Pencil, Trash } from 'lucide-react';
@@ -10,6 +10,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -38,6 +48,7 @@ export function CardItem({
 }: CardItemProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     async function loadImage() {
@@ -70,6 +81,22 @@ export function CardItem({
   const handleImageError = () => {
     console.warn('[CardItem] Image failed to load:', card.image_url);
     setImageError(true);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
+    }
+    if (e.key === 'Delete' || (e.key === 'Backspace' && e.ctrlKey)) {
+      e.preventDefault();
+      setDeleteDialogOpen(true);
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    setDeleteDialogOpen(false);
+    onDelete();
   };
 
   const renderAvatar = (size: 'sm' | 'md' | 'lg') => {
@@ -110,6 +137,7 @@ export function CardItem({
   // List view
   if (viewMode === 'list') {
     return (
+      <>
       <div 
         className={cn(
           "relative p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors cursor-pointer",
@@ -117,6 +145,10 @@ export function CardItem({
           isSelected && "ring-2 ring-primary"
         )}
         onClick={onClick}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        role="button"
+        aria-label={`Business card for ${card.name || card.name_zh}`}
       >
         <div className="absolute right-2 top-2">
           <Checkbox
@@ -177,7 +209,7 @@ export function CardItem({
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
                       <Pencil className="mr-2 h-4 w-4" /> Edit
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setDeleteDialogOpen(true); }} className="text-destructive">
                       <Trash className="mr-2 h-4 w-4" /> Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -187,12 +219,30 @@ export function CardItem({
           </div>
         </div>
       </div>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Business Card</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the card for <strong>{card.name || card.name_zh}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      </>
     );
   }
 
   // Grid view
   if (viewMode === 'grid') {
     return (
+      <>
       <div 
         className={cn(
           "relative p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors cursor-pointer",
@@ -200,6 +250,10 @@ export function CardItem({
           isSelected && "ring-2 ring-primary"
         )}
         onClick={onClick}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        role="button"
+        aria-label={`Business card for ${card.name || card.name_zh}`}
       >
         <div className="absolute right-2 top-2 z-10">
           <Checkbox
@@ -239,18 +293,36 @@ export function CardItem({
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
                 <Pencil className="mr-2 h-4 w-4" /> Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setDeleteDialogOpen(true); }} className="text-destructive">
                 <Trash className="mr-2 h-4 w-4" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Business Card</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the card for <strong>{card.name || card.name_zh}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      </>
     );
   }
 
-  // Carousel view
+  // Carousel (default)
   return (
+    <>
     <div 
       className={cn(
         "relative p-6 rounded-lg border bg-card hover:bg-accent/5 transition-colors cursor-pointer",
@@ -258,6 +330,10 @@ export function CardItem({
         isSelected && "ring-2 ring-primary"
       )}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="button"
+      aria-label={`Business card for ${card.name || card.name_zh}`}
     >
       <div className="absolute right-2 top-2 z-10">
         <Checkbox
@@ -315,12 +391,29 @@ export function CardItem({
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
               <Pencil className="mr-2 h-4 w-4" /> Edit
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setDeleteDialogOpen(true); }} className="text-destructive">
               <Trash className="mr-2 h-4 w-4" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </div>
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Business Card</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete the card for <strong>{card.name || card.name_zh}</strong>? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 } 
