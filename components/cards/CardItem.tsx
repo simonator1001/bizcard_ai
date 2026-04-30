@@ -134,7 +134,7 @@ export function CardItem({
             onError={handleImageError}
           />
         ) : (
-          <AvatarFallback>{initials}</AvatarFallback>
+          <AvatarFallback className="text-foreground font-medium">{initials}</AvatarFallback>
         )}
       </Avatar>
     );
