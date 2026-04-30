@@ -181,6 +181,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             console.debug('[AuthContext] Signing out')
             await account.deleteSession('current')
+            // Clear our domain session cookie too
+            document.cookie = 'aw_session=; path=/; max-age=0'
           } catch (error) {
             console.error('[AuthContext] Sign out error:', error)
             throw error

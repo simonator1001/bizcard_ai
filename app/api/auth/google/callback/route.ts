@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Server-side OAuth callback: exchanges Google code for tokens, creates AppWrite session
-// All operations use fetch() to AppWrite REST API — no server SDK needed
+// Server-side OAuth callback: exchanges Google code → creates AppWrite session → sets cookie on our domain
+// This COMPLETELY bypasses third-party cookie blocking (no cross-domain Set-Cookie needed)
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
@@ -56,7 +56,6 @@ export async function GET(request: NextRequest) {
     // Step 3: Find or create AppWrite user
     let userId: string
     
-    // Try creating user first — if they already exist, search by email to get ID
     console.log('[OAuth] Creating AppWrite user for:', googleUser.email)
     const createRes = await fetch(`${appwriteEndpoint}/users`, {
       method: 'POST',
@@ -70,11 +69,9 @@ export async function GET(request: NextRequest) {
     const createData = await createRes.json()
     
     if (createRes.ok && createData.$id) {
-      // New user created
       userId = createData.$id
       console.log('[OAuth] Created new user:', userId)
     } else if (createRes.status === 409) {
-      // User already exists — search to get their ID
       console.log('[OAuth] User exists, searching for ID...')
       const searchRes = await fetch(
         `${appwriteEndpoint}/users?search=${encodeURIComponent(googleUser.email)}&limit=1`,
@@ -92,7 +89,7 @@ export async function GET(request: NextRequest) {
       throw new Error(`User creation failed: ${JSON.stringify(createData)}`)
     }
 
-    // Step 4: Create a user token (short, valid secret for session creation)
+    // Step 4: Create a user token (one-time secret)
     console.log('[OAuth] Creating user token...')
     const tokenRes2 = await fetch(`${appwriteEndpoint}/users/${userId}/tokens`, {
       method: 'POST',
@@ -104,18 +101,31 @@ export async function GET(request: NextRequest) {
     }
     console.log('[OAuth] Token created, secret length:', tokenData.secret.length)
 
-    // Step 5: Redirect to client-side callback with the token
-    // Client will use AppWrite SDK: account.createSession(userId, secret)
-    // Server does NOT create the session — token can only be used once!
-    const params = new URLSearchParams({
-      secret: tokenData.secret,
-      userId: userId,
+    // Step 5: Create a session using the token (SERVER-SIDE — consumes the token)
+    console.log('[OAuth] Creating session from token...')
+    const sessionRes = await fetch(`${appwriteEndpoint}/account/sessions/token`, {
+      method: 'POST',
+      headers: awHeaders,
+      body: JSON.stringify({ userId, secret: tokenData.secret }),
     })
-    const response = NextResponse.redirect(
-      new URL(`/auth/callback?${params.toString()}`, request.url)
-    )
+    const sessionData = await sessionRes.json()
+    if (!sessionRes.ok || !sessionData.secret) {
+      throw new Error(`Session creation failed: ${JSON.stringify(sessionData)}`)
+    }
+    console.log('[OAuth] ✅ Session created, ID:', sessionData.$id)
 
-    console.log('[OAuth] ✅ Redirecting to callback with fresh token...')
+    // Step 6: Set session secret as a cookie on OUR domain (NOT AppWrite's domain)
+    // The client reads this cookie and uses client.setSession() — zero cross-domain cookie issues!
+    const response = NextResponse.redirect(new URL('/', request.url))
+    response.cookies.set('aw_session', sessionData.secret, {
+      httpOnly: false,   // JS needs to read it for AppWrite SDK
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: '/',
+    })
+
+    console.log('[OAuth] 🎉 Redirecting to / with session cookie set on our domain')
     return response
 
   } catch (err: any) {
