@@ -572,7 +572,7 @@ const FABMenu = ({ onScan }: { onScan: () => void }) => {
       <button
         onClick={() => setExpanded(!expanded)}
         onBlur={() => setTimeout(() => setExpanded(false), 200)}
-        className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-400 to-violet-500 text-white shadow-lg shadow-indigo-400/40 dark:shadow-violet-500/40 ring-2 ring-white/40 hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center ${
+        className={`w-14 h-14 rounded-2xl bg-indigo-500 text-white shadow-xl shadow-indigo-500/50 ring-2 ring-white/60 hover:bg-indigo-400 hover:shadow-2xl hover:shadow-indigo-500/60 hover:scale-105 active:scale-95 transition-all flex items-center justify-center ${
           !pulsed ? 'animate-pulse' : ''
         }`}
       >
