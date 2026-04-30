@@ -295,12 +295,12 @@ export function CardItem({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-4">
-              <div>
+              <div className="min-w-0 overflow-hidden">
                 <p className="font-medium truncate">{card.name || card.name_zh}</p>
                 <p className="text-sm text-muted-foreground truncate">{card.title || card.title_zh}</p>
                 <p className="text-sm truncate">{card.company || card.company_zh}</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {card.email && (
                   <a
                     href={`mailto:${card.email}`}
@@ -367,13 +367,27 @@ export function CardItem({
         <div className={`relative w-full aspect-[3/2] rounded-lg overflow-hidden mb-4 ${thumbGradient} ${thumbBorder}`}>
           {renderThumbnail('lg')}
         </div>
-        <div className="space-y-1">
+        <div className="overflow-hidden space-y-1">
           <p className="font-medium truncate">{card.name || card.name_zh}</p>
           <p className="text-sm text-muted-foreground truncate">{card.title || card.title_zh}</p>
           <p className="text-sm truncate">{card.company || card.company_zh}</p>
         </div>
         <div className="absolute bottom-4 right-4 flex items-center gap-2">
-          {dropdown}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button variant="ghost" size="sm" className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 shadow-sm">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setDeleteDialogOpen(true); }} className="text-destructive">
+                <Trash className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       {deleteDialog}
@@ -415,7 +429,7 @@ export function CardItem({
       <div className={`relative w-full aspect-[3/2] rounded-lg overflow-hidden mb-4 ${thumbGradient} ${thumbBorder}`}>
         {renderThumbnail('lg')}
       </div>
-      <div className="space-y-2">
+      <div className="overflow-hidden space-y-2">
         <p className="text-xl font-medium truncate">{card.name || card.name_zh}</p>
         <p className="text-sm text-muted-foreground truncate">{card.title || card.title_zh}</p>
         <p className="text-sm font-medium truncate">{card.company || card.company_zh}</p>
