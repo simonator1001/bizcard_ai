@@ -192,12 +192,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             console.debug('[AuthContext] Signing in with provider:', provider)
 
-            // Server-side OAuth proxy — bypasses iOS Safari third-party cookie blocking
-            // Redirects to our API route which handles Google OAuth entirely server-side
-            window.location.href = '/api/auth/google'
+            const successUrl = `${window.location.origin}/auth/callback`
+            const failureUrl = `${window.location.origin}/signin`
             
-            // Return a never-resolving promise since we're navigating away
-            return new Promise(() => {})
+            // Use token-based OAuth — JWT in SDK memory, no cross-domain cookies needed
+            // Works on iOS Safari where createOAuth2Session cookies get blocked by ITP
+            await account.createOAuth2Token(
+              OAuthProvider.Google,
+              successUrl,
+              failureUrl,
+              ['profile', 'email']
+            )
           } catch (error) {
             console.error('[AuthContext] Provider sign in error:', error)
             throw error
