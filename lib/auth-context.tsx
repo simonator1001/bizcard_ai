@@ -195,13 +195,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const successUrl = `${window.location.origin}/auth/callback`
             const failureUrl = `${window.location.origin}/signin`
             
-            // Use token-based OAuth — JWT in SDK memory, no cross-domain cookies needed
-            // Works on iOS Safari where createOAuth2Session cookies get blocked by ITP
-            await account.createOAuth2Token(
+            // Use AppWrite's standard OAuth session flow
+            // Redirects: AppWrite → Google → AppWrite callback → our /auth/callback
+            account.createOAuth2Session(
               OAuthProvider.Google,
               successUrl,
-              failureUrl,
-              ['profile', 'email']
+              failureUrl
             )
           } catch (error) {
             console.error('[AuthContext] Provider sign in error:', error)
