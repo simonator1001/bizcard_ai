@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'BizCard AI <noreply@bizcardai.vercel.app>',
+          from: 'BizCard AI <onboarding@resend.dev>',
           to: [email],
           subject: 'Verify your BizCard AI email',
           html: `
