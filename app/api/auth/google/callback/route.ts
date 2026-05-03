@@ -89,7 +89,9 @@ export async function GET(request: NextRequest) {
       throw new Error(`User creation failed: ${JSON.stringify(createData)}`)
     }
 
-    // Step 4: Create a user token (one-time secret)
+    // Step 4: Create a user token (one-time secret) — DON'T consume it server-side
+    // The client OAuthCallback will call account.createSession(userId, secret) to
+    // properly initialize the AppWrite SDK's session state (JWT, localStorage, etc.)
     console.log('[OAuth] Creating user token...')
     const tokenRes2 = await fetch(`${appwriteEndpoint}/users/${userId}/tokens`, {
       method: 'POST',
@@ -101,32 +103,15 @@ export async function GET(request: NextRequest) {
     }
     console.log('[OAuth] Token created, secret length:', tokenData.secret.length)
 
-    // Step 5: Create a session using the token (SERVER-SIDE — consumes the token)
-    console.log('[OAuth] Creating session from token...')
-    const sessionRes = await fetch(`${appwriteEndpoint}/account/sessions/token`, {
-      method: 'POST',
-      headers: awHeaders,
-      body: JSON.stringify({ userId, secret: tokenData.secret }),
-    })
-    const sessionData = await sessionRes.json()
-    if (!sessionRes.ok || !sessionData.secret) {
-      throw new Error(`Session creation failed: ${JSON.stringify(sessionData)}`)
-    }
-    console.log('[OAuth] ✅ Session created, ID:', sessionData.$id)
+    // Redirect to /auth/callback with secret+userId — the client creates the session.
+    // This ensures the AppWrite SDK properly stores the session (JWT, localStorage),
+    // avoiding all third-party cookie issues since everything happens on our domain.
+    const callbackUrl = new URL('/auth/callback', request.url)
+    callbackUrl.searchParams.set('secret', tokenData.secret)
+    callbackUrl.searchParams.set('userId', userId)
 
-    // Step 6: Set session secret as a cookie on OUR domain (NOT AppWrite's domain)
-    // The client reads this cookie and uses client.setSession() — zero cross-domain cookie issues!
-    const response = NextResponse.redirect(new URL('/', request.url))
-    response.cookies.set('aw_session', sessionData.secret, {
-      httpOnly: false,   // JS needs to read it for AppWrite SDK
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-      path: '/',
-    })
-
-    console.log('[OAuth] 🎉 Redirecting to / with session cookie set on our domain')
-    return response
+    console.log('[OAuth] 🎉 Redirecting to /auth/callback with session params (client creates session)')
+    return NextResponse.redirect(callbackUrl)
 
   } catch (err: any) {
     console.error('[OAuth] ❌ Error:', err)
