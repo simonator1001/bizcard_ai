@@ -163,6 +163,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             console.debug('[AuthContext] Signing in with email:', email)
             await account.createEmailPasswordSession(email, password)
+            // Immediately update user state so the app knows we're logged in.
+            // Without this, the polling interval (30s) is the only thing that
+            // would pick up the new session, causing a "still signed out" UX.
+            const currentUser = await account.get() as AppWriteUser
+            setUser(currentUser)
+            console.debug('[AuthContext] Sign in successful, user set:', currentUser.$id)
           } catch (error) {
             console.error('[AuthContext] Sign in error:', error)
             throw error
