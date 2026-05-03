@@ -341,7 +341,7 @@ const MyCardTab = () => {
 const ScanTab = () => {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const { cards } = useBusinessCards()
+  const { cards, refresh } = useBusinessCards()
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState('')
   const [progressPercent, setProgressPercent] = useState(0)
@@ -410,6 +410,7 @@ const ScanTab = () => {
       setCurrentFileIndex(0)
       setTotalFiles(0)
       setProgressPercent(0)
+      refresh() // Re-fetch cards after scan to update count
     }, 500)
   }
 
