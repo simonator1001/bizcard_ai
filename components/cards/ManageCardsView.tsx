@@ -61,7 +61,7 @@ interface ManageCardsViewProps {
 }
 
 export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
-  const { cards, loading, addCard, updateCard, deleteCard, refresh } = useBusinessCards();
+  const { cards, loading, loadingMore, hasMore, total, addCard, updateCard, deleteCard, refresh, loadMore } = useBusinessCards();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
@@ -286,6 +286,22 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
                 />
               ))}
             </div>
+            {hasMore && (
+              <div className="flex justify-center py-4">
+                <Button
+                  variant="outline"
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="px-8"
+                >
+                  {loadingMore ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                  ) : (
+                    `Load More (${cards.length} of ${total})`
+                  )}
+                </Button>
+              </div>
+            )}
           )}
         </>
       )}
