@@ -9,7 +9,6 @@ import { useAuth } from '@/lib/auth-context'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { Checkbox } from "@/components/ui/checkbox"
 import { Chrome as Google, Mail, Lock, User, ArrowRight } from 'lucide-react'
 
 export default function SignInPage() {
