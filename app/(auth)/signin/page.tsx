@@ -76,7 +76,7 @@ export default function SignInPage() {
     }
     try {
       await signUp(email, password, name)
-      toast.success('Account created successfully')
+      toast.success('Account created! Check your email to verify your address.')
       setShowSignUp(false)
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign up')

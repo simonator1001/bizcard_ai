@@ -39,7 +39,7 @@ interface AuthContextType {
   loading: boolean
   initialized: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, name: string) => Promise<void>
+  signUp: (email: string, password: string, name: string) => Promise<any>
   signOut: () => Promise<void>
   signInWithProvider: (provider: 'google') => Promise<{ provider: string; url: string } | void>
 }
@@ -171,7 +171,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signUp: async (email, password, name) => {
           try {
             console.debug('[AuthContext] Signing up with email:', email)
-            await account.create(ID.unique(), email, password, name)
+            const user = await account.create(ID.unique(), email, password, name)
+            
+            // Send email verification
+            const verifyUrl = `${window.location.origin}/verify`
+            await account.createVerification(verifyUrl)
+            console.debug('[AuthContext] Verification email sent to:', email)
+            
+            return user
           } catch (error) {
             console.error('[AuthContext] Sign up error:', error)
             throw error
