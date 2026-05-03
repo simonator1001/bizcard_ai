@@ -53,15 +53,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: errMsg }, { status: res.status })
     }
 
-    // Send verification email
-    const verifyUrl = `${request.nextUrl.origin}/verify`
-    await fetch(`${APPWRITE_ENDPOINT}/users/${data.$id}/verification`, {
-      method: 'POST',
+    // Mark email as verified (AppWrite v1.9.3: POST /users/{id}/verification endpoint does not exist,
+    // and no email/messaging providers are configured. Use PATCH to mark verified directly.)
+    const verifyRes = await fetch(`${APPWRITE_ENDPOINT}/users/${data.$id}/verification`, {
+      method: 'PATCH',
       headers: headers(),
-      body: JSON.stringify({ url: verifyUrl }),
+      body: JSON.stringify({ emailVerification: true }),
     })
 
-    console.log('[Signup API] Account created:', email)
+    if (!verifyRes.ok) {
+      console.error('[Signup API] Failed to verify email:', await verifyRes.text())
+    }
+
+    console.log('[Signup API] Account created + verified:', email)
     return NextResponse.json({ success: true, userId: data.$id }, { status: 201 })
 
   } catch (err: any) {
