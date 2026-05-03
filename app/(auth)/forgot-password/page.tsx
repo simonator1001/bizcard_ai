@@ -6,29 +6,32 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase-client'
-import { toast } from 'sonner'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
+  const [error, setError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
+    setError('')
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       })
-      
-      if (error) throw error
-      
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to send reset instructions')
+      }
+
       setSent(true)
-      toast.success('Password reset instructions sent to your email')
-    } catch (error: any) {
-      console.error('Password reset error:', error)
-      toast.error(error.message || error.error_description || 'Failed to send reset instructions')
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong')
     } finally {
       setLoading(false)
     }
@@ -53,12 +56,15 @@ export default function ForgotPasswordPage() {
           <CardDescription>
             {sent 
               ? 'Check your email for password reset instructions'
-              : 'Enter your email address and we\'ll send you a link to reset your password'}
+              : "Enter your email address and we'll send you a link to reset your password"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {!sent ? (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <p className="text-sm text-red-500">{error}</p>
+              )}
               <div className="space-y-2">
                 <Input
                   id="email"
@@ -103,4 +109,4 @@ export default function ForgotPasswordPage() {
       </Card>
     </div>
   )
-} 
+}
