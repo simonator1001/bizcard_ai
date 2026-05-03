@@ -45,8 +45,7 @@ export default function SignInPage() {
     }
   }
 
-  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const handleSignUp = async () => {
     setError(null)
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
@@ -240,7 +239,7 @@ export default function SignInPage() {
                 </div>
               )}
 
-              <form onSubmit={handleSignUp} className="space-y-4">
+              <form className="space-y-4" onSubmit={e => e.preventDefault()}>
                 <div className="space-y-2">
                   <label htmlFor="name" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Full Name
@@ -249,6 +248,7 @@ export default function SignInPage() {
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id="name"
+                      name="name"
                       placeholder="John Doe"
                       value={formData.name}
                       onChange={e => updateField('name', e.target.value)}
@@ -266,6 +266,7 @@ export default function SignInPage() {
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id="signup-email"
+                      name="email"
                       type="email"
                       placeholder="m@example.com"
                       value={formData.email}
@@ -284,6 +285,7 @@ export default function SignInPage() {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id="signup-password"
+                      name="password"
                       type="password"
                       placeholder="Min. 8 characters"
                       value={formData.password}
@@ -302,6 +304,7 @@ export default function SignInPage() {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id="confirmPassword"
+                      name="confirmPassword"
                       type="password"
                       placeholder="Confirm your password"
                       value={formData.confirmPassword}
@@ -313,9 +316,10 @@ export default function SignInPage() {
                 </div>
 
                 <Button
-                  type="submit"
+                  type="button"
                   className="w-full h-11 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white shadow-md shadow-indigo-500/25 font-medium"
                   disabled={isLoading}
+                  onClick={handleSignUp}
                 >
                   {isLoading ? (
                     <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
