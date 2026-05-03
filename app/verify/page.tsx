@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { account } from '@/lib/appwrite'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 
@@ -14,26 +13,34 @@ export default function VerifyPage() {
     const verify = async () => {
       const url = new URL(window.location.href)
       const userId = url.searchParams.get('userId')
-      const secret = url.searchParams.get('secret')
+      const token = url.searchParams.get('token')
 
-      if (!userId || !secret) {
+      if (!userId || !token) {
         setStatus('error')
-        setMessage('Invalid verification link. Please request a new verification email.')
+        setMessage('Invalid verification link. Please sign up again.')
         return
       }
 
       try {
-        await account.updateVerification(userId, secret)
-        setStatus('success')
-        setMessage('Email verified successfully! You can now sign in.')
+        const res = await fetch('/api/auth/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, token }),
+        })
+
+        const data = await res.json()
+
+        if (res.ok) {
+          setStatus('success')
+          setMessage('Email verified successfully! You can now sign in.')
+        } else {
+          setStatus('error')
+          setMessage(data.error || 'Verification failed. Please try again.')
+        }
       } catch (err: any) {
         console.error('[Verify] Error:', err)
         setStatus('error')
-        if (err?.code === 401) {
-          setMessage('This verification link has expired. Please sign in and request a new one.')
-        } else {
-          setMessage(err?.message || 'Verification failed. Please try again.')
-        }
+        setMessage('Something went wrong. Please try again.')
       }
     }
     verify()

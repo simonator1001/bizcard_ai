@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import crypto from 'crypto'
 
 const APPWRITE_ENDPOINT = 'https://sgp.cloud.appwrite.io/v1'
 const PROJECT_ID = '69efa226000db23fcd89'
 
-function headers() {
+function appwriteHeaders() {
   return {
     'X-Appwrite-Project': PROJECT_ID,
     'X-Appwrite-Key': process.env.APPWRITE_API_KEY || '',
@@ -28,10 +29,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
     }
 
-    // Create user via AppWrite server-side API
+    // 1. Create user via AppWrite server-side API
     const res = await fetch(`${APPWRITE_ENDPOINT}/users`, {
       method: 'POST',
-      headers: headers(),
+      headers: appwriteHeaders(),
       body: JSON.stringify({
         userId: 'unique()',
         email,
@@ -53,20 +54,67 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: errMsg }, { status: res.status })
     }
 
-    // Mark email as verified (AppWrite v1.9.3: POST /users/{id}/verification endpoint does not exist,
-    // and no email/messaging providers are configured. Use PATCH to mark verified directly.)
-    const verifyRes = await fetch(`${APPWRITE_ENDPOINT}/users/${data.$id}/verification`, {
+    const userId = data.$id
+
+    // 2. Generate verification token + store in user preferences
+    const token = crypto.randomUUID()
+    const expiresAt = Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+
+    const prefsRes = await fetch(`${APPWRITE_ENDPOINT}/users/${userId}/prefs`, {
       method: 'PATCH',
-      headers: headers(),
-      body: JSON.stringify({ emailVerification: true }),
+      headers: appwriteHeaders(),
+      body: JSON.stringify({
+        prefs: {
+          verificationToken: token,
+          verificationTokenExpires: expiresAt,
+        },
+      }),
     })
 
-    if (!verifyRes.ok) {
-      console.error('[Signup API] Failed to verify email:', await verifyRes.text())
+    if (!prefsRes.ok) {
+      console.error('[Signup API] Failed to store verification token:', await prefsRes.text())
     }
 
-    console.log('[Signup API] Account created + verified:', email)
-    return NextResponse.json({ success: true, userId: data.$id }, { status: 201 })
+    // 3. Send verification email via Resend
+    const verifyUrl = `${request.nextUrl.origin}/verify?userId=${userId}&token=${token}`
+    const resendKey = process.env.RESEND_API_KEY
+
+    if (resendKey) {
+      const emailRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'BizCard AI <noreply@bizcardai.vercel.app>',
+          to: [email],
+          subject: 'Verify your BizCard AI email',
+          html: `
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+              <h2 style="color:#4F46E5">🦞 BizCard AI</h2>
+              <p>Thanks for signing up, <strong>${name}</strong>!</p>
+              <p>Click the button below to verify your email address:</p>
+              <a href="${verifyUrl}" style="display:inline-block;background:#4F46E5;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin:16px 0">Verify Email</a>
+              <p style="color:#6B7280;font-size:14px">Or copy this link:</p>
+              <p style="color:#6B7280;font-size:12px;word-break:break-all">${verifyUrl}</p>
+              <p style="color:#9CA3AF;font-size:12px;margin-top:24px">This link expires in 24 hours.</p>
+            </div>
+          `,
+        }),
+      })
+
+      if (!emailRes.ok) {
+        const errText = await emailRes.text()
+        console.error('[Signup API] Failed to send verification email:', errText)
+        // Don't fail signup if email fails — user can request resend later
+      } else {
+        console.log('[Signup API] Verification email sent to:', email)
+      }
+    }
+
+    console.log('[Signup API] Account created:', email, userId)
+    return NextResponse.json({ success: true, userId }, { status: 201 })
 
   } catch (err: any) {
     console.error('[Signup API] Unexpected error:', err)
