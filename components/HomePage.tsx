@@ -148,13 +148,23 @@ const MyCardTab = () => {
   const [saving, setSaving] = useState(false)
   const [showQR, setShowQR] = useState(false)
 
-  // Sync user data
+  // Load saved card data from AppWrite prefs
   useEffect(() => {
     if (user) {
+      const prefs = user.prefs || {}
       setCard(prev => ({
         ...prev,
         name: user.name || prev.name,
         email: user.email || prev.email,
+        title: prefs.title || prev.title,
+        company: prefs.company || prev.company,
+        phone: prefs.phone || prev.phone,
+        website: prefs.website || prev.website,
+        address: prefs.address || prev.address,
+        photo: prefs.photo || prev.photo,
+        linkedin: prefs.linkedin || prev.linkedin,
+        twitter: prefs.twitter || prev.twitter,
+        wechat: prefs.wechat || prev.wechat,
       }))
     }
   }, [user])
@@ -166,11 +176,23 @@ const MyCardTab = () => {
   const handleSave = async () => {
     setSaving(true)
     try {
-      // Save to AppWrite user prefs for now
-      // Future: dedicated collection
+      const { name, title, company, email, phone, website, address, photo, linkedin, twitter, wechat } = card
+      await account.updatePrefs({
+        ...user?.prefs,
+        title: title || '',
+        company: company || '',
+        phone: phone || '',
+        website: website || '',
+        address: address || '',
+        photo: photo || '',
+        linkedin: linkedin || '',
+        twitter: twitter || '',
+        wechat: wechat || '',
+      })
       toast.success('Card saved!')
     } catch (err: any) {
-      toast.error('Failed to save card')
+      console.error('Save card error:', err)
+      toast.error(err?.message || 'Failed to save card')
     } finally {
       setSaving(false)
     }
