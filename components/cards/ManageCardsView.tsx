@@ -286,22 +286,13 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
                 />
               ))}
             </div>
-            {hasMore && (
-              <div className="flex justify-center py-4">
-                <Button
-                  variant="outline"
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  className="px-8"
-                >
-                  {loadingMore ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
-                  ) : (
-                    `Load More (${cards.length} of ${total})`
-                  )}
-                </Button>
-              </div>
-            )}
+          )}
+          {hasMore && (
+            <div className="flex justify-center py-4">
+              <Button variant="outline" onClick={loadMore} disabled={loadingMore} className="px-8">
+                {loadingMore ? 'Loading...' : `Load More (${cards.length} of ${total})`}
+              </Button>
+            </div>
           )}
         </>
       )}
