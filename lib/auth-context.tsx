@@ -162,10 +162,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn: async (email, password) => {
           try {
             console.debug('[AuthContext] Signing in with email:', email)
+
+            // If there's already an active session (e.g. stale cookie), delete it first.
+            // AppWrite rejects createEmailPasswordSession when a session is active.
+            try {
+              const existingUser = await account.get()
+              if (existingUser) {
+                console.debug('[AuthContext] Existing session detected, deleting...')
+                await account.deleteSession('current')
+              }
+            } catch {
+              // No session — that's fine, proceed
+            }
+
             await account.createEmailPasswordSession(email, password)
-            // Immediately update user state so the app knows we're logged in.
-            // Without this, the polling interval (30s) is the only thing that
-            // would pick up the new session, causing a "still signed out" UX.
             const currentUser = await account.get() as AppWriteUser
             setUser(currentUser)
             console.debug('[AuthContext] Sign in successful, user set:', currentUser.$id)

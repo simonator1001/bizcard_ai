@@ -6,19 +6,26 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useAuth } from '@/lib/auth-context'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { Chrome as Google, Mail, Lock, User, ArrowRight } from 'lucide-react'
 
 export default function SignInPage() {
-  const { signIn, signInWithProvider } = useAuth()
+  const { user, loading, signIn, signInWithProvider } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [providerLoading, setProviderLoading] = useState(false)
   const [showSignUp, setShowSignUp] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' })
   const router = useRouter()
+
+  // If already logged in (session cookie still valid), redirect to dashboard
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace('/')
+    }
+  }, [loading, user, router])
 
   const updateField = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
