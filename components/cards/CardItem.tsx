@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { getImageUrl } from '@/lib/supabase-storage';
+import { getImageUrl } from '@/lib/image-storage';
 import Image from 'next/image';
 
 const THUMBNAIL_PLACEHOLDER = "flex items-center justify-center w-full h-full";

@@ -18,7 +18,7 @@ import {
 import { Mail, Phone, MapPin, Trash2, Edit, Download } from 'lucide-react'
 import Image from 'next/image'
 import { BusinessCard } from '@/types/business-card'
-import { getImageUrl } from '@/lib/supabase-storage'
+import { getImageUrl } from '@/lib/image-storage';
 
 interface BusinessCardDetailsProps {
   card: BusinessCard

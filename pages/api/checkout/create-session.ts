@@ -1,30 +1,31 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
-import { supabase } from '@/lib/supabase-client';
 
-// For debugging purposes - using a test mode
-const TEST_MODE = false;
+const APPWRITE_ENDPOINT = 'https://sgp.cloud.appwrite.io/v1';
+const PROJECT_ID = '69efa226000db23fcd89';
 
-// Initialize Stripe with your test secret key
-// Properly format the key to avoid any issues
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY ? 
-  process.env.STRIPE_SECRET_KEY.replace(/[\r\n\s\t]+/g, '') : 
-  '';
-
-// For debugging
-console.log('[Checkout] Using', TEST_MODE ? 'TEST_MODE' : 'LIVE_MODE');
-if (!TEST_MODE) {
-  console.log('[Checkout] Using Stripe key length:', stripeSecretKey.length);
+function appwriteHeaders() {
+  return {
+    'X-Appwrite-Project': PROJECT_ID,
+    'X-Appwrite-Key': process.env.APPWRITE_API_KEY || '',
+    'Content-Type': 'application/json',
+  };
 }
 
-// Only initialize Stripe if not in test mode
-const stripe = !stripeSecretKey ? 
-  null : 
-  new Stripe(stripeSecretKey, {
-    apiVersion: '2025-04-30.basil' as const,
+// Verify AppWrite session by calling GET /account with the session token
+async function verifyAppWriteSession(userId: string, sessionSecret: string): Promise<boolean> {
+  const res = await fetch(`${APPWRITE_ENDPOINT}/account`, {
+    headers: {
+      'X-Appwrite-Project': PROJECT_ID,
+      'X-Appwrite-Session': sessionSecret,
+    },
   });
+  if (!res.ok) return false;
+  const account = await res.json();
+  return account.$id === userId;
+}
 
-// Define the product/price IDs for different tiers and frequencies
+// Stripe price IDs from env vars
 const PRICE_IDS = {
   pro: {
     monthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
@@ -33,145 +34,83 @@ const PRICE_IDS = {
   basic: {
     monthly: process.env.STRIPE_PRICE_BASIC_MONTHLY,
     yearly: process.env.STRIPE_PRICE_BASIC_YEARLY,
-  }
+  },
 };
 
-// Helper function to determine if a price is for a one-time payment
-const isOneTimePrice = (tier: string, frequency: string) => {
-  // No longer using one-time payment for pro monthly
-  return false;
-};
+// Initialize Stripe
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY
+  ? process.env.STRIPE_SECRET_KEY.replace(/[\r\n\s\t]+/g, '')
+  : '';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+const stripe = stripeSecretKey
+  ? new Stripe(stripeSecretKey, { apiVersion: '2025-04-30.basil' as const })
+  : null;
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  console.log('[Checkout] Request received:', req.body);
-  console.log('[Checkout] Origin:', req.headers.origin);
-
-  // Check authorization header
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    console.log('[Checkout] No authorization header');
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
   try {
-    // Extract token from authorization header
-    const token = authHeader.replace('Bearer ', '');
+    const { tier = 'pro', frequency = 'monthly', userId, appwriteSession } = req.body;
 
-    // Verify token and get user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      console.error('[Checkout] Auth error:', authError);
-      return res.status(401).json({ 
-        error: 'Unauthorized', 
-        details: authError?.message || 'Invalid authentication token'
-      });
+    if (!userId || !appwriteSession) {
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
-    console.log('[Checkout] User authenticated:', {
-      id: user.id,
-      email: user.email
-    });
+    // Verify AppWrite session
+    const isValid = await verifyAppWriteSession(userId, appwriteSession);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid session' });
+    }
 
-    // Extract data from request body
-    const { tier = 'pro', frequency = 'monthly' } = req.body;
-
-    // Validate tier and frequency
     if (!['pro', 'basic'].includes(tier) || !['monthly', 'yearly'].includes(frequency)) {
-      return res.status(400).json({ 
-        error: 'Bad request', 
-        details: 'Invalid tier or frequency' 
-      });
+      return res.status(400).json({ error: 'Invalid tier or frequency' });
     }
 
-    // Get the price ID based on tier and frequency
-    // @ts-ignore
-    const priceId = PRICE_IDS[tier][frequency];
+    // Get price ID
+    const priceId = PRICE_IDS[tier as 'pro' | 'basic']?.[frequency as 'monthly' | 'yearly'];
     if (!priceId) {
-      return res.status(400).json({ 
-        error: 'Bad request', 
-        details: 'Invalid price configuration' 
-      });
+      return res.status(400).json({ error: 'Invalid price configuration' });
     }
 
-    // Build the success URL with the correct origin
+    if (!stripe) {
+      return res.status(500).json({ error: 'Stripe not configured' });
+    }
+
+    // Get user email for Stripe
+    const userRes = await fetch(`${APPWRITE_ENDPOINT}/users/${userId}`, {
+      headers: appwriteHeaders(),
+    });
+    const userData = await userRes.json();
+    const userEmail = userData.email || '';
+
     const origin = req.headers.origin || 'http://localhost:3000';
     const successUrl = `${origin}/payment/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${origin}/pricing`;
 
-    console.log('[Checkout] URLs:', { successUrl, cancelUrl });
-
-    // TEST MODE: Create a simulated session
-    if (TEST_MODE) {
-      console.log('[Checkout] TEST MODE: Returning simulated checkout session');
-      
-      // Instead of directly returning the success URL, create a simulated checkout URL
-      // This will be a URL to a test payment page that will then redirect to the success page
-      const simulated_checkout_url = `${origin}/api/checkout/test-payment?session_id=test_session_${Date.now()}&return_url=${encodeURIComponent(successUrl)}`;
-      
-      return res.status(200).json({
-        sessionId: `test_session_${Date.now()}`,
-        url: simulated_checkout_url,
-        test_mode: true
-      });
-    }
-
-    // Determine if this is a one-time payment for testing
-    const isOneTimeTest = isOneTimePrice(tier, frequency);
-
-    // LIVE MODE: Create actual Stripe checkout session
-    if (!stripe) {
-      console.error('[Checkout] Stripe client not initialized but trying to use live mode');
-      return res.status(500).json({ 
-        error: 'Configuration error', 
-        details: 'Stripe client not initialized'
-      });
-    }
-    
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
+      line_items: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
       success_url: successUrl,
       cancel_url: cancelUrl,
-      client_reference_id: user.id,
-      customer_email: user.email,
-      metadata: {
-        tier,
-        frequency,
-        userId: user.id,
-        isOneTimePayment: isOneTimeTest.toString(),
-      },
+      client_reference_id: userId,
+      customer_email: userEmail,
+      metadata: { tier, frequency, userId },
     });
 
-    console.log('[Checkout] Session created:', {
+    console.log('[Checkout] Session created:', session.id);
+
+    return res.status(200).json({
       sessionId: session.id,
       url: session.url,
     });
-
-    // Return the session URL
-    return res.status(200).json({ 
-      sessionId: session.id,
-      url: session.url
-    });
   } catch (error: any) {
-    console.error('[Checkout] Error creating checkout session:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error', 
-      details: error.message || 'An unexpected error occurred',
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    console.error('[Checkout] Error:', error);
+    return res.status(500).json({
+      error: 'Internal server error',
+      details: error.message,
     });
   }
-} 
+}
