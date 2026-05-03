@@ -27,7 +27,12 @@ export default function ResetPasswordPage() {
     e.preventDefault()
     setError('')
 
-    if (!userId || !token) {
+    // Read directly from URL on submit (prevents race condition with useEffect)
+    const url = new URL(window.location.href)
+    const currentUserId = userId || url.searchParams.get('userId') || ''
+    const currentToken = token || url.searchParams.get('token') || ''
+
+    if (!currentUserId || !currentToken) {
       setError('Invalid reset link. Please request a new one.')
       return
     }
@@ -47,7 +52,7 @@ export default function ResetPasswordPage() {
       const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, token, password }),
+        body: JSON.stringify({ userId: currentUserId, token: currentToken, password }),
       })
 
       const data = await res.json()
