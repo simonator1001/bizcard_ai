@@ -341,7 +341,7 @@ const MyCardTab = () => {
 const ScanTab = () => {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const { cards, refresh } = useBusinessCards()
+  const { cards, total, refresh } = useBusinessCards()
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState('')
   const [progressPercent, setProgressPercent] = useState(0)
@@ -473,7 +473,7 @@ const ScanTab = () => {
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-indigo-600">{cards.length}</p>
+              <p className="text-2xl font-bold text-indigo-600">{total}</p>
               <p className="text-xs text-gray-500">Total Contacts</p>
             </div>
             {user && (
