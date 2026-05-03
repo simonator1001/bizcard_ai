@@ -16,6 +16,7 @@ import { UpgradePrompt } from '@/components/subscription/UpgradePrompt'
 import { useTranslation } from 'react-i18next'
 import { SubscriptionService } from '@/lib/subscription'
 import { useAuth } from '@/lib/auth-context'
+import { account } from '@/lib/appwrite'
 
 interface BusinessCard {
   id: string
@@ -414,7 +415,8 @@ export function ScanPage({ onAddCard }: ScanPageProps) {
         },
         body: JSON.stringify({ 
           image: base64Image, 
-          userId: user.$id 
+          userId: user.$id,
+          appwriteJWT: await account.createJWT()
         }),
         credentials: 'include',
       });

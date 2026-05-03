@@ -42,7 +42,7 @@ export default async function handler(
   }
 
   try {
-    const { image, userId } = req.body
+    const { image, userId, appwriteJWT } = req.body
 
     if (!image) {
       return res.status(400).json({ error: 'No image provided' })
@@ -50,6 +50,28 @@ export default async function handler(
 
     if (!userId) {
       return res.status(400).json({ error: 'User ID required' })
+    }
+
+    // Verify AppWrite session via JWT
+    if (appwriteJWT) {
+      const verifyRes = await fetch(`${APPWRITE_ENDPOINT}/account`, {
+        headers: {
+          'X-Appwrite-Project': PROJECT_ID,
+          'X-Appwrite-JWT': appwriteJWT,
+        },
+      })
+      if (!verifyRes.ok) {
+        console.error('[SCAN] JWT verification failed:', verifyRes.status)
+        return res.status(401).json({ error: 'Invalid session' })
+      }
+      const account = await verifyRes.json()
+      if (account.$id !== userId) {
+        console.error('[SCAN] User ID mismatch:', account.$id, '≠', userId)
+        return res.status(403).json({ error: 'User ID mismatch' })
+      }
+      console.log('[SCAN] JWT verified for:', account.email)
+    } else {
+      console.warn('[SCAN] No JWT provided — proceeding without auth verification (legacy)')
     }
 
     console.log('[SCAN] Image received, size:', Math.ceil(image.length / 1024), 'KB')

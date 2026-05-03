@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
+import { account } from '@/lib/appwrite'
 import { useBusinessCards } from '@/lib/hooks/useBusinessCards'
 import { BusinessCard } from '@/types/business-card'
 import { Button } from "@/components/ui/button"
@@ -385,7 +386,7 @@ const ScanTab = () => {
         const response = await fetch('/api/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: base64, userId: user.$id }),
+          body: JSON.stringify({ image: base64, userId: user.$id, appwriteJWT: await account.createJWT() }),
           signal: controller.signal,
         })
         clearTimeout(timeoutId)
