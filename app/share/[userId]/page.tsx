@@ -5,8 +5,13 @@ import { useParams } from 'next/navigation'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Mail, Phone, Globe, MapPin, Briefcase, User, Download, Share2 } from 'lucide-react'
+import { 
+  Mail, Phone, Globe, MapPin, Briefcase, User, Download, Share2, 
+  Sparkles, QrCode, ExternalLink, MessageCircle, Copy, ChevronRight,
+  Linkedin, Twitter
+} from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 
 interface MyCardData {
   name: string
@@ -24,6 +29,7 @@ interface MyCardData {
 
 export default function ShareCardPage() {
   const params = useParams()
+  const { t } = useTranslation()
   const [card, setCard] = useState<MyCardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -33,7 +39,7 @@ export default function ShareCardPage() {
       try {
         const userId = params?.userId as string
         if (!userId) throw new Error('No user ID')
-        // Fetch user's card from AppWrite
+        
         const APPWRITE_ENDPOINT = 'https://sgp.cloud.appwrite.io/v1'
         const APPWRITE_PROJECT = '69efa226000db23fcd89'
         
@@ -71,10 +77,13 @@ export default function ShareCardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-gray-900 dark:to-gray-800">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
-          <p className="text-gray-500 text-sm">Loading card...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="h-16 w-16 animate-spin rounded-full border-4 border-white/30 border-t-white" />
+            <Sparkles className="absolute inset-0 m-auto w-8 h-8 text-white/60 animate-pulse" />
+          </div>
+          <p className="text-white/80 text-sm animate-pulse">{t('shareCard.loading', 'Loading card...')}</p>
         </div>
       </div>
     )
@@ -82,29 +91,39 @@ export default function ShareCardPage() {
 
   if (error || !card) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-4">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center mb-4">
-            <User className="w-8 h-8 text-red-500" />
+          <div className="w-20 h-20 mx-auto rounded-full bg-white/10 backdrop-blur flex items-center justify-center mb-4">
+            <User className="w-10 h-10 text-white/60" />
           </div>
-          <h2 className="text-xl font-bold mb-2">Card Not Found</h2>
-          <p className="text-gray-500">{error || 'This digital card is not available'}</p>
+          <h2 className="text-2xl font-bold text-white mb-2">{t('shareCard.notFound', 'Card Not Found')}</h2>
+          <p className="text-white/60 mb-6">{error || t('shareCard.notAvailable', 'This digital card is not available')}</p>
+          <a href="/signin">
+            <Button className="rounded-full bg-white text-indigo-600 hover:bg-white/90 font-semibold">
+              {t('shareCard.createFree', 'Create Free Card')} <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </a>
         </div>
       </div>
     )
   }
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({ title: card.name, url: window.location.href })
+  const handleShare = async () => {
+    const shareData = {
+      title: `${card.name} - Digital Business Card`,
+      text: `Check out ${card.name}'s digital business card!`,
+      url: window.location.href,
+    }
+    
+    if (navigator.share && navigator.canShare?.(shareData)) {
+      await navigator.share(shareData)
     } else {
-      navigator.clipboard.writeText(window.location.href)
-      toast.success('Link copied!')
+      await navigator.clipboard.writeText(window.location.href)
+      toast.success(t('shareCard.linkCopied', 'Link copied!'))
     }
   }
 
   const handleSaveContact = () => {
-    // Create vCard
     const vCard = [
       'BEGIN:VCARD', 'VERSION:3.0',
       `FN:${card.name}`,
@@ -124,96 +143,222 @@ export default function ShareCardPage() {
     a.download = `${card.name.replace(/\s+/g, '_')}.vcf`
     a.click()
     URL.revokeObjectURL(url)
-    toast.success('Contact saved!')
+    toast.success(t('shareCard.contactSaved', 'Contact saved!'))
   }
 
+  const handleWhatsAppShare = () => {
+    const text = encodeURIComponent(`${card.name}'s Digital Business Card\n${window.location.href}`)
+    window.open(`https://wa.me/?text=${text}`)
+  }
+
+  const cardUrl = typeof window !== 'undefined' ? window.location.href : ''
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(cardUrl)}&bgcolor=ffffff&color=4f46e5`
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-      <Card className="w-full max-w-sm overflow-hidden shadow-2xl border-0">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700">
+      {/* Animated background pattern */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-pink-500/10 blur-3xl" />
+      </div>
+
+      <div className="relative max-w-md mx-auto px-4 py-8 pb-32">
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-8 text-center text-white">
-          {card.photo ? (
-            <Avatar className="h-24 w-24 mx-auto ring-4 ring-white/30 mb-4">
-              <AvatarImage src={card.photo} />
-              <AvatarFallback className="text-2xl bg-white/20">
-                {card.name?.split(' ').map(n => n[0]).join('') || 'U'}
-              </AvatarFallback>
-            </Avatar>
-          ) : (
-            <div className="h-24 w-24 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-4 ring-4 ring-white/30">
-              <User className="w-12 h-12 text-white/70" />
-            </div>
-          )}
-          <h1 className="text-2xl font-bold">{card.name}</h1>
-          {card.title && <p className="text-white/80 mt-1">{card.title}</p>}
+        <div className="text-center mb-8 animate-fade-in">
+          <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur rounded-full px-4 py-1.5 mb-4">
+            <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+            <span className="text-white/70 text-xs font-medium">Digital Business Card</span>
+          </div>
+          
+          {/* Avatar */}
+          <div className="mb-4">
+            {card.photo ? (
+              <Avatar className="h-28 w-28 mx-auto ring-4 ring-white/20 shadow-2xl">
+                <AvatarImage src={card.photo} />
+                <AvatarFallback className="text-3xl bg-white/10 text-white">
+                  {card.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <div className="h-28 w-28 mx-auto rounded-full bg-white/10 backdrop-blur flex items-center justify-center ring-4 ring-white/20">
+                <User className="w-14 h-14 text-white/50" />
+              </div>
+            )}
+          </div>
+          
+          <h1 className="text-3xl font-bold text-white mb-1">{card.name}</h1>
+          {card.title && <p className="text-white/80 text-lg">{card.title}</p>}
           {card.company && (
-            <p className="text-white/60 text-sm mt-1 flex items-center justify-center gap-1">
+            <p className="text-white/50 text-sm mt-1 flex items-center justify-center gap-1">
               <Briefcase className="w-3.5 h-3.5" /> {card.company}
             </p>
           )}
         </div>
 
-        {/* Details */}
-        <CardContent className="p-6 space-y-4">
-          {card.email && (
-            <a href={`mailto:${card.email}`} className="flex items-center gap-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                <Mail className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Email</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{card.email}</p>
-              </div>
-            </a>
-          )}
-          
-          {card.phone && (
-            <a href={`tel:${card.phone}`} className="flex items-center gap-3 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <Phone className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Phone</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{card.phone}</p>
-              </div>
-            </a>
-          )}
-          
-          {card.website && (
-            <a href={card.website.startsWith('http') ? card.website : `https://${card.website}`} target="_blank" className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <Globe className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Website</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{card.website}</p>
-              </div>
-            </a>
-          )}
-          
-          {card.address && (
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20">
-              <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Address</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{card.address}</p>
-              </div>
-            </div>
-          )}
+        {/* Action Buttons */}
+        <div className="flex gap-3 mb-8 animate-fade-in-up">
+          <Button 
+            onClick={handleSaveContact}
+            className="flex-1 rounded-2xl bg-white text-indigo-600 hover:bg-white/90 font-semibold shadow-lg shadow-black/10 h-12"
+          >
+            <Download className="w-4 h-4 mr-2" /> {t('shareCard.saveContact', 'Save Contact')}
+          </Button>
+          <Button 
+            onClick={handleShare}
+            variant="outline"
+            className="flex-1 rounded-2xl border-white/20 bg-white/10 backdrop-blur text-white hover:bg-white/20 h-12"
+          >
+            <Share2 className="w-4 h-4 mr-2" /> {t('shareCard.share', 'Share')}
+          </Button>
+        </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <Button onClick={handleSaveContact} className="flex-1 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white">
-              <Download className="mr-1.5 h-4 w-4" /> Save Contact
-            </Button>
-            <Button variant="outline" onClick={handleShare} className="rounded-full">
-              <Share2 className="h-4 w-4" />
-            </Button>
+        {/* Contact Details */}
+        <Card className="bg-white/10 backdrop-blur-md border-white/10 shadow-2xl animate-fade-in-up delay-100">
+          <CardContent className="p-4 space-y-1">
+            {card.email && (
+              <a href={`mailto:${card.email}`} 
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 transition-colors group">
+                <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Mail className="w-5 h-5 text-indigo-300" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-white/40">{t('shareCard.email', 'Email')}</p>
+                  <p className="text-sm font-medium text-white truncate">{card.email}</p>
+                </div>
+                <ExternalLink className="w-4 h-4 text-white/20 group-hover:text-white/60 transition-colors" />
+              </a>
+            )}
+            
+            {card.phone && (
+              <a href={`tel:${card.phone}`}
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 transition-colors group">
+                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Phone className="w-5 h-5 text-green-300" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-white/40">{t('shareCard.phone', 'Phone')}</p>
+                  <p className="text-sm font-medium text-white truncate">{card.phone}</p>
+                </div>
+              </a>
+            )}
+            
+            {card.website && (
+              <a href={card.website.startsWith('http') ? card.website : `https://${card.website}`} target="_blank"
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 transition-colors group">
+                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Globe className="w-5 h-5 text-blue-300" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-white/40">{t('shareCard.website', 'Website')}</p>
+                  <p className="text-sm font-medium text-white truncate">{card.website}</p>
+                </div>
+                <ExternalLink className="w-4 h-4 text-white/20 group-hover:text-white/60 transition-colors" />
+              </a>
+            )}
+            
+            {card.address && (
+              <div className="flex items-center gap-3 p-3 rounded-xl">
+                <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                  <MapPin className="w-5 h-5 text-amber-300" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-white/40">{t('shareCard.address', 'Address')}</p>
+                  <p className="text-sm font-medium text-white truncate">{card.address}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Social links */}
+            {(card.linkedin || card.twitter || card.wechat) && (
+              <div className="flex gap-2 pt-2 px-3">
+                {card.linkedin && (
+                  <a href={`https://linkedin.com/in/${card.linkedin}`} target="_blank"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs transition-colors">
+                    <Linkedin className="w-3.5 h-3.5" /> LinkedIn
+                  </a>
+                )}
+                {card.twitter && (
+                  <a href={`https://twitter.com/${card.twitter.replace('@', '')}`} target="_blank"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs transition-colors">
+                    <Twitter className="w-3.5 h-3.5" /> Twitter
+                  </a>
+                )}
+                {card.wechat && (
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 text-white/70 text-xs">
+                    💬 WeChat: {card.wechat}
+                  </span>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Quick Share — WhatsApp */}
+        <div className="mt-4 flex gap-2 animate-fade-in-up delay-200">
+          <Button 
+            onClick={handleWhatsAppShare}
+            variant="outline"
+            className="flex-1 rounded-2xl border-white/10 bg-green-500/20 backdrop-blur text-green-200 hover:bg-green-500/30 h-11 text-sm"
+          >
+            <MessageCircle className="w-4 h-4 mr-1.5" /> WhatsApp
+          </Button>
+          <Button 
+            onClick={handleShare}
+            variant="outline"
+            className="flex-1 rounded-2xl border-white/10 bg-white/5 backdrop-blur text-white/60 hover:bg-white/10 h-11 text-sm"
+          >
+            <Copy className="w-4 h-4 mr-1.5" /> Copy Link
+          </Button>
+        </div>
+
+        {/* Viral CTA — Get Your Own Card */}
+        <div className="mt-8 text-center animate-fade-in-up delay-300">
+          <div className="bg-white/5 backdrop-blur rounded-2xl p-6 border border-white/10">
+            <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-r from-yellow-400 to-orange-400 flex items-center justify-center mb-3 shadow-lg shadow-orange-500/20">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-white mb-1">
+              {t('shareCard.getYourOwn', 'Get Your Own Card 🚀')}
+            </h3>
+            <p className="text-white/50 text-sm mb-4">
+              {t('shareCard.getYourOwnDesc', 'Create your free digital business card in seconds')}
+            </p>
+            <a href="/signin">
+              <Button className="w-full rounded-xl bg-white text-indigo-600 hover:bg-white/90 font-semibold shadow-lg shadow-black/10 h-11">
+                {t('shareCard.createFree', 'Create Free Card')} <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </a>
+            <p className="text-white/20 text-xs mt-3">{t('shareCard.poweredBy', 'Powered by BizCard')}</p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* QR Code Section */}
+        <div className="mt-6 text-center animate-fade-in-up delay-300">
+          <div className="inline-block bg-white p-3 rounded-2xl shadow-xl">
+            <img src={qrCodeUrl} alt="QR Code" className="w-32 h-32" />
+          </div>
+          <p className="text-white/40 text-xs mt-2">Scan to save contact</p>
+        </div>
+      </div>
+
+      {/* Inline animation styles */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.6s ease-out forwards;
+        }
+        .animate-fade-in-up {
+          opacity: 0;
+          animation: fadeIn 0.6s ease-out forwards;
+          animation-delay: 0.15s;
+        }
+        .delay-100 { animation-delay: 0.25s; }
+        .delay-200 { animation-delay: 0.35s; }
+        .delay-300 { animation-delay: 0.5s; }
+      `}</style>
     </div>
   )
 }

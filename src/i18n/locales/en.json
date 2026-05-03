@@ -377,5 +377,50 @@
   },
   "toast": {
     "languageUpdated": "Language updated to {{language}}"
+  },
+  "myCard": {
+    "title": "Title",
+    "subtitle": "Your shareable digital business card",
+    "editDetails": "Edit Card Details",
+    "saveCard": "Save Card",
+    "saving": "Saving...",
+    "saved": "Card saved!",
+    "saveFailed": "Failed to save card",
+    "qrCode": "QR Code",
+    "copyLink": "Copy Link",
+    "share": "Share",
+    "download": "Download",
+    "linkCopied": "Link copied!",
+    "yourQrCode": "Your QR Code",
+    "scanToView": "Scan to view my digital business card",
+    "signInPrompt": "Create Your Digital Card",
+    "signInSubtitle": "Sign in to create your personalized digital business card",
+    "signInButton": "Sign In to Start",
+    "name": "Name",
+    "company": "Company",
+    "email": "Email",
+    "phone": "Phone",
+    "website": "Website",
+    "address": "Address",
+    "linkedin": "LinkedIn",
+    "twitter": "Twitter",
+    "wechat": "WeChat"
+  },
+  "shareCard": {
+    "loading": "Loading card...",
+    "notFound": "Card Not Found",
+    "notAvailable": "This digital card is not available",
+    "email": "Email",
+    "phone": "Phone",
+    "website": "Website",
+    "address": "Address",
+    "share": "Share",
+    "saveContact": "Save Contact",
+    "contactSaved": "Contact saved!",
+    "linkCopied": "Link copied!",
+    "getYourOwn": "Get Your Own Card 🚀",
+    "getYourOwnDesc": "Create your free digital business card in seconds",
+    "poweredBy": "Powered by BizCard",
+    "createFree": "Create Free Card"
   }
-} 
+}

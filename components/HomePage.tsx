@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { account } from '@/lib/appwrite'
 import { useBusinessCards } from '@/lib/hooks/useBusinessCards'
+import { useTranslation } from 'react-i18next'
 import { BusinessCard } from '@/types/business-card'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,7 +17,6 @@ import {
   Plus, Edit3, Trash2, X, Check, Copy, ExternalLink
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useTranslation } from 'react-i18next'
 import imageCompression from 'browser-image-compression'
 import { ManageCardsView } from '@/components/cards/ManageCardsView'
 import { SettingsTab } from '@/components/shared/SettingsTab'
@@ -131,6 +131,7 @@ const TopBar = ({ onSettingsClick }: { onSettingsClick: () => void }) => {
 
 // ─── My Card Editor ──────────────────────────────────────
 const MyCardTab = () => {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const [card, setCard] = useState<MyCardData>({
     name: user?.name || '',
@@ -189,10 +190,10 @@ const MyCardTab = () => {
         twitter: twitter || '',
         wechat: wechat || '',
       })
-      toast.success('Card saved!')
+      toast.success(t('myCard.saved', 'Card saved!'))
     } catch (err: any) {
       console.error('Save card error:', err)
-      toast.error(err?.message || 'Failed to save card')
+      toast.error(err?.message || t('myCard.saveFailed', 'Failed to save card'))
     } finally {
       setSaving(false)
     }
@@ -204,7 +205,7 @@ const MyCardTab = () => {
 
   const copyUrl = () => {
     navigator.clipboard.writeText(cardUrl)
-    toast.success('Link copied!')
+    toast.success(t('myCard.linkCopied', 'Link copied!'))
   }
 
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(cardUrl)}`
@@ -215,10 +216,10 @@ const MyCardTab = () => {
         <div className="w-20 h-20 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mb-4">
           <User className="w-10 h-10 text-indigo-500" />
         </div>
-        <h2 className="text-xl font-bold mb-2">Create Your Digital Card</h2>
-        <p className="text-gray-500 text-center mb-4">Sign in to create your personalized digital business card</p>
+        <h2 className="text-xl font-bold mb-2">{t('myCard.signInPrompt', 'Create Your Digital Card')}</h2>
+        <p className="text-gray-500 text-center mb-4">{t('myCard.signInSubtitle', 'Sign in to create your personalized digital business card')}</p>
         <Button className="rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white" onClick={() => {}}>
-          Sign In to Start
+          {t('myCard.signInButton', 'Sign In to Start')}
         </Button>
       </div>
     )
@@ -228,9 +229,9 @@ const MyCardTab = () => {
     <div className="p-4 md:p-6 max-w-lg mx-auto pb-20">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-          My Digital Card
+          {t('myCard.title', 'My Digital Card')}
         </h2>
-        <p className="text-gray-500 text-sm mt-1">Your shareable digital business card</p>
+        <p className="text-gray-500 text-sm mt-1">{t('myCard.subtitle', 'Your shareable digital business card')}</p>
       </div>
 
       {/* Card Preview */}
@@ -263,68 +264,68 @@ const MyCardTab = () => {
       {/* Quick Actions */}
       <div className="flex gap-2 mb-6">
         <Button variant="outline" className="flex-1 rounded-full" onClick={() => setShowQR(true)}>
-          <QrCode className="w-4 h-4 mr-1.5" /> QR Code
+          <QrCode className="w-4 h-4 mr-1.5" /> {t('myCard.qrCode', 'QR Code')}
         </Button>
         <Button variant="outline" className="flex-1 rounded-full" onClick={copyUrl}>
-          <Copy className="w-4 h-4 mr-1.5" /> Copy Link
+          <Copy className="w-4 h-4 mr-1.5" /> {t('myCard.copyLink', 'Copy Link')}
         </Button>
         <Button variant="outline" className="flex-1 rounded-full" onClick={() => {
           if (navigator.share) navigator.share({ title: card.name, url: cardUrl })
           else copyUrl()
         }}>
-          <Share2 className="w-4 h-4 mr-1.5" /> Share
+          <Share2 className="w-4 h-4 mr-1.5" /> {t('myCard.share', 'Share')}
         </Button>
       </div>
 
       {/* Edit Form */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Edit Card Details</h3>
+        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">{t('myCard.editDetails', 'Edit Card Details')}</h3>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">Name</Label>
+            <Label className="text-xs">{t('myCard.name', 'Name')}</Label>
             <Input value={card.name} onChange={e => updateField('name', e.target.value)} placeholder="Your full name" className="h-9 text-sm" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Title</Label>
+            <Label className="text-xs">{t('myCard.title', 'Title')}</Label>
             <Input value={card.title} onChange={e => updateField('title', e.target.value)} placeholder="e.g. CEO" className="h-9 text-sm" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Company</Label>
+            <Label className="text-xs">{t('myCard.company', 'Company')}</Label>
             <Input value={card.company} onChange={e => updateField('company', e.target.value)} placeholder="Company name" className="h-9 text-sm" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Email</Label>
+            <Label className="text-xs">{t('myCard.email', 'Email')}</Label>
             <Input value={card.email} onChange={e => updateField('email', e.target.value)} placeholder="you@company.com" className="h-9 text-sm" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Phone</Label>
+            <Label className="text-xs">{t('myCard.phone', 'Phone')}</Label>
             <Input value={card.phone} onChange={e => updateField('phone', e.target.value)} placeholder="+852 ..." className="h-9 text-sm" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Website</Label>
+            <Label className="text-xs">{t('myCard.website', 'Website')}</Label>
             <Input value={card.website} onChange={e => updateField('website', e.target.value)} placeholder="https://..." className="h-9 text-sm" />
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Address</Label>
+          <Label className="text-xs">{t('myCard.address', 'Address')}</Label>
           <Input value={card.address} onChange={e => updateField('address', e.target.value)} placeholder="Your address" className="h-9 text-sm" />
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">LinkedIn</Label>
+            <Label className="text-xs">{t('myCard.linkedin', 'LinkedIn')}</Label>
             <Input value={card.linkedin} onChange={e => updateField('linkedin', e.target.value)} placeholder="username" className="h-9 text-sm" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Twitter</Label>
+            <Label className="text-xs">{t('myCard.twitter', 'Twitter')}</Label>
             <Input value={card.twitter} onChange={e => updateField('twitter', e.target.value)} placeholder="@handle" className="h-9 text-sm" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">WeChat</Label>
+            <Label className="text-xs">{t('myCard.wechat', 'WeChat')}</Label>
             <Input value={card.wechat} onChange={e => updateField('wechat', e.target.value)} placeholder="WeChat ID" className="h-9 text-sm" />
           </div>
         </div>
         <Button onClick={handleSave} disabled={saving} className="w-full mt-3 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white">
-          {saving ? 'Saving...' : 'Save Card'}
+          {saving ? t('myCard.saving', 'Saving...') : t('myCard.saveCard', 'Save Card')}
         </Button>
       </div>
 
@@ -332,13 +333,13 @@ const MyCardTab = () => {
       <Dialog open={showQR} onOpenChange={setShowQR}>
         <DialogContent className="max-w-xs">
           <DialogHeader>
-            <DialogTitle>Your QR Code</DialogTitle>
+            <DialogTitle>{t('myCard.yourQrCode', 'Your QR Code')}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center gap-4 py-4">
             <div className="bg-white p-4 rounded-xl shadow-sm">
               <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48" />
             </div>
-            <p className="text-xs text-gray-500 text-center">Scan to view my digital business card</p>
+            <p className="text-xs text-gray-500 text-center">{t('myCard.scanToView', 'Scan to view my digital business card')}</p>
             <div className="flex gap-2 w-full">
               <Button variant="outline" className="flex-1 rounded-full text-xs" onClick={copyUrl}>
                 <Copy className="w-3.5 h-3.5 mr-1" /> Copy Link
@@ -349,7 +350,7 @@ const MyCardTab = () => {
                 link.download = 'bizcard-qr.png'
                 link.click()
               }}>
-                <Download className="w-3.5 h-3.5 mr-1" /> Download
+                <Download className="w-3.5 h-3.5 mr-1" /> {t('myCard.download', 'Download')}
               </Button>
             </div>
           </div>
@@ -388,10 +389,10 @@ const ScanTab = () => {
       setProgressPercent((i / fileList.length) * 100)
       const file = fileList[i]
       try {
-        setUploadProgress('Compressing...')
+        setUploadProgress(t('scan.compress', 'Compressing...'))
         const compressedFile = await compressImage(file)
 
-        setUploadProgress('Processing...')
+        setUploadProgress(t('scan.process', 'Processing...'))
         const reader = new FileReader()
         const base64 = await new Promise<string>((resolve, reject) => {
           reader.onload = () => resolve(reader.result as string)
@@ -400,7 +401,7 @@ const ScanTab = () => {
         })
 
         if (!user) throw new Error('Please sign in')
-        setUploadProgress('Scanning...')
+        setUploadProgress(t('scan.scanning', 'Scanning...'))
 
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 60000) // 60s timeout
