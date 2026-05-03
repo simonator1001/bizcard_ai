@@ -47,15 +47,14 @@ export function useBusinessCards() {
       setLoading(true);
       setError(null);
 
-      // Fetch cards from AppWrite
+      // Fetch cards from AppWrite (up to 500 — default limit is only 25!)
       const response = await databases.listDocuments(
         DATABASE_ID,
         CARDS_COLLECTION,
         [
           Query.equal('user_id', user.$id),
           Query.orderDesc('$createdAt'),
-          Query.isNotNull('company'),
-          Query.notEqual('company', ''),
+          Query.limit(500),
         ]
       );
 
