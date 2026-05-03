@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation'
 import { Chrome as Google, Mail, Lock, User, ArrowRight } from 'lucide-react'
 
 export default function SignInPage() {
-  const { signIn, signUp, signInWithProvider } = useAuth()
+  const { signIn, signInWithProvider } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [providerLoading, setProviderLoading] = useState(false)
   const [showSignUp, setShowSignUp] = useState(false)
@@ -58,7 +58,14 @@ export default function SignInPage() {
     }
     setIsLoading(true)
     try {
-      await signUp(formData.email, formData.password, formData.name)
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: formData.name, email: formData.email, password: formData.password }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to sign up')
+      
       toast.success('Account created! Check your email to verify your address.')
       setShowSignUp(false)
       setFormData({ name: '', email: '', password: '', confirmPassword: '' })
