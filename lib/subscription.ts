@@ -61,6 +61,15 @@ export class SubscriptionService {
     return SUBSCRIPTION_PLANS[subscription.tier] || SUBSCRIPTION_PLANS.free;
   }
 
+  static getDefaultUsage(plan: any): SubscriptionUsage {
+    return {
+      scansCount: 0,
+      companiesTracked: 0,
+      totalCards: 0,
+      remainingScans: plan.limits.scansPerMonth,
+    };
+  }
+
   static async getCurrentUsage(userId: string): Promise<SubscriptionUsage> {
     const subscription = await this.getCurrentSubscription(userId);
     const plan = SUBSCRIPTION_PLANS[subscription.tier] || SUBSCRIPTION_PLANS.free;
