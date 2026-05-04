@@ -785,7 +785,8 @@ export default function HomePage() {
   // Handle old tab param for backward compatibility
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab)
-    router.push(`/?tab=${tab}`, { scroll: false })
+    // Use replaceState to avoid re-render that clears pendingScanFiles
+    window.history.replaceState(null, '', `/?tab=${tab}`)
   }
 
   return (
