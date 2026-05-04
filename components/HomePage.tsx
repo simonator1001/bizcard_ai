@@ -380,6 +380,7 @@ const ScanTab = ({ externalFiles, onFilesProcessed }: { externalFiles?: FileList
   // Process files passed from outside (FAB menu)
   useEffect(() => {
     if (externalFiles) {
+      console.log('[ScanTab] externalFiles received, processing', externalFiles.length, 'files')
       processFiles(externalFiles, false)
       onFilesProcessed?.()
     }
@@ -581,7 +582,7 @@ const AddCardDialog = ({ open, onClose }: { open: boolean; onClose: () => void }
         notes: '',
         lastModified: new Date().toISOString(),
       } as any)
-      toast.success('Card added!')
+      console.log('[AddCardDialog] Card saved successfully'); toast.success('Card added!')
       onClose()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to add card')
@@ -676,6 +677,7 @@ const FABMenu = ({
   }, [])
 
   const triggerCamera = () => {
+    console.log('[FAB] 📷 Scan Card clicked')
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = 'image/*'
@@ -692,6 +694,7 @@ const FABMenu = ({
   }
 
   const triggerImport = () => {
+    console.log('[FAB] 📤 Import Photo clicked')
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = 'image/*'
@@ -710,7 +713,7 @@ const FABMenu = ({
   const menuItems = [
     { icon: Camera, label: 'Scan Card', action: triggerCamera },
     { icon: Upload, label: 'Import Photo', action: triggerImport },
-    { icon: Edit3, label: 'Add Manually', action: () => { setExpanded(false); onAddManually() } },
+    { icon: Edit3, label: 'Add Manually', action: () => { console.log('[FAB] ✏️ Add Manually clicked'); setExpanded(false); onAddManually() } },
   ]
 
   return (
@@ -822,8 +825,8 @@ export default function HomePage() {
           {/* Expandable menu (long press or tap on +) */}
           <FABMenu 
           onScan={() => handleTabChange('scan')} 
-          onImportPhoto={(files) => { setPendingScanFiles(files) }} 
-          onAddManually={() => { setShowAddCard(true) }}
+          onImportPhoto={(files) => { console.log('[HomePage] onImportPhoto - files:', files?.length); setPendingScanFiles(files) }} 
+          onAddManually={() => { console.log('[HomePage] onAddManually - opening dialog'); setShowAddCard(true) }}
         />
         </div>
       )}
