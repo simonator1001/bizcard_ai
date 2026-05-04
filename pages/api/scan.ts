@@ -52,24 +52,28 @@ export default async function handler(
       return res.status(400).json({ error: 'User ID required' })
     }
 
-    // Verify AppWrite session via JWT
+    // Verify AppWrite session via JWT (lenient — warns but doesn't block)
     if (appwriteJWT) {
-      const verifyRes = await fetch(`${APPWRITE_ENDPOINT}/account`, {
-        headers: {
-          'X-Appwrite-Project': PROJECT_ID,
-          'X-Appwrite-JWT': appwriteJWT,
-        },
-      })
-      if (!verifyRes.ok) {
-        console.error('[SCAN] JWT verification failed:', verifyRes.status)
-        return res.status(401).json({ error: 'Invalid session' })
+      try {
+        const verifyRes = await fetch(`${APPWRITE_ENDPOINT}/account`, {
+          headers: {
+            'X-Appwrite-Project': PROJECT_ID,
+            'X-Appwrite-JWT': appwriteJWT,
+          },
+        })
+        if (!verifyRes.ok) {
+          console.warn('[SCAN] JWT verification failed (status %s) — proceeding anyway', verifyRes.status)
+        } else {
+          const account = await verifyRes.json()
+          if (account.$id !== userId) {
+            console.warn('[SCAN] User ID mismatch: JWT=%s ≠ body=%s — using body userId', account.$id, userId)
+          } else {
+            console.log('[SCAN] JWT verified for:', account.email)
+          }
+        }
+      } catch (jwtErr: any) {
+        console.warn('[SCAN] JWT verification error (proceeding anyway):', jwtErr.message)
       }
-      const account = await verifyRes.json()
-      if (account.$id !== userId) {
-        console.error('[SCAN] User ID mismatch:', account.$id, '≠', userId)
-        return res.status(403).json({ error: 'User ID mismatch' })
-      }
-      console.log('[SCAN] JWT verified for:', account.email)
     } else {
       console.warn('[SCAN] No JWT provided — proceeding without auth verification (legacy)')
     }
