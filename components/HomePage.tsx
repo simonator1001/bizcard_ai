@@ -14,9 +14,10 @@ import {
   ScanLine, Camera, Upload, User, Settings, LogOut, LogIn,
   QrCode, Share2, Download, Search, Filter, MoreHorizontal,
   Mail, Phone, MapPin, Building2, Briefcase, Globe, Linkedin,
-  Plus, Edit3, Trash2, X, Check, Copy, ExternalLink
+  Plus, Edit3, Trash2, X, Check, Copy, ExternalLink, Sun, Moon
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTheme } from 'next-themes'
 import imageCompression from 'browser-image-compression'
 import { ManageCardsView } from '@/components/cards/ManageCardsView'
 import { SettingsTab } from '@/components/shared/SettingsTab'
@@ -79,6 +80,7 @@ const TabBar = ({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
 // ─── Minimal Top Bar ─────────────────────────────────────
 const TopBar = ({ onSettingsClick }: { onSettingsClick: () => void }) => {
   const { user, signOut } = useAuth()
+  const { theme, setTheme } = useTheme()
   const router = useRouter()
   
   return (
@@ -88,7 +90,17 @@ const TopBar = ({ onSettingsClick }: { onSettingsClick: () => void }) => {
           BizCard
         </span>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {/* Theme Toggle */}
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Toggle theme"
+          >
+            <Sun className="h-4 w-4 hidden dark:block" />
+            <Moon className="h-4 w-4 block dark:hidden" />
+          </button>
+          
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
