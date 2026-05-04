@@ -168,7 +168,7 @@ export function CardItem({
           src={imageUrl}
           alt={card.name || 'Business Card'}
           fill
-          className="object-cover"
+          className="object-contain"
           onError={handleImageError}
         />
       );
