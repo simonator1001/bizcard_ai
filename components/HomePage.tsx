@@ -798,7 +798,7 @@ export default function HomePage() {
 
       <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as Tab)}>
         <TabsContent value="scan" className="mt-0">
-          <ScanTab />
+          <ScanTab externalFiles={pendingScanFiles} onFilesProcessed={() => setPendingScanFiles(null)} />
         </TabsContent>
         <TabsContent value="mycard" className="mt-0">
           <MyCardTab />
@@ -813,6 +813,7 @@ export default function HomePage() {
       <TabBar active={activeTab} onChange={handleTabChange} />
       
       <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
+      <AddCardDialog open={showAddCard} onClose={() => setShowAddCard(false)} />
 
       {/* FAB — Floating Action Button (Contacts tab only) */}
       {activeTab === 'contacts' && (
