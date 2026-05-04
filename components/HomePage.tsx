@@ -361,7 +361,7 @@ const MyCardTab = () => {
 }
 
 // ─── Scan Tab ────────────────────────────────────────────
-const ScanTab = () => {
+const ScanTab = ({ externalFiles, onFilesProcessed }: { externalFiles?: FileList | null; onFilesProcessed?: () => void }) => {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { cards, total, refresh } = useBusinessCards()
@@ -376,6 +376,14 @@ const ScanTab = () => {
     const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true, fileType: 'image/jpeg' as const }
     return await imageCompression(file, options)
   }
+
+  // Process files passed from outside (FAB menu)
+  useEffect(() => {
+    if (externalFiles) {
+      processFiles(externalFiles, false)
+      onFilesProcessed?.()
+    }
+  }, [externalFiles])
 
   const processFiles = async (files: FileList, isCamera = false) => {
     setIsUploading(true)
@@ -545,8 +553,119 @@ const ScanTab = () => {
   )
 }
 
+
+// ─── Add Card Manually Dialog ─────────────────────────────
+const AddCardDialog = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+  const { addCard } = useBusinessCards()
+  const { t } = useTranslation()
+  const [saving, setSaving] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = e.currentTarget
+    const fd = new FormData(form)
+    setSaving(true)
+    try {
+      await addCard({
+        name: fd.get('name') as string || '',
+        name_zh: fd.get('name_zh') as string || '',
+        title: fd.get('title') as string || '',
+        title_zh: fd.get('title_zh') as string || '',
+        company: fd.get('company') as string || '',
+        company_zh: fd.get('company_zh') as string || '',
+        email: fd.get('email') as string || '',
+        phone: fd.get('phone') as string || '',
+        address: fd.get('address') as string || '',
+        address_zh: fd.get('address_zh') as string || '',
+        image_url: '',
+        notes: '',
+        lastModified: new Date().toISOString(),
+      } as any)
+      toast.success('Card added!')
+      onClose()
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to add card')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add Business Card</DialogTitle>
+          <DialogDescription>Manually enter business card details</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-3 mt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Name (EN)</Label>
+              <Input name="name" placeholder="John Smith" />
+            </div>
+            <div>
+              <Label className="text-xs">Name (中文)</Label>
+              <Input name="name_zh" placeholder="陳大文" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Title (EN)</Label>
+              <Input name="title" placeholder="CEO" />
+            </div>
+            <div>
+              <Label className="text-xs">Title (中文)</Label>
+              <Input name="title_zh" placeholder="行政總裁" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Company (EN)</Label>
+              <Input name="company" placeholder="Acme Corp" />
+            </div>
+            <div>
+              <Label className="text-xs">Company (中文)</Label>
+              <Input name="company_zh" placeholder="亞克米公司" />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Email</Label>
+            <Input name="email" type="email" placeholder="john@example.com" />
+          </div>
+          <div>
+            <Label className="text-xs">Phone</Label>
+            <Input name="phone" placeholder="+852 9123 4567" />
+          </div>
+          <div>
+            <Label className="text-xs">Address (EN)</Label>
+            <Input name="address" placeholder="100 Queen's Road, Central" />
+          </div>
+          <div>
+            <Label className="text-xs">Address (中文)</Label>
+            <Input name="address_zh" placeholder="皇后大道中100號" />
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="outline" className="flex-1 rounded-full" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={saving} className="flex-1 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white">
+              {saving ? 'Saving...' : 'Save Card'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ─── FAB Menu ────────────────────────────────────────────
-const FABMenu = ({ onScan }: { onScan: () => void }) => {
+const FABMenu = ({ 
+  onScan, 
+  onImportPhoto, 
+  onAddManually 
+}: { 
+  onScan: () => void
+  onImportPhoto: (files: FileList) => void
+  onAddManually: () => void
+}) => {
   const [expanded, setExpanded] = useState(false)
   const [pulsed, setPulsed] = useState(false)
 
@@ -556,23 +675,42 @@ const FABMenu = ({ onScan }: { onScan: () => void }) => {
     return () => clearTimeout(timer)
   }, [])
 
-  const menuItems = [
-    { icon: Camera, label: 'Scan Card', action: () => { onScan(); setExpanded(false) } },
-    { icon: Upload, label: 'Import Photo', action: () => { 
-      const input = document.createElement('input')
-      input.type = 'file'; input.accept = 'image/*'; input.multiple = true
-      input.onchange = (e) => {
-        const files = (e.target as HTMLInputElement).files
-        if (files?.length) {
-          // Navigate to scan tab with the files would need a refactor,
-          // for now just switch to scan tab
-          onScan()
-        }
+  const triggerCamera = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.capture = 'environment'
+    input.onchange = (e) => {
+      const files = (e.target as HTMLInputElement).files
+      if (files?.length) {
+        onScan()
+        setTimeout(() => onImportPhoto(files!), 100)
       }
-      input.click()
-      setExpanded(false)
-    }},
-    { icon: Edit3, label: 'Add Manually', action: () => { setExpanded(false); /* future */ } },
+    }
+    input.click()
+    setExpanded(false)
+  }
+
+  const triggerImport = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.multiple = true
+    input.onchange = (e) => {
+      const files = (e.target as HTMLInputElement).files
+      if (files?.length) {
+        onScan()
+        setTimeout(() => onImportPhoto(files!), 100)
+      }
+    }
+    input.click()
+    setExpanded(false)
+  }
+
+  const menuItems = [
+    { icon: Camera, label: 'Scan Card', action: triggerCamera },
+    { icon: Upload, label: 'Import Photo', action: triggerImport },
+    { icon: Edit3, label: 'Add Manually', action: () => { setExpanded(false); onAddManually() } },
   ]
 
   return (
@@ -629,6 +767,8 @@ export default function HomePage() {
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<Tab>('contacts')
   const [showSettings, setShowSettings] = useState(false)
+  const [pendingScanFiles, setPendingScanFiles] = useState<FileList | null>(null)
+  const [showAddCard, setShowAddCard] = useState(false)
   const { t } = useTranslation()
 
   // Sync tab from URL
@@ -678,7 +818,11 @@ export default function HomePage() {
       {activeTab === 'contacts' && (
         <div className="fixed bottom-20 right-5 z-40 flex flex-col items-end gap-2">
           {/* Expandable menu (long press or tap on +) */}
-          <FABMenu onScan={() => handleTabChange('scan')} />
+          <FABMenu 
+          onScan={() => handleTabChange('scan')} 
+          onImportPhoto={(files) => { setPendingScanFiles(files) }} 
+          onAddManually={() => { setShowAddCard(true) }}
+        />
         </div>
       )}
       
