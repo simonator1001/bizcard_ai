@@ -35,7 +35,9 @@ interface ToolbarProps extends React.HTMLAttributes<HTMLDivElement> {
   onSortChange: (field: string, direction: string) => void;
   viewMode: string;
   onViewModeChange: (mode: string) => void;
-  onExport: () => void;
+  onExport?: (format?: string) => void;
+  onExportCSV?: () => void;
+  onExportVCard?: () => void;
   onManageDuplicates: () => void;
   cards: any[];
   filterType: 'company' | 'name' | 'title' | null;
@@ -52,6 +54,8 @@ function Toolbar({
   viewMode,
   onViewModeChange,
   onExport,
+  onExportCSV,
+  onExportVCard,
   onManageDuplicates,
   cards = [],
   filterType,
@@ -173,10 +177,40 @@ function Toolbar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Export Button */}
-        <button className="h-9 w-9 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-zinc-200 rounded-lg flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-w-[44px] flex-shrink-0 border border-gray-200 dark:border-gray-600" onClick={onExport} aria-label="Export">
-          <FileDown className="w-5 h-5" />
-        </button>
+        {/* Export Dropdown */}
+        {(onExportCSV || onExportVCard) ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="h-9 w-9 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-zinc-200 rounded-lg flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-w-[44px] flex-shrink-0 border border-gray-200 dark:border-gray-600" aria-label="Export">
+                <FileDown className="w-5 h-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-36 z-[9999] bg-white dark:bg-zinc-900 shadow-xl text-zinc-900 dark:text-zinc-100">
+              {onExportCSV && (
+                <button
+                  className="w-full text-left px-2 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded cursor-pointer flex items-center gap-2"
+                  onClick={onExportCSV}
+                >
+                  <FileDown className="w-4 h-4" />
+                  Export CSV
+                </button>
+              )}
+              {onExportVCard && (
+                <button
+                  className="w-full text-left px-2 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded cursor-pointer flex items-center gap-2"
+                  onClick={onExportVCard}
+                >
+                  <FileDown className="w-4 h-4" />
+                  Export vCard
+                </button>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <button className="h-9 w-9 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-zinc-200 rounded-lg flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-w-[44px] flex-shrink-0 border border-gray-200 dark:border-gray-600" onClick={() => onExport?.()} aria-label="Export">
+            <FileDown className="w-5 h-5" />
+          </button>
+        )}
 
         {/* Duplicate Manager Button */}
         <button className="h-9 w-9 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-zinc-200 rounded-lg flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-w-[44px] flex-shrink-0 border border-gray-200 dark:border-gray-600" onClick={onManageDuplicates} aria-label="Duplicates">

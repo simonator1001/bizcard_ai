@@ -45,7 +45,7 @@ import { CardDetailView } from './CardDetailView';
 import { DuplicateManager } from './DuplicateManager';
 import type { BusinessCard } from '@/types/business-card';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { downloadCSV } from '@/lib/csv-utils';
+import { account } from '@/lib/appwrite';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { GridMotion } from '@/components/ui/grid-motion';
@@ -103,9 +103,71 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
     }
   }, [user, deleteCard]);
 
-  const handleExportCSV = useCallback(() => {
-    downloadCSV(cards);
-  }, [cards]);
+  const handleExportCSV = useCallback(async () => {
+    if (!user) {
+      toast.error('You must be signed in to export contacts');
+      return;
+    }
+    try {
+      const jwt = await account.createJWT();
+      const response = await fetch('/api/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.$id, appwriteJWT: jwt, format: 'csv' }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Export failed' }));
+        throw new Error(err.error || 'Export failed');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'bizcard-contacts.csv';
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Contacts exported!');
+    } catch (err: any) {
+      console.error('Error exporting CSV:', err);
+      toast.error(err.message || 'Failed to export contacts');
+    }
+  }, [user]);
+
+  const handleExportVCard = useCallback(async () => {
+    if (!user) {
+      toast.error('You must be signed in to export contacts');
+      return;
+    }
+    try {
+      const jwt = await account.createJWT();
+      const response = await fetch('/api/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.$id, appwriteJWT: jwt, format: 'vcard' }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Export failed' }));
+        throw new Error(err.error || 'Export failed');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'bizcard-contacts.vcf';
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Contacts exported!');
+    } catch (err: any) {
+      console.error('Error exporting vCard:', err);
+      toast.error(err.message || 'Failed to export contacts');
+    }
+  }, [user]);
 
   const handleDuplicateManagerOpen = useCallback(() => {
     setShowDuplicateManager(true);
@@ -195,7 +257,8 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
         }}
         viewMode={viewMode}
         onViewModeChange={(mode) => setViewMode(mode as ViewMode)}
-        onExport={handleExportCSV}
+        onExportCSV={handleExportCSV}
+        onExportVCard={handleExportVCard}
         onManageDuplicates={handleDuplicateManagerOpen}
         className="mb-4"
         cards={cards}
