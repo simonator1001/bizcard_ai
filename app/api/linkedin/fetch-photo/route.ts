@@ -98,6 +98,8 @@ async function downloadAndStorePhoto(photoUrl: string, cardId: string, linkedinU
     const photoRes = await fetch(photoUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://www.linkedin.com/',
+        'Accept': 'image/avif,image/webp,image/*,*/*;q=0.8',
       },
     })
 
