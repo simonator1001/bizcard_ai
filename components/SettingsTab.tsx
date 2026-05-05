@@ -1,6 +1,9 @@
 import { useSubscription } from '@/hooks/useSubscription';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Mail } from 'lucide-react';
+
+const SUPPORT_EMAIL = 'support@bizcardai.agentmail.to';
 
 export function SettingsTab() {
   const { subscription, usage, plan, loading, error } = useSubscription();
@@ -63,6 +66,21 @@ export function SettingsTab() {
                 </p>
               </>
             )}
+          </div>
+
+          {/* Customer Support */}
+          <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold mb-2">Need Help?</h3>
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              className="inline-flex items-center gap-2 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+            >
+              <Mail className="w-4 h-4" />
+              {SUPPORT_EMAIL}
+            </a>
+            <p className="text-xs text-muted-foreground mt-1">
+              We typically respond within 24 hours.
+            </p>
           </div>
         </div>
       </CardContent>
