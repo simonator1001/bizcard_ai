@@ -310,7 +310,7 @@ export function CardItem({
               {dropdown}
             </div>
             {/* Action icons row below name */}
-            <div className="flex items-center gap-1.5 mt-2">
+            <div className="flex items-center gap-1.5 mt-1.5">
               <button
                 onClick={handleFindLinkedin}
                 className="p-1.5 rounded-full hover:bg-[#0A66C2]/10 text-[#0A66C2] hover:text-[#0A66C2] transition-colors"
