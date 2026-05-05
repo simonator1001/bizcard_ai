@@ -34,8 +34,6 @@ export async function GET() {
   const results = []
 
   // Create missing attributes for the new features
-  results.push(await createAttribute('profile_pic_url', 'string', 2000))
-  results.push(await createAttribute('linkedin_url', 'string', 1000))
   results.push(await createAttribute('images', 'string', 5000)) // JSON array as string since AppWrite array support varies
 
   return NextResponse.json({

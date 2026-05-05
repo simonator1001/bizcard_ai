@@ -12,7 +12,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Facebook, Instagram, Linkedin, Send, Twitter } from "lucide-react"
+import { Facebook, Instagram, Send, Twitter } from "lucide-react"
 import NewsletterForm from "@/components/ui/newsletter-form"
 import Link from "next/link"
 
@@ -64,10 +64,6 @@ function Footerdemo() {
               <Button variant="outline" size="icon" className="rounded-full border-primary/20 hover:bg-primary/10">
                 <Instagram className="h-4 w-4 text-primary" />
                       <span className="sr-only">Instagram</span>
-                    </Button>
-              <Button variant="outline" size="icon" className="rounded-full border-primary/20 hover:bg-primary/10">
-                <Linkedin className="h-4 w-4 text-primary" />
-                      <span className="sr-only">LinkedIn</span>
                     </Button>
             </div>
           </div>

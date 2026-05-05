@@ -18,8 +18,6 @@ export interface BusinessCard {
   address_zh?: string;
   image_url?: string;
   images?: CardImage[];
-  profile_pic_url?: string;
-  linkedin_url?: string;
   notes?: string;
   created_at: string;
   lastModified?: string;

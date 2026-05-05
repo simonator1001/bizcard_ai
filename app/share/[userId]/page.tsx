@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { 
   Mail, Phone, Globe, MapPin, Briefcase, User, Download, Share2, 
   Sparkles, QrCode, ExternalLink, MessageCircle, Copy, ChevronRight,
-  Linkedin, Twitter
+  Twitter
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
@@ -22,7 +22,6 @@ interface MyCardData {
   website: string
   address: string
   photo: string
-  linkedin: string
   twitter: string
   wechat: string
 }
@@ -61,7 +60,6 @@ export default function ShareCardPage() {
           website: userData.prefs?.website || '',
           address: userData.prefs?.address || '',
           photo: userData.prefs?.photo || '',
-          linkedin: userData.prefs?.linkedin || '',
           twitter: userData.prefs?.twitter || '',
           wechat: userData.prefs?.wechat || '',
         })
@@ -269,14 +267,8 @@ export default function ShareCardPage() {
             )}
 
             {/* Social links */}
-            {(card.linkedin || card.twitter || card.wechat) && (
+            {(card.twitter || card.wechat) && (
               <div className="flex gap-2 pt-2 px-3">
-                {card.linkedin && (
-                  <a href={`https://linkedin.com/in/${card.linkedin}`} target="_blank"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs transition-colors">
-                    <Linkedin className="w-3.5 h-3.5" /> LinkedIn
-                  </a>
-                )}
                 {card.twitter && (
                   <a href={`https://twitter.com/${card.twitter.replace('@', '')}`} target="_blank"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs transition-colors">

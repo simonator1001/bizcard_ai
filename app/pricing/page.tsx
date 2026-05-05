@@ -29,7 +29,6 @@ import {
   Tags,
   ScanLine,
   Users,
-  Linkedin,
   Infinity,
 } from 'lucide-react'
 
@@ -84,7 +83,6 @@ const pricingTiers: PricingTier[] = [
       { name: '10 scans / month', nameZh: '每月10次掃描', included: true },
       { name: 'Standard AI OCR', nameZh: '標準AI辨識', included: true },
       { name: 'CSV & vCard export', nameZh: 'CSV 及 vCard 導出', included: true },
-      { name: 'LinkedIn enrichment', nameZh: 'LinkedIn 資料補充', included: false },
       { name: 'Batch scan', nameZh: '批量掃描', included: false },
       { name: 'Tags & folders', nameZh: '標籤與文件夾', included: false },
       { name: 'Community support', nameZh: '社群支援', included: true },
@@ -107,7 +105,6 @@ const pricingTiers: PricingTier[] = [
       { name: '100 scans / month', nameZh: '每月100次掃描', included: true },
       { name: 'GPT-4o Enhanced OCR', nameZh: 'GPT-4o 增強辨識', included: true, highlight: true },
       { name: 'All export formats', nameZh: '全部導出格式', included: true },
-      { name: 'LinkedIn enrichment', nameZh: 'LinkedIn 資料補充', included: true },
       { name: 'Batch scan', nameZh: '批量掃描', included: true },
       { name: 'Tags & folders', nameZh: '標籤與文件夾', included: true },
       { name: 'Priority email support', nameZh: '優先電郵支援', included: true },
@@ -130,7 +127,6 @@ const pricingTiers: PricingTier[] = [
       { name: '100 scans / month', nameZh: '每月100次掃描', included: true },
       { name: 'GPT-4o Enhanced OCR', nameZh: 'GPT-4o 增強辨識', included: true, highlight: true },
       { name: 'All export formats', nameZh: '全部導出格式', included: true },
-      { name: 'LinkedIn enrichment', nameZh: 'LinkedIn 資料補充', included: true },
       { name: 'Batch scan', nameZh: '批量掃描', included: true },
       { name: 'Tags & folders', nameZh: '標籤與文件夾', included: true },
       { name: 'Priority email support', nameZh: '優先電郵支援', included: true },

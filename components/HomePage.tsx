@@ -13,7 +13,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { 
   ScanLine, Camera, Upload, User, Settings, LogOut, LogIn,
   QrCode, Share2, Download, Search, Filter, MoreHorizontal,
-  Mail, Phone, MapPin, Building2, Briefcase, Globe, Linkedin,
+  Mail, Phone, MapPin, Building2, Briefcase, Globe,
   Plus, Edit3, Trash2, X, Check, Copy, ExternalLink, Sun, Moon
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -44,7 +44,6 @@ interface MyCardData {
   website: string
   address: string
   photo: string
-  linkedin: string
   twitter: string
   wechat: string
 }
@@ -154,7 +153,6 @@ const MyCardTab = () => {
     website: '',
     address: '',
     photo: '',
-    linkedin: '',
     twitter: '',
     wechat: '',
   })
@@ -175,7 +173,6 @@ const MyCardTab = () => {
         website: prefs.website || prev.website,
         address: prefs.address || prev.address,
         photo: prefs.photo || prev.photo,
-        linkedin: prefs.linkedin || prev.linkedin,
         twitter: prefs.twitter || prev.twitter,
         wechat: prefs.wechat || prev.wechat,
       }))
@@ -189,7 +186,7 @@ const MyCardTab = () => {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const { name, title, company, email, phone, website, address, photo, linkedin, twitter, wechat } = card
+      const { name, title, company, email, phone, website, address, photo, twitter, wechat } = card
       await account.updatePrefs({
         ...user?.prefs,
         title: title || '',
@@ -198,7 +195,6 @@ const MyCardTab = () => {
         website: website || '',
         address: address || '',
         photo: photo || '',
-        linkedin: linkedin || '',
         twitter: twitter || '',
         wechat: wechat || '',
       })
@@ -322,11 +318,7 @@ const MyCardTab = () => {
           <Label className="text-xs">{t('myCard.address', 'Address')}</Label>
           <Input value={card.address} onChange={e => updateField('address', e.target.value)} placeholder="Your address" className="h-9 text-sm" />
         </div>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('myCard.linkedin', 'LinkedIn')}</Label>
-            <Input value={card.linkedin} onChange={e => updateField('linkedin', e.target.value)} placeholder="username" className="h-9 text-sm" />
-          </div>
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs">{t('myCard.twitter', 'Twitter')}</Label>
             <Input value={card.twitter} onChange={e => updateField('twitter', e.target.value)} placeholder="@handle" className="h-9 text-sm" />
@@ -545,18 +537,6 @@ const ScanTab = ({ externalFiles, onFilesProcessed }: { externalFiles?: FileList
               <div className="flex gap-3 pt-1">
                 {lastScannedCard.email && <span className="text-xs text-indigo-500">✉ {lastScannedCard.email}</span>}
                 {lastScannedCard.phone && <span className="text-xs text-gray-500">📞 {lastScannedCard.phone}</span>}
-              </div>
-              {/* LinkedIn Search */}
-              <div className="pt-2">
-                <a
-                  href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent([lastScannedCard.name, lastScannedCard.company].filter(Boolean).join(' '))}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#0A66C2] hover:bg-[#004182] rounded-full transition-colors shadow-sm"
-                >
-                  <Linkedin className="w-3.5 h-3.5" />
-                  Find on LinkedIn
-                </a>
               </div>
             </div>
           </CardContent>

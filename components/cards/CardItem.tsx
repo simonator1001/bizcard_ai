@@ -3,7 +3,7 @@
 import { useState, useEffect, Fragment, useRef } from 'react';
 import { BusinessCard } from '@/types/business-card';
 import { Button } from '@/components/ui/button';
-import { Mail, Phone, MoreVertical, Pencil, Trash, Linkedin, Share2 } from 'lucide-react';
+import { Mail, Phone, MoreVertical, Pencil, Trash, Share2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -127,9 +127,9 @@ export function CardItem({
 
     return (
       <Avatar className={sizeClasses[size]}>
-        {(card.profile_pic_url || (imageUrl && !imageError)) ? (
+        {(imageUrl && !imageError) ? (
           <AvatarImage 
-            src={card.profile_pic_url || imageUrl || ''} 
+            src={imageUrl} 
             alt={card.name || ''} 
             onError={handleImageError}
           />
@@ -162,8 +162,8 @@ export function CardItem({
       : "w-full aspect-[3/2] rounded-lg";
     const textSize = size === 'sm' ? "text-lg" : "text-3xl";
     
-    // Prefer LinkedIn profile pic if available, fallback to card image
-    const displayUrl = card.profile_pic_url || (imageUrl && !imageError ? imageUrl : null);
+    // Prefer card image
+    const displayUrl = imageUrl && !imageError ? imageUrl : null;
     
     if (displayUrl) {
       return (
@@ -171,7 +171,7 @@ export function CardItem({
           src={displayUrl}
           alt={card.name || 'Business Card'}
           fill
-          className={card.profile_pic_url ? "object-cover" : "object-contain"}
+          className="object-contain"
           onError={handleImageError}
         />
       );
@@ -199,13 +199,6 @@ export function CardItem({
         <a href={`tel:${card.phone}`} onClick={(e) => e.stopPropagation()}
           className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 transition-colors">
           <Phone className="w-4 h-4" />
-        </a>
-      )}
-      {card.name && card.company && (
-        <a href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent([card.name, card.company].filter(Boolean).join(' '))}`}
-          target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-          className="w-9 h-9 rounded-full bg-[#0A66C2]/10 flex items-center justify-center text-[#0A66C2] hover:bg-[#0A66C2]/20 transition-colors">
-          <Linkedin className="w-4 h-4" />
         </a>
       )}
       <button onClick={(e) => { e.stopPropagation(); if (navigator.share && card.name) { navigator.share({ title: card.name, text: `${card.name} - ${card.title || ''} at ${card.company || ''}` }).catch(() => {}); } }}
