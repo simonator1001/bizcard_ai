@@ -10,6 +10,19 @@ import { toast } from 'sonner';
 const PAGE_SIZE = 100;
 
 function mapDocument(doc: any): BusinessCard {
+  // Parse extended metadata from notes
+  const notesRaw = doc.notes || ''
+  const metaIdx = notesRaw.indexOf('__bizcard_meta__')
+  let images: any[] = []
+  let cleanNotes = notesRaw
+  if (metaIdx !== -1) {
+    try {
+      const meta = JSON.parse(notesRaw.slice(metaIdx + '__bizcard_meta__'.length))
+      images = meta._i || []
+      cleanNotes = notesRaw.slice(0, metaIdx).trim()
+    } catch {}
+  }
+
   return {
     id: doc.$id,
     created_at: doc.$createdAt,
@@ -26,10 +39,10 @@ function mapDocument(doc: any): BusinessCard {
     address: doc.address,
     address_zh: doc.address_zh,
     image_url: doc.image_url,
-    images: typeof doc.images === 'string' ? JSON.parse(doc.images || '[]') : (doc.images || []),
+    images,
     profile_pic_url: doc.profile_pic_url,
     linkedin_url: doc.linkedin_url,
-    notes: doc.notes,
+    notes: cleanNotes,
     mergedFrom: doc.mergedFrom,
   };
 }
