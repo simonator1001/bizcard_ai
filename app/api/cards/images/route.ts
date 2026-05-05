@@ -6,7 +6,7 @@ const PROJECT_ID = '69efa226000db23fcd89'
 const DATABASE_ID = 'bizcard_ai'
 const CARDS_COLLECTION = 'business_cards'
 const STORAGE_BUCKET = 'card_images'
-const META_DELIMITER = '__bizcard_meta__'
+const META_MARKER = '##BIZCARD_IMAGES##'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -15,25 +15,22 @@ function getClient() {
   return new Client().setEndpoint(APPWRITE_ENDPOINT).setProject(PROJECT_ID).setKey(process.env.APPWRITE_API_KEY || '')
 }
 
-// Parse and strip metadata from notes field
-function stripMeta(notes: string): { text: string; images: any[]; profile_pic?: string; linkedin?: string } {
-  if (!notes) return { text: '', images: [] }
-  const idx = notes.indexOf(META_DELIMITER)
-  if (idx === -1) return { text: notes, images: [] }
-  try {
-    const meta = JSON.parse(notes.slice(idx + META_DELIMITER.length))
-    return { text: notes.slice(0, idx), images: meta._i || [], profile_pic: meta._pp, linkedin: meta._li }
-  } catch { return { text: notes.slice(0, Math.max(0, idx - 1)), images: [] } }
+// Store images in raw_text: original_raw_text + META_MARKER + JSON
+function getImages(rawText: string): any[] {
+  if (!rawText) return []
+  const idx = rawText.indexOf(META_MARKER)
+  if (idx === -1) return []
+  try { return JSON.parse(rawText.slice(idx + META_MARKER.length)) } catch { return [] }
 }
-
-// Encode metadata into notes
-function encodeMeta(text: string, images: any[], profilePic?: string, linkedin?: string): string {
-  const meta: any = {}
-  if (images.length) meta._i = images
-  if (profilePic) meta._pp = profilePic
-  if (linkedin) meta._li = linkedin
-  if (Object.keys(meta).length === 0) return text
-  return (text || '') + META_DELIMITER + JSON.stringify(meta)
+function getCleanRawText(rawText: string): string {
+  if (!rawText) return ''
+  const idx = rawText.indexOf(META_MARKER)
+  return idx === -1 ? rawText : rawText.slice(0, idx)
+}
+function setImages(rawText: string, images: any[]): string {
+  const clean = getCleanRawText(rawText)
+  if (!images.length) return clean
+  return clean + META_MARKER + JSON.stringify(images)
 }
 
 // POST - add image
@@ -43,7 +40,6 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File
     const cardId = formData.get('cardId') as string
     const label = (formData.get('label') as string) || ''
-
     if (!file || !cardId) return NextResponse.json({ error: 'file and cardId required' }, { status: 400 })
 
     const client = getClient()
@@ -53,11 +49,11 @@ export async function POST(req: NextRequest) {
 
     const databases = new Databases(client)
     const card = await databases.getDocument(DATABASE_ID, CARDS_COLLECTION, cardId)
-    const { text, images, profile_pic, linkedin } = stripMeta(card.notes || '')
+    const images = getImages(card.raw_text || '')
     images.push({ url: fileUrl, label: label || null, added_at: new Date().toISOString() })
 
     await databases.updateDocument(DATABASE_ID, CARDS_COLLECTION, cardId, {
-      notes: encodeMeta(text, images, profile_pic || card.profile_pic_url, linkedin || card.linkedin_url),
+      raw_text: setImages(card.raw_text || '', images),
       image_url: card.image_url || fileUrl,
       lastModified: new Date().toISOString(),
     })
@@ -79,11 +75,11 @@ export async function DELETE(req: NextRequest) {
     const client = getClient()
     const databases = new Databases(client)
     const card = await databases.getDocument(DATABASE_ID, CARDS_COLLECTION, cardId)
-    const { text, images, profile_pic, linkedin } = stripMeta(card.notes || '')
+    const images = getImages(card.raw_text || '')
     const filtered = images.filter((img: any) => img.url !== imageUrl)
 
     const updates: any = {
-      notes: encodeMeta(text, filtered, profile_pic, linkedin),
+      raw_text: setImages(card.raw_text || '', filtered),
       lastModified: new Date().toISOString(),
     }
     if (card.image_url === imageUrl) updates.image_url = filtered[0]?.url || null
@@ -104,8 +100,7 @@ export async function PATCH(req: NextRequest) {
     const client = getClient()
     const databases = new Databases(client)
     await databases.updateDocument(DATABASE_ID, CARDS_COLLECTION, cardId, {
-      image_url: imageUrl,
-      lastModified: new Date().toISOString(),
+      image_url: imageUrl, lastModified: new Date().toISOString(),
     })
     return NextResponse.json({ success: true })
   } catch (error: any) {

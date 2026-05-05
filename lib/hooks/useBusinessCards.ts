@@ -10,17 +10,13 @@ import { toast } from 'sonner';
 const PAGE_SIZE = 100;
 
 function mapDocument(doc: any): BusinessCard {
-  // Parse extended metadata from notes
-  const notesRaw = doc.notes || ''
-  const metaIdx = notesRaw.indexOf('__bizcard_meta__')
+  // Parse images stored in raw_text (format: original_text##BIZCARD_IMAGES##[...])
+  const raw = doc.raw_text || ''
+  const marker = '##BIZCARD_IMAGES##'
+  const idx = raw.indexOf(marker)
   let images: any[] = []
-  let cleanNotes = notesRaw
-  if (metaIdx !== -1) {
-    try {
-      const meta = JSON.parse(notesRaw.slice(metaIdx + '__bizcard_meta__'.length))
-      images = meta._i || []
-      cleanNotes = notesRaw.slice(0, metaIdx).trim()
-    } catch {}
+  if (idx !== -1) {
+    try { images = JSON.parse(raw.slice(idx + marker.length)) } catch {}
   }
 
   return {
@@ -42,7 +38,7 @@ function mapDocument(doc: any): BusinessCard {
     images,
     profile_pic_url: doc.profile_pic_url,
     linkedin_url: doc.linkedin_url,
-    notes: cleanNotes,
+    notes: doc.notes,
     mergedFrom: doc.mergedFrom,
   };
 }
