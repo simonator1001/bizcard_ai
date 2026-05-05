@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
-import { Edit, Share, Download, Trash2, X, Mail, Share2, Copy } from 'lucide-react'
+import { Edit, Share, Download, Trash2, X, Mail, Share2, Copy, Linkedin, Search, ImageIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
@@ -54,6 +54,9 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
   const [showShareMenu, setShowShareMenu] = useState(false);
   const shareMenuRef = useRef<HTMLDivElement>(null);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
+  const [linkedinUrl, setLinkedinUrl] = useState(card.linkedin_url || '');
+  const [showLinkedinInput, setShowLinkedinInput] = useState(false);
+  const [isFetchingLinkedinPhoto, setIsFetchingLinkedinPhoto] = useState(false);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -164,6 +167,40 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
     setShowDeleteAlert(true)
   }
 
+  const handleFetchLinkedinPhoto = async () => {
+    if (!linkedinUrl.trim()) {
+      toast.error('Please enter a LinkedIn profile URL')
+      return
+    }
+
+    setIsFetchingLinkedinPhoto(true)
+    try {
+      const res = await fetch('/api/linkedin/fetch-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ linkedinUrl: linkedinUrl.trim(), cardId: card.id }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to fetch LinkedIn photo')
+      }
+
+      // Update the card with the new profile pic
+      const updatedCard = { ...editedCard, profile_pic_url: data.profile_pic_url, linkedin_url: data.linkedin_url }
+      setEditedCard(updatedCard)
+      onEdit(updatedCard)
+
+      toast.success('LinkedIn profile photo applied! 🎉')
+      setShowLinkedinInput(false)
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to fetch LinkedIn photo')
+    } finally {
+      setIsFetchingLinkedinPhoto(false)
+    }
+  }
+
   const confirmDelete = () => {
     onDelete(editedCard.id)
     setShowDeleteAlert(false)
@@ -252,30 +289,98 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
           <ScrollArea className="flex-1 p-6">
             <div className="space-y-8">
               {/* Image Section */}
-              {card.image_url ? (
+              {/* Show LinkedIn profile pic if available, otherwise show card image */}
+              {(editedCard.profile_pic_url || card.image_url) ? (
                 <div className="relative">
                   <div 
                     className="relative rounded-lg overflow-hidden cursor-pointer bg-gray-50 dark:bg-gray-800 max-h-[40vh]"
                     onClick={() => setIsImageEnlarged(true)}
                   >
                     <img
-                      src={card.image_url}
-                      alt={`${card.name}'s business card`}
-                      className="w-full h-auto max-h-[40vh] object-contain rounded-lg shadow-sm"
+                      src={editedCard.profile_pic_url || card.image_url}
+                      alt={`${card.name}'s ${editedCard.profile_pic_url ? 'profile photo' : 'business card'}`}
+                      className={`w-full h-auto max-h-[40vh] object-contain rounded-lg shadow-sm ${editedCard.profile_pic_url ? 'object-cover aspect-square' : 'object-contain'}`}
                     />
                   </div>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="absolute top-4 right-4 bg-white/80 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-gray-800"
-                    onClick={handleDownload}
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
+                  {/* Badge showing source */}
+                  {editedCard.profile_pic_url && (
+                    <div className="absolute top-4 left-4 bg-blue-600/90 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                      <Linkedin className="h-3 w-3" />
+                      LinkedIn
+                    </div>
+                  )}
+                  <div className="absolute top-4 right-4 flex gap-2">
+                    {/* Switch between profile pic and card image */}
+                    {editedCard.profile_pic_url && card.image_url && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="bg-white/80 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-gray-800 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const updated = { ...editedCard, profile_pic_url: undefined as string | undefined }
+                          setEditedCard(updated)
+                          onEdit(updated)
+                          toast.success('Switched to namecard image')
+                        }}
+                      >
+                        <ImageIcon className="h-3 w-3 mr-1" /> Card
+                      </Button>
+                    )}
+                    {/* LinkedIn Photo button */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="bg-white/80 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-gray-800 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowLinkedinInput(!showLinkedinInput)
+                      }}
+                    >
+                      <Linkedin className="h-3 w-3 mr-1" /> Photo
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="bg-white/80 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-gray-800"
+                      onClick={handleDownload}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-8 text-center">
                   <p className="text-sm text-gray-500 dark:text-gray-400">{t('card.noImage', defaultLabels.noImage)}</p>
+                </div>
+              )}
+
+              {/* LinkedIn URL Input */}
+              {showLinkedinInput && (
+                <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <Linkedin className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <Input
+                    placeholder="Paste LinkedIn profile URL..."
+                    value={linkedinUrl}
+                    onChange={(e) => setLinkedinUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleFetchLinkedinPhoto()}
+                    className="flex-1 text-sm"
+                    disabled={isFetchingLinkedinPhoto}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleFetchLinkedinPhoto}
+                    disabled={isFetchingLinkedinPhoto || !linkedinUrl.trim()}
+                    className="bg-[#0A66C2] hover:bg-[#004182] text-white"
+                  >
+                    {isFetchingLinkedinPhoto ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    ) : (
+                      <>
+                        <Search className="h-3 w-3 mr-1" /> Fetch
+                      </>
+                    )}
+                  </Button>
                 </div>
               )}
 

@@ -127,9 +127,9 @@ export function CardItem({
 
     return (
       <Avatar className={sizeClasses[size]}>
-        {imageUrl && !imageError ? (
+        {(card.profile_pic_url || (imageUrl && !imageError)) ? (
           <AvatarImage 
-            src={imageUrl} 
+            src={card.profile_pic_url || imageUrl || ''} 
             alt={card.name || ''} 
             onError={handleImageError}
           />
@@ -162,13 +162,16 @@ export function CardItem({
       : "w-full aspect-[3/2] rounded-lg";
     const textSize = size === 'sm' ? "text-lg" : "text-3xl";
     
-    if (imageUrl && !imageError) {
+    // Prefer LinkedIn profile pic if available, fallback to card image
+    const displayUrl = card.profile_pic_url || (imageUrl && !imageError ? imageUrl : null);
+    
+    if (displayUrl) {
       return (
         <Image
-          src={imageUrl}
+          src={displayUrl}
           alt={card.name || 'Business Card'}
           fill
-          className="object-contain"
+          className={card.profile_pic_url ? "object-cover" : "object-contain"}
           onError={handleImageError}
         />
       );
