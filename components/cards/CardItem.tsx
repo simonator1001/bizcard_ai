@@ -3,7 +3,7 @@
 import { useState, useEffect, Fragment, useRef } from 'react';
 import { BusinessCard } from '@/types/business-card';
 import { Button } from '@/components/ui/button';
-import { Mail, Phone, MoreVertical, Pencil, Trash, Share2 } from 'lucide-react';
+import { Mail, Phone, MoreVertical, Pencil, Trash, Share2, Linkedin } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -100,6 +100,12 @@ export function CardItem({
   const handleImageError = () => {
     console.warn('[CardItem] Image failed to load:', card.image_url);
     setImageError(true);
+  };
+
+  const linkedinSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(card.name || card.name_zh || '')}+${encodeURIComponent(card.company || card.company_zh || '')}+linkedin`;
+  const handleFindLinkedin = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(linkedinSearchUrl, '_blank');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -298,6 +304,13 @@ export function CardItem({
                 </p>
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
+                <button
+                  onClick={handleFindLinkedin}
+                  className="text-muted-foreground hover:text-[#0A66C2] transition-colors"
+                  title="Find on LinkedIn"
+                >
+                  <Linkedin className="h-3.5 w-3.5" />
+                </button>
                 {card.email && (
                   <a href={`mailto:${card.email}`} className="text-muted-foreground hover:text-indigo-500 transition-colors" onClick={(e) => e.stopPropagation()}>
                     <Mail className="h-3.5 w-3.5" />
@@ -362,6 +375,13 @@ export function CardItem({
           <p className="text-sm truncate">{card.company || card.company_zh}</p>
         </div>
         <div className="absolute bottom-4 right-4 flex items-center gap-2">
+          <button
+            onClick={handleFindLinkedin}
+            className="text-muted-foreground hover:text-[#0A66C2] transition-colors p-1 rounded-full bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm"
+            title="Find on LinkedIn"
+          >
+            <Linkedin className="h-3.5 w-3.5" />
+          </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="sm" className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 shadow-sm">
@@ -424,6 +444,13 @@ export function CardItem({
         <p className="text-sm font-medium truncate">{card.company || card.company_zh}</p>
       </div>
       <div className="flex justify-center space-x-2 mt-4">
+        <button
+          onClick={handleFindLinkedin}
+          className="text-muted-foreground hover:text-[#0A66C2] transition-colors p-1"
+          title="Find on LinkedIn"
+        >
+          <Linkedin className="h-4 w-4" />
+        </button>
         {card.email && (
           <a
             href={`mailto:${card.email}`}
