@@ -30,7 +30,10 @@ import {
   ScanLine,
   Users,
   Infinity,
+  Loader2,
 } from 'lucide-react'
+import { useAuth } from '@/lib/auth-context'
+import { useStripeCheckout } from '@/lib/hooks/useStripeCheckout'
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -214,6 +217,25 @@ function FeatureRow({ name, nameZh, included }: PricingFeature) {
 function PricingCard({ tier }: { tier: PricingTier }) {
   const isPro = tier.id === 'pro-monthly'
   const isLifetime = tier.id === 'pro-lifetime'
+  const isFree = tier.id === 'free'
+  const { user } = useAuth()
+  const { checkout, loading } = useStripeCheckout()
+
+  const handleCta = () => {
+    if (isFree) {
+      window.location.href = '/signup'
+      return
+    }
+    if (!user) {
+      window.location.href = '/signin'
+      return
+    }
+    const plan = isLifetime ? 'pro_yearly' : 'pro_monthly'
+    checkout(plan).catch(err => {
+      console.error('Stripe checkout failed:', err)
+      alert('Failed to start checkout. Please try again.')
+    })
+  }
 
   return (
     <Card
@@ -281,22 +303,28 @@ function PricingCard({ tier }: { tier: PricingTier }) {
       </CardContent>
 
       <CardFooter className="pt-4 pb-6">
-        <Link href="/signup" className="w-full">
-          <Button
-            className={`w-full text-base font-semibold py-6 rounded-xl transition-all duration-300 ${
-              isPro
-                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30'
-                : isLifetime
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg shadow-amber-500/25'
-                  : 'bg-white dark:bg-gray-800 border-2 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30'
-            }`}
-          >
-            {tier.cta}
-            <span className="block text-xs font-normal opacity-80 ml-2">
-              {tier.ctaZh}
-            </span>
-          </Button>
-        </Link>
+        <Button
+          onClick={handleCta}
+          disabled={loading}
+          className={`w-full text-base font-semibold py-6 rounded-xl transition-all duration-300 ${
+            isPro
+              ? 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30'
+              : isLifetime
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg shadow-amber-500/25'
+                : 'bg-white dark:bg-gray-800 border-2 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30'
+          }`}
+        >
+          {loading ? (
+            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+          ) : (
+            <>
+              {tier.cta}
+              <span className="block text-xs font-normal opacity-80 ml-2">
+                {tier.ctaZh}
+              </span>
+            </>
+          )}
+        </Button>
       </CardFooter>
     </Card>
   )
