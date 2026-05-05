@@ -125,44 +125,44 @@ export function DuplicateManager({ cards, onMerge, onDelete, onClose }: Duplicat
   }, [filteredGroups, onMerge, onDelete, processing]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-200px)]">
-      <DialogHeader className="px-6 py-4 border-b shrink-0">
-        <DialogTitle className="text-xl">Manage Duplicate Cards</DialogTitle>
-        <DialogDescription>
+    <div className="flex flex-col h-full">
+      <DialogHeader className="px-3 sm:px-6 py-3 sm:py-4 border-b shrink-0">
+        <DialogTitle className="text-lg sm:text-xl">Manage Duplicate Cards</DialogTitle>
+        <DialogDescription className="text-xs sm:text-sm">
           Review and manage duplicate business cards in your collection
         </DialogDescription>
-        <div className="mt-4 relative">
+        <div className="mt-3 sm:mt-4 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search duplicates..."
             value={searchTerm}
             onChange={handleSearchChange}
-            className="pl-9"
+            className="pl-9 text-sm"
           />
         </div>
       </DialogHeader>
       
-      <div className="flex-1 overflow-y-auto">
-        <ScrollArea className="h-full">
-          <div className="px-6 py-6">
-            {filteredGroups.length > 1 && (
-              <div className="mb-4 flex justify-end">
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleMergeAll}
-                  disabled={processing}
-                  type="button"
-                >
-                  <Check className="w-4 h-4 mr-2" />
-                  Merge All Groups
-                </Button>
-              </div>
-            )}
+      <ScrollArea className="flex-1">
+        <div className="px-3 sm:px-6 py-4 sm:py-6">
+          {filteredGroups.length > 1 && (
+            <div className="mb-4 flex justify-end">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleMergeAll}
+                disabled={processing}
+                type="button"
+                className="w-full sm:w-auto"
+              >
+                <Check className="w-4 h-4 mr-2" />
+                Merge All Groups
+              </Button>
+            </div>
+          )}
             {filteredGroups.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <p className="text-muted-foreground text-sm">
+              <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
+                <Users className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/50 mb-3 sm:mb-4" />
+                <p className="text-muted-foreground text-xs sm:text-sm">
                   {searchTerm ? 'No matching duplicate cards found' : 'No duplicate cards found'}
                 </p>
               </div>
@@ -171,11 +171,11 @@ export function DuplicateManager({ cards, onMerge, onDelete, onClose }: Duplicat
                 {filteredGroups.map((group, index) => (
                   <div 
                     key={`group-${index}-${group.primaryCard.id}`}
-                    className="rounded-lg border bg-card shadow-sm transition-all hover:shadow-md"
+                    className="rounded-lg border bg-card shadow-sm"
                   >
-                    <div className="p-4 space-y-4">
-                      <div className="flex items-center justify-between border-b pb-4">
-                        <h3 className="font-medium">Duplicate Group {index + 1}</h3>
+                    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b pb-3 sm:pb-4">
+                        <h3 className="font-medium text-sm sm:text-base">Duplicate Group {index + 1}</h3>
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
@@ -183,8 +183,9 @@ export function DuplicateManager({ cards, onMerge, onDelete, onClose }: Duplicat
                             onClick={() => handleKeepPrimary(group)}
                             disabled={processing}
                             type="button"
+                            className="flex-1 sm:flex-none text-xs sm:text-sm"
                           >
-                            <Check className="w-4 h-4 mr-2" />
+                            <Check className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                             Keep Primary
                           </Button>
                           <Button
@@ -193,43 +194,44 @@ export function DuplicateManager({ cards, onMerge, onDelete, onClose }: Duplicat
                             onClick={() => handleMerge(group)}
                             disabled={processing}
                             type="button"
+                            className="flex-1 sm:flex-none text-xs sm:text-sm"
                           >
-                            <Check className="w-4 h-4 mr-2" />
+                            <Check className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                             Merge All
                           </Button>
                         </div>
                       </div>
-                      <div className="grid gap-4">
+                      <div className="grid gap-3 sm:gap-4">
                         {group.cards.map((card) => (
                           <div
                             key={card.id}
                             className={cn(
-                              "p-4 rounded-lg border transition-all",
+                              "p-3 sm:p-4 rounded-lg border transition-all",
                               card.id === group.primaryCard.id
                                 ? "bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800"
                                 : "bg-background hover:bg-muted/50"
                             )}
                           >
-                            <div className="flex items-start justify-between">
-                              <div className="space-y-1">
-                                <p className="font-medium">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                                <p className="font-medium text-sm sm:text-base truncate">
                                   {card.name || card.name_zh}
                                   {card.name && card.name_zh && ` (${card.name_zh})`}
                                 </p>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-xs sm:text-sm text-muted-foreground truncate">
                                   {card.title || card.title_zh}
                                   {card.title && card.title_zh && ` (${card.title_zh})`}
                                 </p>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-xs sm:text-sm text-muted-foreground truncate">
                                   {card.company || card.company_zh}
                                   {card.company && card.company_zh && ` (${card.company_zh})`}
                                 </p>
                                 {card.email && (
-                                  <p className="text-sm text-muted-foreground">{card.email}</p>
+                                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{card.email}</p>
                                 )}
                               </div>
                               {card.id === group.primaryCard.id && (
-                                <span className="px-2 py-1 text-xs font-medium text-purple-700 bg-purple-100 rounded-full dark:text-purple-300 dark:bg-purple-900/40">
+                                <span className="shrink-0 px-2 py-1 text-xs font-medium text-purple-700 bg-purple-100 rounded-full dark:text-purple-300 dark:bg-purple-900/40">
                                   Primary
                                 </span>
                               )}
@@ -244,11 +246,10 @@ export function DuplicateManager({ cards, onMerge, onDelete, onClose }: Duplicat
             )}
           </div>
         </ScrollArea>
-      </div>
       
-      <DialogFooter className="px-6 py-4 border-t shrink-0 bg-white dark:bg-gray-900">
-        <Button variant="ghost" onClick={onClose} type="button">
-          <X className="w-4 h-4 mr-2" />
+      <DialogFooter className="px-3 sm:px-6 py-3 sm:py-4 border-t shrink-0">
+        <Button variant="ghost" onClick={onClose} type="button" size="sm">
+          <X className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
           Close
         </Button>
       </DialogFooter>
