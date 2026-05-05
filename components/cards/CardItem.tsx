@@ -307,26 +307,27 @@ export function CardItem({
                   {[card.company, card.title].filter(Boolean).join(' · ') || card.company_zh || card.title_zh}
                 </p>
               </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <button
-                  onClick={handleFindLinkedin}
-                  className="p-1.5 rounded-full hover:bg-[#0A66C2]/10 text-[#0A66C2] hover:text-[#0A66C2] transition-colors"
-                  title="Find on LinkedIn"
-                >
-                  <Linkedin className="h-4 w-4" />
-                </button>
-                {card.email && (
-                  <a href={`mailto:${card.email}`} className="text-muted-foreground hover:text-indigo-500 transition-colors" onClick={(e) => e.stopPropagation()}>
-                    <Mail className="h-3.5 w-3.5" />
-                  </a>
-                )}
-                {card.phone && (
-                  <a href={`tel:${card.phone}`} className="text-muted-foreground hover:text-emerald-500 transition-colors" onClick={(e) => e.stopPropagation()}>
-                    <Phone className="h-3.5 w-3.5" />
-                  </a>
-                )}
-                {dropdown}
-              </div>
+              {dropdown}
+            </div>
+            {/* Action icons row below name */}
+            <div className="flex items-center gap-1.5 mt-2">
+              <button
+                onClick={handleFindLinkedin}
+                className="p-1.5 rounded-full hover:bg-[#0A66C2]/10 text-[#0A66C2] hover:text-[#0A66C2] transition-colors"
+                title="Find on LinkedIn"
+              >
+                <Linkedin className="h-4 w-4" />
+              </button>
+              {card.email && (
+                <a href={`mailto:${card.email}`} className="text-muted-foreground hover:text-indigo-500 transition-colors" onClick={(e) => e.stopPropagation()}>
+                  <Mail className="h-3.5 w-3.5" />
+                </a>
+              )}
+              {card.phone && (
+                <a href={`tel:${card.phone}`} className="text-muted-foreground hover:text-emerald-500 transition-colors" onClick={(e) => e.stopPropagation()}>
+                  <Phone className="h-3.5 w-3.5" />
+                </a>
+              )}
             </div>
           </div>
         </div>
