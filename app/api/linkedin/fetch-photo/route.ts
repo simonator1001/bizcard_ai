@@ -93,50 +93,54 @@ export async function POST(req: NextRequest) {
 
 async function downloadAndStorePhoto(photoUrl: string, cardId: string, linkedinUrl: string) {
   try {
-    // Step 3: Download the profile photo
-    console.log('[LinkedIn] Downloading photo:', photoUrl)
-    const photoRes = await fetch(photoUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-        'Referer': 'https://www.linkedin.com/',
-        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Sec-Fetch-Dest': 'image',
-        'Sec-Fetch-Mode': 'no-cors',
-        'Sec-Fetch-Site': 'cross-site',
-        'Cache-Control': 'no-cache',
-      },
-    })
+    console.log('[LinkedIn] Trying to download photo:', photoUrl)
 
-    if (!photoRes.ok) {
-      return NextResponse.json({ error: `Failed to download profile photo (HTTP ${photoRes.status})` }, { status: 502 })
+    let profilePicUrl: string | null = null
+
+    // Step 3: Try to download the photo from LinkedIn CDN
+    try {
+      const photoRes = await fetch(photoUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          'Referer': 'https://www.linkedin.com/',
+          'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+      })
+
+      if (photoRes.ok) {
+        const contentType = photoRes.headers.get('content-type') || 'image/jpeg'
+        const photoBuffer = Buffer.from(await photoRes.arrayBuffer())
+
+        const ext = contentType.includes('png') ? 'png' :
+          contentType.includes('webp') ? 'webp' : 'jpg'
+        const filename = `linkedin_${cardId}_${Date.now()}.${ext}`
+
+        // Upload to AppWrite Storage
+        const client = getAppWriteClient()
+        const storage = new Storage(client)
+
+        const uploadedFile = await storage.createFile(
+          STORAGE_BUCKET,
+          ID.unique(),
+          new File([photoBuffer], filename, { type: contentType }),
+        )
+
+        profilePicUrl = `${APPWRITE_ENDPOINT}/storage/buckets/${uploadedFile.bucketId}/files/${uploadedFile.$id}/view?project=${PROJECT_ID}&mode=admin`
+        console.log('[LinkedIn] Uploaded to AppWrite:', profilePicUrl)
+      }
+    } catch (downloadErr: any) {
+      console.warn('[LinkedIn] Could not download photo, using CDN URL directly:', downloadErr.message)
     }
 
-    const contentType = photoRes.headers.get('content-type') || 'image/jpeg'
-    const photoBuffer = Buffer.from(await photoRes.arrayBuffer())
+    // Step 4: Fallback — use LinkedIn CDN URL directly (long-lived, expires 2038)
+    if (!profilePicUrl) {
+      console.log('[LinkedIn] Using LinkedIn CDN URL directly')
+      profilePicUrl = photoUrl
+    }
 
-    // Generate a clean filename
-    const ext = contentType.includes('png') ? 'png' :
-      contentType.includes('webp') ? 'webp' : 'jpg'
-    const filename = `linkedin_${cardId}_${Date.now()}.${ext}`
-
-    // Step 4: Upload to AppWrite Storage
+    // Step 5: Update the card document
     const client = getAppWriteClient()
-    const storage = new Storage(client)
-
-    const uploadedFile = await storage.createFile(
-      STORAGE_BUCKET,
-      ID.unique(),
-      new File([photoBuffer], filename, { type: contentType }),
-    )
-
-    const bucketId = uploadedFile.bucketId
-    const fileId = uploadedFile.$id
-    const profilePicUrl = `${APPWRITE_ENDPOINT}/storage/buckets/${bucketId}/files/${fileId}/view?project=${PROJECT_ID}&mode=admin`
-
-    console.log('[LinkedIn] Uploaded to AppWrite:', profilePicUrl)
-
-    // Step 5: Update the card document with profile_pic_url and linkedin_url
     const databases = new Databases(client)
     await databases.updateDocument(
       DATABASE_ID,
@@ -148,7 +152,7 @@ async function downloadAndStorePhoto(photoUrl: string, cardId: string, linkedinU
       }
     )
 
-    console.log('[LinkedIn] Card updated with profile pic')
+    console.log('[LinkedIn] Card updated with profile pic:', profilePicUrl)
 
     return NextResponse.json({
       success: true,
