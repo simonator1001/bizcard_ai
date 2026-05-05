@@ -59,6 +59,9 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
   const [isFetchingLinkedinPhoto, setIsFetchingLinkedinPhoto] = useState(false);
   const [autoSearchStatus, setAutoSearchStatus] = useState<'idle' | 'prompt' | 'found'>('idle');
   const [matchedLinkedinUrl, setMatchedLinkedinUrl] = useState<string | null>(null);
+  const [albumIndex, setAlbumIndex] = useState(0);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-show LinkedIn input on card open if no profile pic
   useEffect(() => {
@@ -130,13 +133,14 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
   };
 
   const handleDownload = async () => {
-    if (!editedCard.image_url) {
+    const currentImage = albumImages[albumIndex]?.url || editedCard.image_url
+    if (!currentImage) {
       toast.error('No image available to download');
       return;
     }
 
     try {
-      const response = await fetch(editedCard.image_url);
+      const response = await fetch(currentImage);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -227,6 +231,71 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
     onClose()
   }
 
+  // Album image list (profile pic + card images)
+  const albumImages = [
+    ...(editedCard.profile_pic_url ? [{ url: editedCard.profile_pic_url, label: 'profile' as const }] : []),
+    ...(editedCard.image_url ? [{ url: editedCard.image_url, label: 'cover' as const }] : []),
+    ...(editedCard.images || []).filter((img: any) => {
+      if (typeof img === 'string') return img !== editedCard.image_url
+      return img.url !== editedCard.image_url && img.url !== editedCard.profile_pic_url
+    }).map((img: any) => typeof img === 'string' ? { url: img, label: '' } : img),
+  ]
+
+  const handleSetCover = async (imageUrl: string) => {
+    try {
+      await fetch('/api/cards/images', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cardId: card.id, imageUrl }),
+      })
+      const updated = { ...editedCard, image_url: imageUrl }
+      setEditedCard(updated)
+      onEdit(updated)
+      toast.success('Cover image updated')
+    } catch { toast.error('Failed to update cover') }
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setIsUploadingImage(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('cardId', card.id)
+      fd.append('label', '')
+      const res = await fetch('/api/cards/images', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (data.success) {
+        const updatedImages = [...(editedCard.images || []).map((img: any) => typeof img === 'string' ? { url: img, label: '' } : img), data.image]
+        const updated = { ...editedCard, images: updatedImages, image_url: editedCard.image_url || data.cover_url }
+        setEditedCard(updated)
+        onEdit(updated)
+        setAlbumIndex(albumImages.length)
+        toast.success('Image added')
+      }
+    } catch { toast.error('Upload failed') }
+    finally { setIsUploadingImage(false) }
+  }
+
+  const handleRemoveImage = async (imageUrl: string) => {
+    try {
+      await fetch(`/api/cards/images?cardId=${card.id}&imageUrl=${encodeURIComponent(imageUrl)}`, { method: 'DELETE' })
+      const filtered = (editedCard.images || []).filter((img: any) => 
+        (typeof img === 'string' ? img : img.url) !== imageUrl
+      )
+      const updated = { 
+        ...editedCard, 
+        images: filtered,
+        image_url: editedCard.image_url === imageUrl ? (filtered[0] ? (typeof filtered[0] === 'string' ? filtered[0] : filtered[0].url) : editedCard.profile_pic_url || undefined) : editedCard.image_url
+      }
+      setEditedCard(updated)
+      onEdit(updated)
+      setAlbumIndex(0)
+      toast.success('Image removed')
+    } catch { toast.error('Failed to remove image') }
+  }
+
   return (
     <>
       <Dialog open={true} onOpenChange={onClose}>
@@ -308,70 +377,107 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
           
           <ScrollArea className="flex-1 p-6">
             <div className="space-y-8">
-              {/* Image Section */}
-              {/* Show LinkedIn profile pic if available, otherwise show card image */}
-              {(editedCard.profile_pic_url || card.image_url) ? (
-                <div className="relative">
-                  <div 
-                    className="relative rounded-lg overflow-hidden cursor-pointer bg-gray-50 dark:bg-gray-800 max-h-[40vh]"
-                    onClick={() => setIsImageEnlarged(true)}
-                  >
-                    <img
-                      src={editedCard.profile_pic_url || card.image_url}
-                      alt={`${card.name}'s ${editedCard.profile_pic_url ? 'profile photo' : 'business card'}`}
-                      className={`w-full h-auto max-h-[40vh] object-contain rounded-lg shadow-sm ${editedCard.profile_pic_url ? 'object-cover aspect-square' : 'object-contain'}`}
-                    />
-                  </div>
-                  {/* Badge showing source */}
-                  {editedCard.profile_pic_url && (
-                    <div className="absolute top-4 left-4 bg-blue-600/90 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                      <Linkedin className="h-3 w-3" />
-                      LinkedIn
+              {/* ─── Image Album Section ─── */}
+              {albumImages.length > 0 ? (
+                <div className="space-y-3">
+                  {/* Main image display */}
+                  <div className="relative">
+                    <div 
+                      className="relative rounded-lg overflow-hidden cursor-pointer bg-gray-50 dark:bg-gray-800"
+                      style={{ height: albumImages[albumIndex]?.label === 'profile' ? '40vh' : '40vh' }}
+                      onClick={() => setIsImageEnlarged(true)}
+                    >
+                      <img
+                        src={albumImages[albumIndex].url}
+                        alt={`${card.name} - ${albumImages[albumIndex].label || 'card'}`}
+                        className={`w-full h-full ${albumImages[albumIndex].label === 'profile' ? 'object-cover' : 'object-contain'} rounded-lg`}
+                      />
                     </div>
-                  )}
-                  <div className="absolute top-4 right-4 flex gap-2">
-                    {/* Switch between profile pic and card image */}
-                    {editedCard.profile_pic_url && card.image_url && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="bg-white/80 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-gray-800 text-xs"
+
+                    {/* Label badge */}
+                    <div className="absolute top-3 left-3 flex gap-1.5">
+                      {albumImages[albumIndex].label === 'profile' && (
+                        <span className="bg-blue-600/90 text-white text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Linkedin className="h-2.5 w-2.5" /> LinkedIn
+                        </span>
+                      )}
+                      {albumImages[albumIndex].label === 'cover' && (
+                        <span className="bg-gray-600/90 text-white text-[10px] px-2 py-0.5 rounded-full">Cover</span>
+                      )}
+                      {(!albumImages[albumIndex].label || albumImages[albumIndex].label === '') && (
+                        <span className="bg-emerald-600/90 text-white text-[10px] px-2 py-0.5 rounded-full">Photo {albumIndex + 1}</span>
+                      )}
+                    </div>
+
+                    {/* Top-right actions */}
+                    <div className="absolute top-3 right-3 flex gap-1.5">
+                      <Button size="sm" variant="outline" className="h-7 px-2 text-[11px] bg-white/80 dark:bg-gray-900/80"
+                        onClick={(e) => { e.stopPropagation(); handleDownload() }}>
+                        <Download className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 px-2 text-[11px] bg-white/80 dark:bg-gray-900/80"
                         onClick={(e) => {
                           e.stopPropagation()
-                          const updated = { ...editedCard, profile_pic_url: undefined as string | undefined }
-                          setEditedCard(updated)
-                          onEdit(updated)
-                          toast.success('Switched to namecard image')
-                        }}
-                      >
-                        <ImageIcon className="h-3 w-3 mr-1" /> Card
+                          if (!linkedinUrl) {
+                            setShowLinkedinInput(true)
+                            setAutoSearchStatus('prompt')
+                          } else {
+                            handleFetchLinkedinPhoto()
+                          }
+                        }}>
+                        <Linkedin className="h-3 w-3 mr-1" /> Photo
                       </Button>
-                    )}
-                    {/* LinkedIn Photo button */}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="bg-white/80 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-gray-800 text-xs"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setShowLinkedinInput(!showLinkedinInput)
-                      }}
-                    >
-                      <Linkedin className="h-3 w-3 mr-1" /> Photo
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="bg-white/80 dark:bg-gray-900/80 hover:bg-white dark:hover:bg-gray-800"
-                      onClick={handleDownload}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
+                      <label className="h-7 px-2 text-[11px] bg-white/80 dark:bg-gray-900/80 border rounded-md flex items-center gap-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={isUploadingImage}
+                          ref={fileInputRef} />
+                        {isUploadingImage ? <div className="animate-spin h-3 w-3 border-2 border-gray-500 border-t-transparent rounded-full" /> : <><span className="text-[16px]">+</span> Add</>}
+                      </label>
+                    </div>
                   </div>
+
+                  {/* Album thumbnail strip */}
+                  {albumImages.length > 1 && (
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {albumImages.map((img: any, i: number) => (
+                        <div key={i} className={`relative flex-shrink-0 cursor-pointer rounded-md overflow-hidden border-2 transition-all
+                          ${i === albumIndex ? 'border-indigo-500 shadow-md' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                          onClick={() => setAlbumIndex(i)}>
+                          <img src={img.url} alt={`${img.label || 'photo'} ${i+1}`} 
+                            className="w-16 h-12 object-cover" />
+                          {/* Set as cover button */}
+                          {img.url !== editedCard.image_url && (
+                            <button className="absolute bottom-0.5 right-0.5 bg-black/60 text-white text-[9px] px-1 rounded"
+                              onClick={(e) => { e.stopPropagation(); handleSetCover(img.url) }}>
+                              Cover
+                            </button>
+                          )}
+                          {/* Remove button for extra images (not cover/profile) */}
+                          {img.label !== 'cover' && img.label !== 'profile' && albumImages.length > 2 && (
+                            <button className="absolute top-0.5 right-0.5 bg-red-500/80 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center"
+                              onClick={(e) => { e.stopPropagation(); handleRemoveImage(img.url) }}>
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Album nav arrows */}
+                  {albumImages.length > 1 && (
+                    <div className="flex justify-between items-center text-xs text-muted-foreground px-1">
+                      <span>{albumIndex + 1} / {albumImages.length}</span>
+                      <span className="text-[10px]">← swipe or click thumbnails →</span>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-8 text-center">
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-8 text-center space-y-3">
                   <p className="text-sm text-gray-500 dark:text-gray-400">{t('card.noImage', defaultLabels.noImage)}</p>
+                  <label className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg cursor-pointer hover:bg-indigo-700 text-sm">
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={isUploadingImage} />
+                    + Add Photo
+                  </label>
                 </div>
               )}
 

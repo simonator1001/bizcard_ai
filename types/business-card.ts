@@ -1,3 +1,9 @@
+export interface CardImage {
+  url: string;
+  label?: string; // 'front' | 'back' | 'profile' | custom string
+  added_at?: string;
+}
+
 export interface BusinessCard {
   id: string;
   name?: string;
@@ -11,12 +17,12 @@ export interface BusinessCard {
   address?: string;
   address_zh?: string;
   image_url?: string;
-  images?: string[];
+  images?: CardImage[];
   profile_pic_url?: string;
   linkedin_url?: string;
   notes?: string;
   created_at: string;
   lastModified?: string;
-  mergedFrom?: string[]; // IDs of cards that were merged to create this card
+  mergedFrom?: string[];
   user_id: string;
-} 
+}
