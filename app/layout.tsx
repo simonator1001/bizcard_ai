@@ -46,6 +46,10 @@ export default function RootLayout({
         <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        {/* iOS / Safari icons */}
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
       </head>
       <body className={inter.className}>
         <I18nProvider>
