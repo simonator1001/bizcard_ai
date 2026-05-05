@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BizCard AI — Sales Infographic</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a1a; color: #e0e0ff; overflow-x: hidden; }
+  
+  .hero { 
+    background: linear-gradient(135deg, #1a0533 0%, #0d1b3e 40%, #0a0a2e 100%); 
+    padding: 60px 40px; text-align: center; position: relative; overflow: hidden;
+  }
+  .hero::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; 
+    background: radial-gradient(circle at 30% 50%, rgba(99,102,241,0.08) 0%, transparent 50%),
+               radial-gradient(circle at 70% 30%, rgba(139,92,246,0.06) 0%, transparent 40%);
+    animation: float 20s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-20px,-20px)} }
+  
+  .hero h1 { font-size: 3.5em; font-weight: 800; background: linear-gradient(135deg, #818cf8, #c084fc, #f472b6); 
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; position: relative; z-index: 1; }
+  .hero p { font-size: 1.3em; color: #94a3b8; margin-top: 16px; position: relative; z-index: 1; }
+  .hero .badges { display: flex; justify-content: center; gap: 16px; margin-top: 32px; flex-wrap: wrap; position: relative; z-index: 1; }
+  .badge { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); padding: 10px 20px; border-radius: 50px; font-size: 0.9em; color: #a5b4fc; }
+
+  .section { max-width: 1200px; margin: 0 auto; padding: 60px 40px; }
+  .section h2 { font-size: 2.2em; font-weight: 700; text-align: center; margin-bottom: 12px;
+    background: linear-gradient(135deg, #818cf8, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .section .subtitle { text-align: center; color: #64748b; font-size: 1.1em; margin-bottom: 48px; }
+
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+  .feature-card { background: linear-gradient(135deg, rgba(30,30,60,0.8), rgba(20,20,50,0.9)); border: 1px solid rgba(99,102,241,0.15); 
+    border-radius: 16px; padding: 32px; transition: transform 0.3s, border-color 0.3s; }
+  .feature-card:hover { transform: translateY(-4px); border-color: rgba(99,102,241,0.4); }
+  .feature-icon { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; 
+    font-size: 1.6em; margin-bottom: 20px; }
+  .feature-card h3 { font-size: 1.2em; margin-bottom: 8px; color: #e2e8f0; }
+  .feature-card p { color: #94a3b8; font-size: 0.95em; line-height: 1.6; }
+
+  .pricing-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 32px; }
+  .pricing-card { background: linear-gradient(135deg, rgba(30,30,60,0.8), rgba(20,20,50,0.9)); border: 1px solid rgba(99,102,241,0.2);
+    border-radius: 20px; padding: 36px; text-align: center; position: relative; }
+  .pricing-card.popular { border-color: rgba(99,102,241,0.6); box-shadow: 0 0 40px rgba(99,102,241,0.1); transform: scale(1.05); }
+  .popular-badge { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white; padding: 6px 20px; border-radius: 20px; font-size: 0.85em; font-weight: 600; }
+  .price { font-size: 2.8em; font-weight: 800; margin: 12px 0; background: linear-gradient(135deg, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .price-label { color: #64748b; font-size: 0.9em; }
+
+  .comparison-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 24px; border-radius: 16px; overflow: hidden; }
+  .comparison-table th { background: rgba(99,102,241,0.15); padding: 16px; text-align: left; font-weight: 600; color: #a5b4fc; }
+  .comparison-table td { padding: 14px 16px; border-bottom: 1px solid rgba(99,102,241,0.08); color: #cbd5e1; }
+  .comparison-table tr:last-child td { border-bottom: none; }
+  .check { color: #34d399; font-weight: bold; }
+  .cross { color: #f87171; }
+
+  .screenshot-showcase { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-top: 32px; }
+  .screen-card { background: linear-gradient(135deg, rgba(30,30,60,0.6), rgba(20,20,40,0.8)); border: 1px solid rgba(99,102,241,0.15);
+    border-radius: 16px; overflow: hidden; }
+  .screen-card img { width: 100%; height: auto; display: block; }
+  .screen-card .caption { padding: 16px 20px; background: rgba(15,15,35,0.9); }
+  .screen-card .caption h4 { color: #e2e8f0; font-size: 1em; margin-bottom: 4px; }
+  .screen-card .caption p { color: #64748b; font-size: 0.85em; }
+
+  .cta { background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.1)); border: 1px solid rgba(99,102,241,0.2);
+    border-radius: 24px; padding: 60px; text-align: center; margin-top: 48px; }
+  .cta h2 { color: #e2e8f0 !important; -webkit-text-fill-color: #e2e8f0 !important; }
+  .cta p { color: #94a3b8; margin: 16px 0 24px; font-size: 1.1em; }
+  .btn { display: inline-block; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 16px 40px; border-radius: 50px;
+    text-decoration: none; font-weight: 600; font-size: 1.1em; transition: transform 0.3s, box-shadow 0.3s; }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(99,102,241,0.3); }
+
+  .highlight-box { background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.06)); border-left: 3px solid #818cf8;
+    border-radius: 0 12px 12px 0; padding: 20px 24px; margin: 16px 0; }
+  .highlight-box strong { color: #a5b4fc; }
+
+  @media (max-width: 768px) {
+    .pricing-row { grid-template-columns: 1fr; }
+    .pricing-card.popular { transform: none; }
+    .hero h1 { font-size: 2.2em; }
+    .screenshot-showcase { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ HERO ═══════════ -->
+<section class="hero">
+  <h1>BizCard AI</h1>
+  <p>AI-Powered Business Card Scanner &amp; Contact Manager<br>Your contacts are YOURS. Export anytime. No data held hostage.</p>
+  <div class="badges">
+    <span class="badge">🛡️ Data Liberation Promise</span>
+    <span class="badge">🌐 EN + 中文 + 廣東話</span>
+    <span class="badge">🤖 GPT-4o Enhanced OCR</span>
+    <span class="badge">📤 Free CSV/vCard Export</span>
+    <span class="badge">🔗 LinkedIn Photo Auto-Fetch</span>
+  </div>
+</section>
+
+<!-- ═══════════ KEY FEATURES ═══════════ -->
+<section class="section">
+  <h2>Why BizCard?</h2>
+  <p class="subtitle">The only business card app that doesn't hold your data hostage</p>
+  
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(99,102,241,0.15);color:#818cf8;">🤖</div>
+      <h3>AI-Powered OCR</h3>
+      <p>GPT-4o Vision extracts names, titles, companies, emails, and phones in <strong>20+ languages</strong> including English, Chinese, and Japanese — with near-perfect accuracy.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(34,197,94,0.15);color:#4ade80;">📤</div>
+      <h3>Data Liberation Promise</h3>
+      <p>Export your contacts <strong>anytime, for free</strong> — CSV, vCard, Excel, Google Contacts. Even on the Free plan. No paywalls, no tricks.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(14,165,233,0.15);color:#38bdf8;">🔗</div>
+      <h3>LinkedIn Photo Auto-Fetch</h3>
+      <p>Open any card → paste a LinkedIn URL → <strong>instantly replaces the namecard image</strong> with their professional profile photo. Toggle back anytime.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(239,68,68,0.15);color:#f87171;">🚨</div>
+      <h3>Switch from CamCard</h3>
+      <p>CamCard holding your contacts hostage? <strong>Import your CSV/vCard in 3 minutes</strong> — free. We've helped hundreds of HK professionals escape.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(168,85,247,0.15);color:#a78bfa;">🔍</div>
+      <h3>Duplicate Detection</h3>
+      <p>Automatically finds and merges duplicate cards. No more scrolling through 5 copies of the same contact.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(251,191,36,0.15);color:#fbbf24;">⚡</div>
+      <h3>Cancel in 1 Tap</h3>
+      <p>No tickets. No calls. No begging. Just tap, done. <strong>No auto-renew traps</strong> — we email you before your trial ends.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ PRICING ═══════════ -->
+<section class="section">
+  <h2>Simple, Honest Pricing</h2>
+  <p class="subtitle">HK$ pricing. No hidden fees. Cancel anytime.</p>
+
+  <div class="pricing-row">
+    <div class="pricing-card">
+      <h3>Free</h3>
+      <div class="price">HK$0</div>
+      <div class="price-label">forever free · 永久免費</div>
+      <p style="margin-top:16px;color:#94a3b8;line-height:1.8;font-size:0.9em;">
+        ✅ Unlimited cards<br>
+        ✅ 10 scans/month<br>
+        ✅ Standard AI OCR<br>
+        ✅ CSV &amp; vCard export<br>
+        ✅ LinkedIn enrichment
+      </p>
+    </div>
+    <div class="pricing-card popular">
+      <div class="popular-badge">⭐ Most Popular</div>
+      <h3>Pro</h3>
+      <div class="price">HK$68</div>
+      <div class="price-label">/ month · 月</div>
+      <p style="margin-top:16px;color:#94a3b8;line-height:1.8;font-size:0.9em;">
+        ✅ Everything in Free<br>
+        ✅ 100 scans/month<br>
+        ✅ GPT-4o Enhanced OCR<br>
+        ✅ All export formats<br>
+        ✅ Batch scan<br>
+        ✅ Tags &amp; folders<br>
+        ✅ Priority support
+      </p>
+    </div>
+    <div class="pricing-card">
+      <h3>Pro Lifetime</h3>
+      <div class="price">HK$388</div>
+      <div class="price-label">one-time · 一次性</div>
+      <p style="margin-top:16px;color:#94a3b8;line-height:1.8;font-size:0.9em;">
+        ✅ Everything in Pro<br>
+        ✅ Pay once, own forever<br>
+        ✅ No recurring fees<br>
+        ✅ All future updates<br>
+        ✅ Best value 🏆
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ COMPARISON ═══════════ -->
+<section class="section">
+  <h2>CamCard vs BizCard</h2>
+  <p class="subtitle">The honest comparison you've been looking for</p>
+
+  <table class="comparison-table">
+    <tr><th>Feature</th><th>CamCard</th><th>BizCard</th></tr>
+    <tr><td>Data Hostage?</td><td class="cross">Yes — locked behind paywall</td><td class="check">No — always exportable</td></tr>
+    <tr><td>Free Tier</td><td class="cross">~10 cards, no export</td><td class="check">Unlimited cards + export</td></tr>
+    <tr><td>Annual Price</td><td class="cross">$59.99–$119.99</td><td class="check">Free / HK$68 month</td></tr>
+    <tr><td>Cancellation</td><td class="cross">Auto-renew traps</td><td class="check">1-click cancel</td></tr>
+    <tr><td>OCR Quality (ZH)</td><td class="cross">Poor</td><td class="check">AI-powered, excellent</td></tr>
+    <tr><td>Export Formats</td><td class="cross">CSV only (Premium)</td><td class="check">CSV, vCard, Excel, Google</td></tr>
+    <tr><td>LinkedIn Integration</td><td class="cross">None</td><td class="check">Auto-fetch profile photos</td></tr>
+    <tr><td>HK + Cantonese</td><td class="cross">Limited</td><td class="check">Full EN + 中文 + 廣東話</td></tr>
+  </table>
+</section>
+
+<!-- ═══════════ SCREENSHOTS ═══════════ -->
+<section class="section">
+  <h2>See BizCard in Action</h2>
+  <p class="subtitle">Designed for HK professionals who value their data</p>
+
+  <div class="screenshot-showcase">
+    <div class="screen-card">
+      <div style="background:linear-gradient(135deg, #1a0533, #0d1b3e); padding: 24px; text-align: center;">
+        <div style="font-size: 4em;">🤖→📇</div>
+        <h3 style="color:#e2e8f0; margin-top:12px;">AI OCR Scan</h3>
+        <p style="color:#94a3b8; margin-top:8px;">Snap a business card → AI extracts name, title, company, email, phone in seconds. GPT-4o powered for 20+ languages.</p>
+      </div>
+    </div>
+    <div class="screen-card">
+      <div style="background:linear-gradient(135deg, #0d1b3e, #1a2a1a); padding: 24px; text-align: center;">
+        <div style="font-size: 4em;">📤→🔓</div>
+        <h3 style="color:#e2e8f0; margin-top:12px;">CamCard Import</h3>
+        <p style="color:#94a3b8; margin-top:8px;">Upload CSV/vCard from CamCard → all contacts appear in BizCard instantly. Free, forever.</p>
+      </div>
+    </div>
+    <div class="screen-card">
+      <div style="background:linear-gradient(135deg, #1a0533, #1a1a30); padding: 24px; text-align: center;">
+        <div style="font-size: 4em;">🔗→🖼️</div>
+        <h3 style="color:#e2e8f0; margin-top:12px;">LinkedIn Photo Fetch</h3>
+        <p style="color:#94a3b8; margin-top:8px;">Paste a LinkedIn URL → profile photo replaces the namecard image. Toggle back anytime.</p>
+      </div>
+    </div>
+    <div class="screen-card">
+      <div style="background:linear-gradient(135deg, #1a1a30, #2a1a2a); padding: 24px; text-align: center;">
+        <div style="font-size: 4em;">💳→🗑️</div>
+        <h3 style="color:#e2e8f0; margin-top:12px;">1-Tap Cancel</h3>
+        <p style="color:#94a3b8; margin-top:8px;">No tickets. No calls. No begging. Just tap, done. No auto-renew traps.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ KEY HIGHLIGHTS ═══════════ -->
+<section class="section">
+  <h2>Why HK Professionals Trust BizCard</h2>
+  <p class="subtitle">Built for people who value their contacts</p>
+
+  <div class="highlight-box">
+    <strong>🛡️ Data Liberation Promise:</strong> Your contacts are YOURS. Export anytime — even on the Free plan. We support CSV, vCard, Excel, and Google Contacts. Unlike CamCard, we never hold your data hostage behind a paywall.
+  </div>
+  <div class="highlight-box">
+    <strong>🤖 AI That Actually Works:</strong> GPT-4o Vision OCR with 20+ language support. Reads English, Chinese (Traditional/Simplified), Japanese, Korean, and more. Handles complex layouts, vertical text, and low-quality scans.
+  </div>
+  <div class="highlight-box">
+    <strong>🔗 LinkedIn Integration:</strong> Auto-fetch professional profile photos from LinkedIn URLs. Your contact cards look professional instead of showing messy namecard scans.
+  </div>
+  <div class="highlight-box">
+    <strong>🇭🇰 Built for Hong Kong:</strong> Full Cantonese and Mandarin support. HK$ pricing. No US-centric features that don't work here. Built by a Hong Kong team who understands local business culture.
+  </div>
+  <div class="highlight-box">
+    <strong>🚀 CamCard Refugee Program:</strong> Switching from CamCard? Get 30 days of Pro free — no credit card required. We'll help you import your contacts safely. Dedicated support for HK switchers.
+  </div>
+</section>
+
+<!-- ═══════════ CTA ═══════════ -->
+<section class="section">
+  <div class="cta">
+    <h2>Ready to own your contacts?</h2>
+    <p>Join hundreds of HK professionals who switched from CamCard.<br>Free forever. No credit card needed.</p>
+    <a href="https://bizcardai.vercel.app" class="btn" target="_blank">Start Free → 免費開始</a>
+    <p style="margin-top:20px; font-size:0.85em; color:#64748b;">
+      📧 hello@bizcard.ai &nbsp;|&nbsp; 🌐 bizcardai.vercel.app
+    </p>
+  </div>
+</section>
+
+</body>
+</html>
