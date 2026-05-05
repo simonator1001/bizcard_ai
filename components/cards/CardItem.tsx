@@ -195,6 +195,10 @@ export function CardItem({
       "flex items-center justify-end gap-2 px-4 py-2 transition-all duration-200",
       swipeOffset < -40 ? "opacity-100 max-h-12" : "opacity-0 max-h-0 py-0 overflow-hidden"
     )}>
+      <button onClick={handleFindLinkedin}
+        className="w-9 h-9 rounded-full bg-[#0A66C2]/10 dark:bg-[#0A66C2]/20 flex items-center justify-center text-[#0A66C2] hover:bg-[#0A66C2]/20 transition-colors">
+        <Linkedin className="w-4 h-4" />
+      </button>
       {card.email && (
         <a href={`mailto:${card.email}`} onClick={(e) => e.stopPropagation()}
           className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 transition-colors">
@@ -306,10 +310,10 @@ export function CardItem({
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <button
                   onClick={handleFindLinkedin}
-                  className="text-muted-foreground hover:text-[#0A66C2] transition-colors"
+                  className="p-1.5 rounded-full hover:bg-[#0A66C2]/10 text-[#0A66C2] hover:text-[#0A66C2] transition-colors"
                   title="Find on LinkedIn"
                 >
-                  <Linkedin className="h-3.5 w-3.5" />
+                  <Linkedin className="h-4 w-4" />
                 </button>
                 {card.email && (
                   <a href={`mailto:${card.email}`} className="text-muted-foreground hover:text-indigo-500 transition-colors" onClick={(e) => e.stopPropagation()}>
@@ -377,10 +381,10 @@ export function CardItem({
         <div className="absolute bottom-4 right-4 flex items-center gap-2">
           <button
             onClick={handleFindLinkedin}
-            className="text-muted-foreground hover:text-[#0A66C2] transition-colors p-1 rounded-full bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm"
+            className="p-1.5 rounded-full bg-[#0A66C2]/10 dark:bg-[#0A66C2]/20 text-[#0A66C2] hover:bg-[#0A66C2]/20 transition-colors"
             title="Find on LinkedIn"
           >
-            <Linkedin className="h-3.5 w-3.5" />
+            <Linkedin className="h-4 w-4" />
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -446,7 +450,7 @@ export function CardItem({
       <div className="flex justify-center space-x-2 mt-4">
         <button
           onClick={handleFindLinkedin}
-          className="text-muted-foreground hover:text-[#0A66C2] transition-colors p-1"
+          className="p-1.5 rounded-full bg-[#0A66C2]/10 dark:bg-[#0A66C2]/20 text-[#0A66C2] hover:bg-[#0A66C2]/20 transition-colors"
           title="Find on LinkedIn"
         >
           <Linkedin className="h-4 w-4" />
