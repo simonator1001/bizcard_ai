@@ -191,33 +191,50 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
   }
 
   const handleFetchLinkedinPhoto = async () => {
-    if (!linkedinUrl.trim()) {
-      toast.error('Please enter a LinkedIn profile URL')
-      return
-    }
-
     setIsFetchingLinkedinPhoto(true)
     try {
-      const res = await fetch('/api/linkedin/fetch-photo', {
+      // If user provided a URL, use direct fetch; otherwise auto-search by name
+      const endpoint = linkedinUrl.trim()
+        ? '/api/linkedin/fetch-photo'
+        : '/api/linkedin/search-and-fetch'
+
+      const body = linkedinUrl.trim()
+        ? { linkedinUrl: linkedinUrl.trim(), cardId: card.id }
+        : { name: card.name, company: card.company || '', cardId: card.id }
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ linkedinUrl: linkedinUrl.trim(), cardId: card.id }),
+        body: JSON.stringify(body),
       })
 
       const data = await res.json()
 
-      if (!res.ok) {
+      if (data.success) {
+        const updatedCard = { ...editedCard, profile_pic_url: data.profile_pic_url, linkedin_url: data.linkedin_url }
+        setEditedCard(updatedCard)
+        onEdit(updatedCard)
+        setMatchedLinkedinUrl(data.linkedin_url)
+        setAutoSearchStatus('found')
+        setAlbumIndex(0) // Show the new profile pic
+        toast.success(data.autoMatched ? 'Auto-matched LinkedIn photo! 🎉' : 'LinkedIn profile photo applied! 🎉')
+        setShowLinkedinInput(false)
+      } else if (data.requiresManualInput) {
+        setAutoSearchStatus('prompt')
+        if (!linkedinUrl.trim()) setShowLinkedinInput(true)
+        toast.info('Please paste the LinkedIn profile URL manually')
+        if (data.googleSearchUrl) {
+          handleOpenLinkedinSearch()
+        }
+      } else if (data.linkedinUrl) {
+        // Found profile but photo fetch failed
+        setLinkedinUrl(data.linkedinUrl)
+        setAutoSearchStatus('prompt')
+        setShowLinkedinInput(true)
+        toast.warning('Found profile but could not extract photo. Try a different profile or paste URL manually.')
+      } else {
         throw new Error(data.error || 'Failed to fetch LinkedIn photo')
       }
-
-      const updatedCard = { ...editedCard, profile_pic_url: data.profile_pic_url, linkedin_url: data.linkedin_url }
-      setEditedCard(updatedCard)
-      onEdit(updatedCard)
-      setMatchedLinkedinUrl(data.linkedin_url)
-      setAutoSearchStatus('found')
-
-      toast.success('LinkedIn profile photo applied! 🎉')
-      setShowLinkedinInput(false)
     } catch (error: any) {
       toast.error(error.message || 'Failed to fetch LinkedIn photo')
     } finally {
@@ -418,14 +435,9 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                       <Button size="sm" variant="outline" className="h-7 px-2 text-[11px] bg-white/80 dark:bg-gray-900/80"
                         onClick={(e) => {
                           e.stopPropagation()
-                          if (!linkedinUrl) {
-                            setShowLinkedinInput(true)
-                            setAutoSearchStatus('prompt')
-                          } else {
-                            handleFetchLinkedinPhoto()
-                          }
+                          handleFetchLinkedinPhoto()
                         }}>
-                        <Linkedin className="h-3 w-3 mr-1" /> Photo
+                        <Linkedin className="h-3 w-3 mr-1" /> Auto Photo
                       </Button>
                       <label className="h-7 px-2 text-[11px] bg-white/80 dark:bg-gray-900/80 border rounded-md flex items-center gap-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
                         <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={isUploadingImage}
