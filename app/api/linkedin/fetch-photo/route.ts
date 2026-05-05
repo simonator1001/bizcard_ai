@@ -41,24 +41,60 @@ export async function POST(req: NextRequest) {
 
     console.log('[LinkedIn] Fetching profile:', profileUrl)
 
-    // Step 1: Fetch the LinkedIn public profile page
-    const profileRes = await fetch(profileUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-      redirect: 'follow',
-    })
+    // Step 1: Try multiple strategies to fetch the LinkedIn public profile page
+    let html: string | null = null
 
-    if (!profileRes.ok) {
-      console.error('[LinkedIn] Fetch failed:', profileRes.status)
-      return NextResponse.json({
-        error: `Could not fetch LinkedIn profile (HTTP ${profileRes.status}). The profile may be private or LinkedIn blocked the request.`
-      }, { status: 502 })
+    // Strategy 1: Direct fetch
+    try {
+      const profileRes = await fetch(profileUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+          'sec-ch-ua-platform': '"macOS"',
+        },
+        redirect: 'follow',
+      })
+      if (profileRes.ok) html = await profileRes.text()
+    } catch (e: any) {
+      console.warn('[LinkedIn] Strategy 1 (direct) failed:', e.message)
     }
 
-    const html = await profileRes.text()
+    // Strategy 2: Try via CORS proxy
+    if (!html) {
+      try {
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(profileUrl)}`
+        const proxyRes = await fetch(proxyUrl, { headers: { 
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+          'Accept': 'text/html'
+        }})
+        if (proxyRes.ok) html = await proxyRes.text()
+      } catch (e: any) {
+        console.warn('[LinkedIn] Strategy 2 (corsproxy) failed:', e.message)
+      }
+    }
+
+    // Strategy 3: Try Google Web Cache
+    if (!html) {
+      try {
+        const cacheUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(profileUrl)}`
+        const cacheRes = await fetch(cacheUrl, { headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+          'Accept': 'text/html'
+        }})
+        if (cacheRes.ok) html = await cacheRes.text()
+      } catch (e: any) {
+        console.warn('[LinkedIn] Strategy 3 (cache) failed:', e.message)
+      }
+    }
+
+    if (!html) {
+      return NextResponse.json({
+        error: 'Could not fetch LinkedIn profile. The profile may be private, or LinkedIn blocks automated access. Try opening the profile in your browser and copying the profile photo URL directly.',
+        suggestion: 'Right-click the profile photo on LinkedIn → Copy Image Address → paste into the URL field'
+      }, { status: 502 })
+    }
 
     // Step 2: Extract profile picture from og:image meta tag
     // LinkedIn public profiles include og:image with the profile picture
