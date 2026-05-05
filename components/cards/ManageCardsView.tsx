@@ -377,7 +377,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
       </Dialog>
 
       <Dialog open={showDuplicateManager} onOpenChange={handleDuplicateManagerChange}>
-        <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[80vh] w-[95vw] sm:w-auto bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col p-0">
+        <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[80vh] w-[95vw] sm:w-auto bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col p-0 [&>button:first-child]:hidden">
           <DuplicateManager
             cards={cards}
             onClose={handleDuplicateManagerClose}
