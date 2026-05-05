@@ -57,16 +57,20 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
   const [linkedinUrl, setLinkedinUrl] = useState(card.linkedin_url || '');
   const [showLinkedinInput, setShowLinkedinInput] = useState(false);
   const [isFetchingLinkedinPhoto, setIsFetchingLinkedinPhoto] = useState(false);
-  const [autoSearchStatus, setAutoSearchStatus] = useState<'idle' | 'searching' | 'found' | 'not_found' | 'error'>('idle');
+  const [autoSearchStatus, setAutoSearchStatus] = useState<'idle' | 'prompt' | 'found'>('idle');
   const [matchedLinkedinUrl, setMatchedLinkedinUrl] = useState<string | null>(null);
 
-  // Auto-search LinkedIn profile on card open
+  // Auto-show LinkedIn input on card open if no profile pic
   useEffect(() => {
-    // Only auto-search if no profile pic already and card has a name
     if (!card.profile_pic_url && card.name) {
-      handleAutoLinkedinSearch()
+      // Short delay so the dialog animations finish first
+      const timer = setTimeout(() => {
+        setAutoSearchStatus('prompt')
+        setShowLinkedinInput(true)
+      }, 500)
+      return () => clearTimeout(timer)
     }
-  }, [card.id]) // Only on mount when card changes
+  }, [card.id])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -177,38 +181,9 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
     setShowDeleteAlert(true)
   }
 
-  const handleAutoLinkedinSearch = async () => {
-    setAutoSearchStatus('searching')
-    try {
-      const res = await fetch('/api/linkedin/search-and-fetch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: card.name, company: card.company || '', cardId: card.id }),
-      })
-
-      const data = await res.json()
-
-      if (data.success) {
-        // Auto-match found!
-        setMatchedLinkedinUrl(data.linkedin_url)
-        const updatedCard = { ...editedCard, profile_pic_url: data.profile_pic_url, linkedin_url: data.linkedin_url }
-        setEditedCard(updatedCard)
-        onEdit(updatedCard)
-        setAutoSearchStatus('found')
-      } else {
-        setAutoSearchStatus('not_found')
-        // If it needs manual input, pre-fill any URL we found
-        if (data.linkedinUrl) {
-          setLinkedinUrl(data.linkedinUrl)
-          setMatchedLinkedinUrl(data.linkedinUrl)
-        }
-        // Show the input so user can provide correct URL
-        setShowLinkedinInput(true)
-      }
-    } catch (error: any) {
-      setAutoSearchStatus('error')
-      setShowLinkedinInput(true)
-    }
+  const handleOpenLinkedinSearch = () => {
+    const query = encodeURIComponent(`${card.name || ''} ${card.company || ''} linkedin`.trim())
+    window.open(`https://www.google.com/search?q=${query}`, '_blank')
   }
 
   const handleFetchLinkedinPhoto = async () => {
@@ -335,16 +310,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
             <div className="space-y-8">
               {/* Image Section */}
               {/* Show LinkedIn profile pic if available, otherwise show card image */}
-              {/* Auto-searching state */}
-              {autoSearchStatus === 'searching' ? (
-                <div className="relative rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-800 max-h-[40vh] flex items-center justify-center">
-                  <div className="text-center p-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent mx-auto mb-3" />
-                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Searching LinkedIn...</p>
-                    <p className="text-xs text-muted-foreground mt-1">"{card.name}"{card.company ? ` · ${card.company}` : ''}</p>
-                  </div>
-                </div>
-              ) : (editedCard.profile_pic_url || card.image_url) ? (
+              {(editedCard.profile_pic_url || card.image_url) ? (
                 <div className="relative">
                   <div 
                     className="relative rounded-lg overflow-hidden cursor-pointer bg-gray-50 dark:bg-gray-800 max-h-[40vh]"
@@ -409,76 +375,89 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                 </div>
               )}
 
-              {/* LinkedIn URL Input — shows when auto-search fails or user clicks Photo button */}
+              {/* LinkedIn URL Input — auto-shows on card open if no profile pic */}
               {showLinkedinInput && (
                 <div className="space-y-2">
-                  {/* Auto-search status message */}
-                  {autoSearchStatus === 'searching' && (
-                    <div className="flex items-center gap-2 p-2 text-sm text-blue-600 dark:text-blue-400">
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent" />
-                      Searching LinkedIn for "{card.name}"{card.company ? ` at ${card.company}` : ''}...
+                  {autoSearchStatus === 'prompt' && !matchedLinkedinUrl && (
+                    <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Linkedin className="h-4 w-4 text-[#0A66C2]" />
+                        <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                          Find LinkedIn photo for <strong>{card.name}</strong>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs bg-white hover:bg-blue-50 border-blue-300 text-blue-700"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleOpenLinkedinSearch()
+                          }}
+                        >
+                          <Search className="h-3 w-3 mr-1" /> Search LinkedIn ↗
+                        </Button>
+                        <span className="text-xs text-muted-foreground">then paste URL below ↓</span>
+                      </div>
                     </div>
                   )}
-                  {autoSearchStatus === 'not_found' && (
-                    <div className="p-2 text-sm bg-amber-50 dark:bg-amber-950/30 rounded-md border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400">
-                      ⚠️ No LinkedIn profile found for "{card.name}". Please paste the correct LinkedIn URL:
-                    </div>
-                  )}
-                  {autoSearchStatus === 'error' && (
-                    <div className="p-2 text-sm bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
-                      ❌ Error searching LinkedIn. Please paste the URL manually:
-                    </div>
-                  )}
+
                   {matchedLinkedinUrl && autoSearchStatus === 'found' && (
                     <div className="flex items-center justify-between p-2 text-sm bg-green-50 dark:bg-green-950/30 rounded-md border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400">
-                      <span>✅ Matched: {matchedLinkedinUrl.replace('https://www.linkedin.com/in/', '')}</span>
+                      <span>✅ {matchedLinkedinUrl.replace('https://www.linkedin.com/in/', '')}</span>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="text-xs h-6 px-2"
                         onClick={(e) => {
                           e.stopPropagation()
-                          setShowLinkedinInput(true)
                           setLinkedinUrl('')
-                          setAutoSearchStatus('idle')
+                          setAutoSearchStatus('prompt')
+                          setMatchedLinkedinUrl(null)
                         }}
                       >
-                        Not right? Fix →
+                        Not right? Retry
                       </Button>
                     </div>
                   )}
 
-                  {/* Manual URL input (or auto-show when search fails) */}
-                  {(autoSearchStatus === 'not_found' || autoSearchStatus === 'error' || autoSearchStatus === 'idle' || linkedinUrl) && (
-                    <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <Linkedin className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                      <Input
-                        placeholder="Paste LinkedIn profile URL..."
-                        value={linkedinUrl}
-                        onChange={(e) => setLinkedinUrl(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleFetchLinkedinPhoto()}
-                        className="flex-1 text-sm"
-                        disabled={isFetchingLinkedinPhoto}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={handleFetchLinkedinPhoto}
-                        disabled={isFetchingLinkedinPhoto || !linkedinUrl.trim()}
-                        className="bg-[#0A66C2] hover:bg-[#004182] text-white"
-                      >
-                        {isFetchingLinkedinPhoto ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                        ) : (
-                          <>Fix Match</>
-                        )}
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <Linkedin className="h-4 w-4 text-[#0A66C2] shrink-0" />
+                    <Input
+                      placeholder="Paste LinkedIn profile URL here (e.g. linkedin.com/in/username)"
+                      value={linkedinUrl}
+                      onChange={(e) => {
+                        setLinkedinUrl(e.target.value)
+                        // Auto-submit if valid LinkedIn URL pattern detected
+                        const val = e.target.value.trim()
+                        if (val.includes('linkedin.com/in/') && val.split('/in/')[1]?.length > 0) {
+                          // Will auto-submit after short pause (user may still be typing)
+                        }
+                      }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleFetchLinkedinPhoto()}
+                      className="flex-1 text-sm"
+                      disabled={isFetchingLinkedinPhoto}
+                      autoFocus
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleFetchLinkedinPhoto}
+                      disabled={isFetchingLinkedinPhoto || !linkedinUrl.trim()}
+                      className="bg-[#0A66C2] hover:bg-[#004182] text-white shrink-0"
+                    >
+                      {isFetchingLinkedinPhoto ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                      ) : (
+                        <>Fetch Photo</>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               )}
 
-              {/* LinkedIn Photo button — only show when no match found yet */}
-              {!showLinkedinInput && autoSearchStatus !== 'searching' && autoSearchStatus !== 'found' && (
+              {/* Show LinkedIn finder button when input is hidden */}
+              {!showLinkedinInput && !card.profile_pic_url && autoSearchStatus !== 'found' && (
                 <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
                   <Button
                     variant="ghost"
@@ -487,10 +466,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                     onClick={(e) => {
                       e.stopPropagation()
                       setShowLinkedinInput(true)
-                      // Retry auto-search
-                      if (autoSearchStatus === 'not_found' || autoSearchStatus === 'error') {
-                        handleAutoLinkedinSearch()
-                      }
+                      setAutoSearchStatus('prompt')
                     }}
                   >
                     <Linkedin className="h-3 w-3 mr-1" /> Find LinkedIn Photo
