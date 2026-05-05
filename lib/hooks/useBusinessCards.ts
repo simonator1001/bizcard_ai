@@ -26,7 +26,7 @@ function mapDocument(doc: any): BusinessCard {
     address: doc.address,
     address_zh: doc.address_zh,
     image_url: doc.image_url,
-    images: doc.images,
+    images: typeof doc.images === 'string' ? JSON.parse(doc.images || '[]') : (doc.images || []),
     profile_pic_url: doc.profile_pic_url,
     linkedin_url: doc.linkedin_url,
     notes: doc.notes,

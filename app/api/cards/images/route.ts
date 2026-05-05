@@ -36,16 +36,20 @@ export async function POST(req: NextRequest) {
 
     const fileUrl = `${APPWRITE_ENDPOINT}/storage/buckets/${uploaded.bucketId}/files/${uploaded.$id}/view?project=${PROJECT_ID}&mode=admin`
 
-    // Read current card images
+    // Read current card images (stored as JSON string in 'images' field)
     const databases = new Databases(client)
     const card = await databases.getDocument(DATABASE_ID, CARDS_COLLECTION, cardId)
-    const existingImages = (card.images as any[]) || []
+    let existingImages: any[] = []
+    try {
+      const raw = card.images
+      existingImages = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : []
+    } catch { existingImages = [] }
 
     const newImage = { url: fileUrl, label: label || null, added_at: new Date().toISOString() }
 
     // If no cover image set, use this as cover
     const updates: any = {
-      images: [...existingImages, newImage],
+      images: JSON.stringify([...existingImages, newImage]),
       lastModified: new Date().toISOString(),
     }
     if (!card.image_url) {
@@ -74,10 +78,14 @@ export async function DELETE(req: NextRequest) {
     const client = getClient()
     const databases = new Databases(client)
     const card = await databases.getDocument(DATABASE_ID, CARDS_COLLECTION, cardId)
-    const existingImages = (card.images as any[]) || []
+    let existingImages: any[] = []
+    try {
+      const raw = card.images
+      existingImages = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : []
+    } catch { existingImages = [] }
 
     const filtered = existingImages.filter((img: any) => img.url !== imageUrl)
-    const updates: any = { images: filtered, lastModified: new Date().toISOString() }
+    const updates: any = { images: JSON.stringify(filtered), lastModified: new Date().toISOString() }
 
     // If cover image was removed, set new cover
     if (card.image_url === imageUrl) {
