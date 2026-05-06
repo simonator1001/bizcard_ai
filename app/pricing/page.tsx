@@ -371,7 +371,7 @@ export default function PricingPage() {
 
           {/* Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight animate-fade-in-down">
-            <span className="text-indigo-700 dark:text-indigo-300">
+            <span className="text-gray-900">
               Simple, honest pricing.
             </span>
             <br />
