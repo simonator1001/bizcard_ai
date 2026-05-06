@@ -371,7 +371,7 @@ export default function PricingPage() {
 
           {/* Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight animate-fade-in-down">
-            <span className="bg-gradient-to-r from-indigo-800 to-violet-800 dark:from-indigo-300 dark:to-violet-300 bg-clip-text text-transparent">
+            <span className="text-indigo-700 dark:text-indigo-300">
               Simple, honest pricing.
             </span>
             <br />
@@ -393,10 +393,10 @@ export default function PricingPage() {
             {trustBadges.map((badge) => (
               <div
                 key={badge.title}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 dark:bg-gray-900/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 text-sm"
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/95 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-sm shadow-sm"
               >
-                <badge.icon className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <span className="font-medium text-gray-800 dark:text-gray-200">
+                <badge.icon className="w-4 h-4 text-indigo-700 dark:text-indigo-300 shrink-0" />
+                <span className="font-medium text-gray-900 dark:text-gray-100">
                   {badge.title}
                 </span>
                 <span className="text-xs text-muted-foreground hidden sm:inline">
