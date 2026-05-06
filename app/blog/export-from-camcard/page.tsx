@@ -261,7 +261,7 @@ export default function ExportFromCamCardPage() {
 
                   <div className="flex-1 p-5">
                     <div className="flex items-start gap-3">
-                      <step.icon className="w-5 h-5 mt-0.5 text-indigo-500 shrink-0" />
+                      {(() => { const Icon = step.icon; return <Icon className="w-5 h-5 mt-0.5 text-indigo-500 shrink-0" /> })()}
                       <div>
                         <h3 className="font-semibold text-gray-900">
                           {step.title}
