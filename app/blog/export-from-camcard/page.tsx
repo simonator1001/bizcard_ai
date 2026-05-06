@@ -28,7 +28,7 @@ interface ExportStep {
   titleZh: string
   description: string
   descriptionZh: string
-  icon: React.ElementType
+  icon: any // lucide-react icon component
   tip?: string
   tipZh?: string
 }
@@ -261,7 +261,7 @@ export default function ExportFromCamCardPage() {
 
                   <div className="flex-1 p-5">
                     <div className="flex items-start gap-3">
-                      {(() => { const Icon = step.icon; return <Icon className="w-5 h-5 mt-0.5 text-indigo-500 shrink-0" /> })()}
+                      <step.icon className="w-5 h-5 mt-0.5 text-indigo-500 shrink-0" />
                       <div>
                         <h3 className="font-semibold text-gray-900">
                           {step.title}
