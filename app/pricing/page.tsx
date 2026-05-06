@@ -371,19 +371,19 @@ export default function PricingPage() {
 
           {/* Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight animate-fade-in-down">
-            <span className="bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-indigo-800 to-violet-800 dark:from-indigo-300 dark:to-violet-300 bg-clip-text text-transparent">
               Simple, honest pricing.
             </span>
             <br />
-            <span className="text-gray-800 dark:text-gray-200">
+            <span className="text-gray-900 dark:text-gray-100">
               No data hostage. No auto-charge traps.
             </span>
           </h1>
 
           {/* Sub-headline */}
-          <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 animate-fade-in-up">
+          <p className="mt-4 text-lg text-gray-700 dark:text-gray-300 animate-fade-in-up">
             簡單、透明嘅定價。冇數據綁架，冇自動收費陷阱。&nbsp;
-            <span className="text-gray-400 dark:text-gray-500">
+            <span className="text-gray-500 dark:text-gray-400">
               簡單、透明的定價。沒有數據綁架，沒有自動收費陷阱。
             </span>
           </p>
@@ -393,10 +393,10 @@ export default function PricingPage() {
             {trustBadges.map((badge) => (
               <div
                 key={badge.title}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/70 dark:bg-gray-900/50 backdrop-blur-sm border border-gray-200 dark:border-gray-800 text-sm"
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 dark:bg-gray-900/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 text-sm"
               >
-                <badge.icon className="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0" />
-                <span className="font-medium text-gray-700 dark:text-gray-300">
+                <badge.icon className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                <span className="font-medium text-gray-800 dark:text-gray-200">
                   {badge.title}
                 </span>
                 <span className="text-xs text-muted-foreground hidden sm:inline">
