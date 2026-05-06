@@ -351,39 +351,30 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen">
       {/* ─── Hero Section ────────────────────────────── */}
-      <section className="relative overflow-hidden">
-        {/* Background Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-violet-50 to-pink-50 dark:from-gray-950 dark:via-indigo-950/30 dark:to-violet-950/30 pointer-events-none" />
-
-        {/* Decorative blobs */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-indigo-300/20 dark:bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-violet-300/20 dark:bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
-
+      <section className="relative overflow-hidden bg-white">
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 sm:pt-28 sm:pb-20 text-center">
           {/* Badge */}
           <Badge
             variant="secondary"
-            className="mb-6 px-4 py-1.5 text-sm bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 animate-fade-in-down"
+            className="mb-6 px-4 py-1.5 text-sm bg-indigo-600 text-white border-0 animate-fade-in-down"
           >
             <Sparkles className="w-3.5 h-3.5 mr-1.5" />
             Transparent HKD Pricing 透明港幣定價
           </Badge>
 
           {/* Headline */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight animate-fade-in-down">
-            <span className="text-gray-900">
-              Simple, honest pricing.
-            </span>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight text-black animate-fade-in-down">
+            Simple, honest pricing.
             <br />
-            <span className="text-gray-900 dark:text-gray-100">
+            <span className="text-black">
               No data hostage. No auto-charge traps.
             </span>
           </h1>
 
           {/* Sub-headline */}
-          <p className="mt-4 text-lg text-gray-700 dark:text-gray-300 animate-fade-in-up">
+          <p className="mt-4 text-lg text-gray-600 animate-fade-in-up">
             簡單、透明嘅定價。冇數據綁架，冇自動收費陷阱。&nbsp;
-            <span className="text-gray-500 dark:text-gray-400">
+            <span className="text-gray-500">
               簡單、透明的定價。沒有數據綁架，沒有自動收費陷阱。
             </span>
           </p>
@@ -393,10 +384,10 @@ export default function PricingPage() {
             {trustBadges.map((badge) => (
               <div
                 key={badge.title}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/95 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-sm shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border-2 border-gray-300 shadow-sm"
               >
-                <badge.icon className="w-4 h-4 text-indigo-700 dark:text-indigo-300 shrink-0" />
-                <span className="font-medium text-gray-900 dark:text-gray-100">
+                <badge.icon className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span className="font-semibold text-black">
                   {badge.title}
                 </span>
                 <span className="text-xs text-muted-foreground hidden sm:inline">
