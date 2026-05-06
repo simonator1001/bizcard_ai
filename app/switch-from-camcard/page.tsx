@@ -641,20 +641,7 @@ function CompareCell({
   value: boolean | 'partial' | string
   highlight?: boolean
 }) {
-  if (typeof value === 'string') {
-    return (
-      <span
-        className={`text-sm font-medium ${
-          highlight
-            ? 'text-indigo-600 dark:text-indigo-400'
-            : 'text-gray-600 dark:text-gray-400'
-        }`}
-      >
-        {value}
-      </span>
-    )
-  }
-
+  // Check for 'partial' string literal first (before typeof check)
   if (value === 'partial') {
     return (
       <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
@@ -681,6 +668,20 @@ function CompareCell({
         </span>
         <br />
         <span className="text-[10px] text-emerald-500/70">有</span>
+      </span>
+    )
+  }
+
+  if (typeof value === 'string') {
+    return (
+      <span
+        className={`text-sm font-medium ${
+          highlight
+            ? 'text-indigo-600 dark:text-indigo-400'
+            : 'text-gray-600 dark:text-gray-400'
+        }`}
+      >
+        {value}
       </span>
     )
   }
