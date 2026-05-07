@@ -285,22 +285,23 @@ export default function ShareCardPage() {
           </CardContent>
         </Card>
 
-        {/* Quick Share — WhatsApp */}
-        <div className="mt-4 flex gap-2 animate-fade-in-up delay-200">
-          <Button 
-            onClick={handleWhatsAppShare}
-            variant="outline"
-            className="flex-1 rounded-2xl border-white/10 bg-green-500/20 backdrop-blur text-green-200 hover:bg-green-500/30 h-11 text-sm"
-          >
-            <MessageCircle className="w-4 h-4 mr-1.5" /> WhatsApp
-          </Button>
-          <Button 
-            onClick={handleShare}
-            variant="outline"
-            className="flex-1 rounded-2xl border-white/10 bg-white/5 backdrop-blur text-white/60 hover:bg-white/10 h-11 text-sm"
-          >
-            <Copy className="w-4 h-4 mr-1.5" /> Copy Link
-          </Button>
+        {/* Quick Share — Social Platforms */}
+        <div className="mt-4 animate-fade-in-up delay-200">
+          <p className="text-white/30 text-[10px] text-center mb-2 uppercase tracking-wider">Share via</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {[
+              { app: 'WhatsApp', icon: '💬', url: `https://wa.me/?text=${encodeURIComponent(`${card.name}'s Digital Business Card\n\n🔗 ${cardUrl}\n\n✨ Get your own: simon-gpt.com`)}`, color: 'bg-green-500/20 text-green-200 hover:bg-green-500/30 border-green-500/20' },
+              { app: 'Line', icon: '💚', url: `https://line.me/R/msg/text/?${encodeURIComponent(`${card.name}'s Digital Business Card\n${cardUrl}\n\n✨ simon-gpt.com`)}`, color: 'bg-green-600/20 text-green-200 hover:bg-green-600/30 border-green-500/20' },
+              { app: 'LinkedIn', icon: '💼', url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(cardUrl)}`, color: 'bg-blue-500/20 text-blue-200 hover:bg-blue-500/30 border-blue-500/20' },
+              { app: 'Facebook', icon: '📘', url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(cardUrl)}`, color: 'bg-blue-600/20 text-blue-200 hover:bg-blue-600/30 border-blue-500/20' },
+              { app: 'X', icon: '𝕏', url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(`${card.name}'s Digital Business Card`)}&url=${encodeURIComponent(cardUrl)}`, color: 'bg-gray-500/20 text-gray-200 hover:bg-gray-500/30 border-gray-500/20' },
+            ].map(({ app, icon, url, color }) => (
+              <a key={app} href={url} target="_blank" rel="noopener noreferrer"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-full border text-xs font-medium transition-colors ${color}`}>
+                <span className="text-base">{icon}</span> {app}
+              </a>
+            ))}
+          </div>
         </div>
 
         {/* Viral CTA — Get Your Own Card */}

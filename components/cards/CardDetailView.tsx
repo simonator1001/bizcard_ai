@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
-import { Edit, Share, Download, Trash2, X, Mail, Share2, Copy, ImageIcon, Sparkles, Loader2, MessageCircle } from 'lucide-react'
+import { Edit, Share, Download, Trash2, X, Share2, ImageIcon, Sparkles, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import type { BusinessCard } from '@/types/business-card'
 import { generateShareCardImage, dataUrlToBlob } from '@/lib/share-card-generator'
+import { buildShareContent, linkedInShareUrl, facebookShareUrl, twitterShareUrl, lineShareUrl, kakaoTalkShareUrl, smsShareUrl } from '@/lib/social-share'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -193,46 +194,34 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
     }
   };
 
-  const handleBrandedShareEmail = async () => {
+  // Unified social share helper — builds content and opens URL
+  const handleSocialShare = (platform: string) => {
     setShowShareMenu(false);
-    setIsGeneratingShareCard(true);
-    try {
-      const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://simon-gpt.com'}/share/${(editedCard as any).user_id || ''}`;
-      const subject = encodeURIComponent(`${editedCard.name || ''}'s Digital Business Card — BizCard AI`);
-      const body = encodeURIComponent(
-        `Hi! 👋\n\nHere's ${editedCard.name || ''}'s digital business card, created with BizCard AI:\n\n` +
-        `📇 View card: ${shareUrl}\n\n` +
-        `✨ Get your own free digital card at simon-gpt.com`
-      );
-      window.open(`mailto:?subject=${subject}&body=${body}`);
-      toast.success('Email share ready!');
-    } catch (error) {
-      console.error('Error generating share card:', error);
-      toast.error('Failed to generate share card');
-    } finally {
-      setIsGeneratingShareCard(false);
+    const content = buildShareContent(
+      editedCard,
+      (editedCard as any).user_id,
+      typeof window !== 'undefined' ? window.location.origin : undefined
+    );
+    let url = '';
+    switch (platform) {
+      case 'whatsapp': url = `https://wa.me/?text=${encodeURIComponent(content.brandedText)}`; break;
+      case 'email': url = `mailto:?subject=${encodeURIComponent(content.name + "'s Digital Card")}&body=${encodeURIComponent(content.brandedText)}`; break;
+      case 'linkedin': url = linkedInShareUrl(content.shareUrl); break;
+      case 'facebook': url = facebookShareUrl(content.shareUrl); break;
+      case 'twitter': url = twitterShareUrl(`${content.name}'s Digital Card`, content.shareUrl); break;
+      case 'line': url = lineShareUrl(content.brandedText); break;
+      case 'kakaotalk': url = kakaoTalkShareUrl(content.shareUrl, `${content.name}'s Digital Card`); break;
+      case 'sms': url = smsShareUrl(editedCard.phone || '', content.brandedText); break;
+      case 'wechat':
+      case 'instagram':
+      case 'copy':
+        navigator.clipboard.writeText(content.shareUrl).then(
+          () => toast.success(platform === 'wechat' ? 'Link copied! Share in WeChat 📱' : platform === 'instagram' ? 'Link copied! Share in Instagram 📷' : 'Link copied! 🔗'),
+          () => toast.error('Failed to copy link')
+        );
+        return;
     }
-  };
-
-  const handleBrandedShareWhatsApp = async () => {
-    setShowShareMenu(false);
-    setIsGeneratingShareCard(true);
-    try {
-      const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://simon-gpt.com'}/share/${(editedCard as any).user_id || ''}`;
-      const text = encodeURIComponent(
-        `📇 ${editedCard.name || ''}'s Digital Business Card\n` +
-        `${editedCard.title ? `💼 ${editedCard.title}${editedCard.company ? ` at ${editedCard.company}` : ''}\n` : ''}` +
-        `\n🔗 ${shareUrl}\n\n` +
-        `✨ Get your own free digital card at simon-gpt.com`
-      );
-      window.open(`https://wa.me/?text=${text}`);
-      toast.success('WhatsApp share ready!');
-    } catch (error) {
-      console.error('Error preparing WhatsApp share:', error);
-      toast.error('Failed to prepare share');
-    } finally {
-      setIsGeneratingShareCard(false);
-    }
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleDelete = () => {
@@ -350,70 +339,91 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                   {showShareMenu && (
                     <div 
                       ref={shareMenuRef}
-                      className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50"
+                      className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50 max-h-[70vh] overflow-y-auto"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Share Card Image</p>
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Share Card</p>
                       </div>
-                      <button
-                        className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center dark:text-gray-200"
-                        onClick={handleEmailShare}
-                      >
-                        <Mail className="mr-2 h-4 w-4" />
-                        Share via Email
-                      </button>
-                      <button
-                        className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center dark:text-gray-200"
-                        onClick={handleWhatsAppShare}
-                      >
-                        <Share2 className="mr-2 h-4 w-4" />
-                        Share via WhatsApp
-                      </button>
-                      <button
-                        className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center dark:text-gray-200"
-                        onClick={handleCopyLink}
-                      >
-                        <Copy className="mr-2 h-4 w-4" />
-                        Copy Link
-                      </button>
-                      <button
-                        className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center dark:text-gray-200"
-                        onClick={handleDownload}
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        Download Image
-                      </button>
-                      
-                      <div className="px-3 py-2 border-t border-b border-gray-100 dark:border-gray-700 mt-1">
-                        <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider flex items-center gap-1">
-                          <Sparkles className="w-3 h-3" /> Branded Share
-                        </p>
+
+                      {/* Row 1: Messaging apps */}
+                      <div className="px-2 py-1.5 border-b border-gray-50 dark:border-gray-750">
+                        <p className="text-[10px] font-medium text-gray-400 uppercase px-2 mb-1">Messaging</p>
+                        <div className="flex flex-wrap gap-1">
+                          {[
+                            { p: 'whatsapp', icon: '💬', label: 'WhatsApp' },
+                            { p: 'line', icon: '💚', label: 'Line' },
+                            { p: 'kakaotalk', icon: '💛', label: 'KakaoTalk' },
+                            { p: 'wechat', icon: '🟢', label: 'WeChat' },
+                            { p: 'sms', icon: '📱', label: 'SMS' },
+                          ].map(({ p, icon, label }) => (
+                            <button key={p}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-xs dark:text-gray-200"
+                              onClick={() => handleSocialShare(p)}
+                            >
+                              <span className="text-sm">{icon}</span> {label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <button
-                        className="w-full px-4 py-2 text-left hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center dark:text-gray-200 text-indigo-600 dark:text-indigo-400"
-                        onClick={handleBrandedShareEmail}
-                        disabled={isGeneratingShareCard}
-                      >
-                        {isGeneratingShareCard ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
-                        Share via Email
-                      </button>
-                      <button
-                        className="w-full px-4 py-2 text-left hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center dark:text-gray-200 text-indigo-600 dark:text-indigo-400"
-                        onClick={handleBrandedShareWhatsApp}
-                        disabled={isGeneratingShareCard}
-                      >
-                        {isGeneratingShareCard ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageCircle className="mr-2 h-4 w-4" />}
-                        Share via WhatsApp
-                      </button>
-                      <button
-                        className="w-full px-4 py-2 text-left hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center dark:text-gray-200 text-indigo-600 dark:text-indigo-400"
-                        onClick={handleBrandedShareDownload}
-                        disabled={isGeneratingShareCard}
-                      >
-                        {isGeneratingShareCard ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                        Download Branded Card
-                      </button>
+
+                      {/* Row 2: Social networks */}
+                      <div className="px-2 py-1.5 border-b border-gray-50 dark:border-gray-750">
+                        <p className="text-[10px] font-medium text-gray-400 uppercase px-2 mb-1">Social</p>
+                        <div className="flex flex-wrap gap-1">
+                          {[
+                            { p: 'linkedin', icon: '💼', label: 'LinkedIn' },
+                            { p: 'facebook', icon: '📘', label: 'Facebook' },
+                            { p: 'twitter', icon: '𝕏', label: 'X/Twitter' },
+                            { p: 'instagram', icon: '📷', label: 'Instagram' },
+                          ].map(({ p, icon, label }) => (
+                            <button key={p}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-xs dark:text-gray-200"
+                              onClick={() => handleSocialShare(p)}
+                            >
+                              <span className="text-sm">{icon}</span> {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Row 3: Email + Copy + Download */}
+                      <div className="px-2 py-1.5 border-b border-gray-50 dark:border-gray-750">
+                        <p className="text-[10px] font-medium text-gray-400 uppercase px-2 mb-1">More</p>
+                        <div className="flex flex-wrap gap-1">
+                          {[
+                            { p: 'email', icon: '📧', label: 'Email' },
+                            { p: 'copy', icon: '🔗', label: 'Copy Link' },
+                          ].map(({ p, icon, label }) => (
+                            <button key={p}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-xs dark:text-gray-200"
+                              onClick={() => handleSocialShare(p)}
+                            >
+                              <span className="text-sm">{icon}</span> {label}
+                            </button>
+                          ))}
+                          <button
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-xs text-indigo-600 dark:text-indigo-400 font-medium"
+                            onClick={handleBrandedShareDownload}
+                            disabled={isGeneratingShareCard}
+                          >
+                            {isGeneratingShareCard ? '⏳ Loading...' : '⬇️ Download Card'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Bottom: Add to Wallet / Home Screen */}
+                      <div className="px-3 py-2">
+                        <button
+                          className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-xs dark:text-gray-300 flex items-center gap-2"
+                          onClick={() => {
+                            setShowShareMenu(false);
+                            toast.info('📱 Add to Home Screen: use browser menu → Add to Home Screen');
+                          }}
+                        >
+                          <span className="text-sm">📌</span> Add to Home Screen
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
