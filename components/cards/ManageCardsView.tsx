@@ -368,7 +368,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
               onClose={() => setSelectedCard(null)}
               onDelete={handleDeleteCard}
               onEdit={async (updatedCard) => {
-                const { id, created_at, user_id, ...updates } = updatedCard
+                const { id, created_at, user_id, images, mergedFrom, lastModified, ...updates } = updatedCard
                 await updateCard(id, updates)
                 setSelectedCard(null);
                 toast.success('Card saved successfully')
