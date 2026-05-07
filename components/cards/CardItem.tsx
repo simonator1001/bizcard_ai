@@ -303,8 +303,11 @@ export function CardItem({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold truncate">{card.name || card.name_zh}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {[card.company, card.title].filter(Boolean).join(' · ') || card.company_zh || card.title_zh}
+                <p className="text-xs truncate">
+                  {card.company && <span className="font-medium">{card.company}</span>}
+                  {card.company && card.title && <span className="text-muted-foreground"> · </span>}
+                  {card.title && <span className="text-muted-foreground">{card.title}</span>}
+                  {!card.company && !card.title && (card.company_zh || card.title_zh)}
                 </p>
               </div>
               {dropdown}
@@ -376,8 +379,11 @@ export function CardItem({
         </div>
         <div className="overflow-hidden space-y-1">
           <p className="font-medium truncate">{card.name || card.name_zh}</p>
-          <p className="text-sm text-muted-foreground truncate">
-            {[card.company, card.title].filter(Boolean).join(' · ') || card.company_zh || card.title_zh}
+          <p className="text-sm truncate">
+            {card.company && <span className="font-medium">{card.company}</span>}
+            {card.company && card.title && <span className="text-muted-foreground"> · </span>}
+            {card.title && <span className="text-muted-foreground">{card.title}</span>}
+            {!card.company && !card.title && (card.company_zh || card.title_zh)}
           </p>
         </div>
         <div className="absolute bottom-4 right-4 flex items-center gap-2">
@@ -446,8 +452,11 @@ export function CardItem({
       </div>
       <div className="overflow-hidden space-y-2">
         <p className="text-xl font-medium truncate">{card.name || card.name_zh}</p>
-        <p className="text-sm text-muted-foreground truncate">
-          {[card.company, card.title].filter(Boolean).join(' · ') || card.company_zh || card.title_zh}
+        <p className="text-sm truncate">
+          {card.company && <span className="font-medium">{card.company}</span>}
+          {card.company && card.title && <span className="text-muted-foreground"> · </span>}
+          {card.title && <span className="text-muted-foreground">{card.title}</span>}
+          {!card.company && !card.title && (card.company_zh || card.title_zh)}
         </p>
       </div>
       <div className="flex justify-center space-x-2 mt-4">
