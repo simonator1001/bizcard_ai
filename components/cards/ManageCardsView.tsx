@@ -368,10 +368,17 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
               onClose={() => setSelectedCard(null)}
               onDelete={handleDeleteCard}
               onEdit={async (updatedCard) => {
+                console.log('[ManageCardsView] onEdit called with:', updatedCard.name)
                 const { id, created_at, user_id, images, mergedFrom, lastModified, ...updates } = updatedCard
-                await updateCard(id, updates)
-                setSelectedCard(null);
-                toast.success('Card saved successfully')
+                try {
+                  const result = await updateCard(id, updates)
+                  console.log('[ManageCardsView] updateCard result:', result?.name)
+                  setSelectedCard(null);
+                  toast.success('Card saved successfully')
+                } catch (err: any) {
+                  console.error('[ManageCardsView] updateCard failed:', err?.message, err?.code, err?.type)
+                  toast.error('Failed to save: ' + (err?.message || 'Unknown error'))
+                }
               }}
             />
           )}

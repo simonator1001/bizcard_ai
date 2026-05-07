@@ -95,6 +95,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
   };
 
   const handleSave = () => {
+    console.log('[CardDetailView] handleSave called, editedCard:', editedCard.name)
     onEdit(editedCard);
     setIsEditing(false);
   };
