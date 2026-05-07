@@ -85,12 +85,7 @@ export default function SignInPage() {
   const handleGoogleSignIn = async () => {
     try {
       setProviderLoading(true)
-      // Use server-side OAuth flow (/api/auth/google) instead of AppWrite SDK OAuth.
-      // AppWrite's createOAuth2Session sets cookies on AppWrite's domain (third-party),
-      // which is blocked by iOS Safari, Brave, Firefox, and soon Chrome.
-      // Server-side flow exchanges Google code on our own server, creates an AppWrite
-      // session server-side, and sets the cookie on our domain (first-party). 
-      window.location.href = '/api/auth/google'
+      await signInWithProvider('google')
     } catch (err: any) {
       toast.error(err?.message || 'Authentication with Google failed')
       setProviderLoading(false)

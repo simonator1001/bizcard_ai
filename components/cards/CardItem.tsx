@@ -331,7 +331,6 @@ export function CardItem({
             </div>
           </div>
         </div>
-        </div>
       </div>
       {swipeActionsRow}
       {deleteDialog}
@@ -376,8 +375,9 @@ export function CardItem({
         </div>
         <div className="overflow-hidden space-y-1">
           <p className="font-medium truncate">{card.name || card.name_zh}</p>
-          <p className="text-sm text-muted-foreground truncate">{card.title || card.title_zh}</p>
-          <p className="text-sm truncate">{card.company || card.company_zh}</p>
+          <p className="text-sm text-muted-foreground truncate">
+            {[card.company, card.title].filter(Boolean).join(' · ') || card.company_zh || card.title_zh}
+          </p>
         </div>
         <div className="absolute bottom-4 right-4 flex items-center gap-2">
           <button
@@ -445,8 +445,9 @@ export function CardItem({
       </div>
       <div className="overflow-hidden space-y-2">
         <p className="text-xl font-medium truncate">{card.name || card.name_zh}</p>
-        <p className="text-sm text-muted-foreground truncate">{card.title || card.title_zh}</p>
-        <p className="text-sm font-medium truncate">{card.company || card.company_zh}</p>
+        <p className="text-sm text-muted-foreground truncate">
+          {[card.company, card.title].filter(Boolean).join(' · ') || card.company_zh || card.title_zh}
+        </p>
       </div>
       <div className="flex justify-center space-x-2 mt-4">
         <button
