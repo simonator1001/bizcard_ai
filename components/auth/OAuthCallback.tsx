@@ -37,9 +37,6 @@ export function OAuthCallback() {
           console.log('[OAuthCallback] ✅ Authenticated as:', user.email)
           
           setStatus('success')
-          // Force full page reload to ensure auth context picks up the new session
-          // Using window.location instead of router.replace to avoid Next.js soft navigation
-          // which can prevent the auth provider from re-detecting the session
           setTimeout(() => {
             window.location.replace('/')
           }, 800)
@@ -49,6 +46,34 @@ export function OAuthCallback() {
           setError(`Session failed: ${err?.message || 'Unknown error'}`)
           setStatus('error')
           return
+        }
+      }
+
+      // Approach C: AppWrite SDK OAuth sets aw_session cookie (base64 JSON with id+secret)
+      const getCookie = (name: string): string | null => {
+        const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))
+        return match ? decodeURIComponent(match[1]) : null
+      }
+      
+      const awCookie = getCookie('aw_session')
+      if (awCookie) {
+        console.log('[OAuthCallback] Found aw_session cookie, decoding...')
+        try {
+          const decoded = JSON.parse(atob(awCookie))
+          if (decoded.secret && (decoded.id || decoded.$id)) {
+            console.log('[OAuthCallback] Creating session from aw_session cookie...')
+            await account.createSession(decoded.id || decoded.$id, decoded.secret)
+            const user = await account.get()
+            console.log('[OAuthCallback] ✅ Authenticated via aw_session cookie:', user.email)
+            setStatus('success')
+            setTimeout(() => {
+              window.location.replace('/')
+            }, 800)
+            return
+          }
+        } catch (err: any) {
+          console.error('[OAuthCallback] aw_session cookie parse failed:', err)
+          // Fall through to legacy flow
         }
       }
 
