@@ -331,6 +331,7 @@ export function CardItem({
             </div>
           </div>
         </div>
+        </div>
       </div>
       {swipeActionsRow}
       {deleteDialog}
