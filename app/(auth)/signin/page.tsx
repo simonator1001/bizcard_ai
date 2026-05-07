@@ -85,7 +85,9 @@ export default function SignInPage() {
   const handleGoogleSignIn = async () => {
     try {
       setProviderLoading(true)
-      await signInWithProvider('google')
+      // Server-side OAuth flow (/api/auth/google) — bypasses iOS Safari third-party cookie blocking.
+      // Google Cloud Console now has https://simon-gpt.com/api/auth/google/callback authorized.
+      window.location.href = '/api/auth/google'
     } catch (err: any) {
       toast.error(err?.message || 'Authentication with Google failed')
       setProviderLoading(false)
