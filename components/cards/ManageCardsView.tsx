@@ -369,7 +369,7 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
               onDelete={handleDeleteCard}
               onEdit={async (updatedCard) => {
                 console.log('[ManageCardsView] onEdit called with:', updatedCard.name)
-                const { id, created_at, user_id, images, mergedFrom, lastModified, ...updates } = updatedCard
+                const { id, created_at, user_id, images, mergedFrom, lastModified, notes, ...updates } = updatedCard
                 try {
                   const result = await updateCard(id, updates)
                   console.log('[ManageCardsView] updateCard result:', result?.name)
