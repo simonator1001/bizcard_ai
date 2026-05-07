@@ -5,11 +5,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
-import { Edit, Share, Download, Trash2, X, Mail, Share2, Copy, ImageIcon } from 'lucide-react'
+import { Edit, Share, Download, Trash2, X, Mail, Share2, Copy, ImageIcon, Sparkles, Loader2, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import type { BusinessCard } from '@/types/business-card'
+import { generateShareCardImage, dataUrlToBlob } from '@/lib/share-card-generator'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,6 +55,7 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
   const [showShareMenu, setShowShareMenu] = useState(false);
   const shareMenuRef = useRef<HTMLDivElement>(null);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
+  const [isGeneratingShareCard, setIsGeneratingShareCard] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [albumIndex, setAlbumIndex] = useState(0);
@@ -163,6 +165,74 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
     const text = encodeURIComponent(`Business Card - ${editedCard.name || ''}\n${editedCard.image_url}`);
     window.open(`https://wa.me/?text=${text}`);
     setShowShareMenu(false);
+  };
+
+  const handleBrandedShareDownload = async () => {
+    setShowShareMenu(false);
+    setIsGeneratingShareCard(true);
+    try {
+      const dataUrl = await generateShareCardImage({ 
+        card: editedCard, 
+        userId: (editedCard as any).user_id 
+      });
+      const blob = dataUrlToBlob(dataUrl);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${editedCard.name || 'card'}_bizcard.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Branded card downloaded!');
+    } catch (error) {
+      console.error('Error generating share card:', error);
+      toast.error('Failed to generate share card');
+    } finally {
+      setIsGeneratingShareCard(false);
+    }
+  };
+
+  const handleBrandedShareEmail = async () => {
+    setShowShareMenu(false);
+    setIsGeneratingShareCard(true);
+    try {
+      const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://simon-gpt.com'}/share/${(editedCard as any).user_id || ''}`;
+      const subject = encodeURIComponent(`${editedCard.name || ''}'s Digital Business Card — BizCard AI`);
+      const body = encodeURIComponent(
+        `Hi! 👋\n\nHere's ${editedCard.name || ''}'s digital business card, created with BizCard AI:\n\n` +
+        `📇 View card: ${shareUrl}\n\n` +
+        `✨ Get your own free digital card at simon-gpt.com`
+      );
+      window.open(`mailto:?subject=${subject}&body=${body}`);
+      toast.success('Email share ready!');
+    } catch (error) {
+      console.error('Error generating share card:', error);
+      toast.error('Failed to generate share card');
+    } finally {
+      setIsGeneratingShareCard(false);
+    }
+  };
+
+  const handleBrandedShareWhatsApp = async () => {
+    setShowShareMenu(false);
+    setIsGeneratingShareCard(true);
+    try {
+      const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://simon-gpt.com'}/share/${(editedCard as any).user_id || ''}`;
+      const text = encodeURIComponent(
+        `📇 ${editedCard.name || ''}'s Digital Business Card\n` +
+        `${editedCard.title ? `💼 ${editedCard.title}${editedCard.company ? ` at ${editedCard.company}` : ''}\n` : ''}` +
+        `\n🔗 ${shareUrl}\n\n` +
+        `✨ Get your own free digital card at simon-gpt.com`
+      );
+      window.open(`https://wa.me/?text=${text}`);
+      toast.success('WhatsApp share ready!');
+    } catch (error) {
+      console.error('Error preparing WhatsApp share:', error);
+      toast.error('Failed to prepare share');
+    } finally {
+      setIsGeneratingShareCard(false);
+    }
   };
 
   const handleDelete = () => {
@@ -280,9 +350,12 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                   {showShareMenu && (
                     <div 
                       ref={shareMenuRef}
-                      className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50"
+                      className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50"
                       onClick={(e) => e.stopPropagation()}
                     >
+                      <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Share Card Image</p>
+                      </div>
                       <button
                         className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center dark:text-gray-200"
                         onClick={handleEmailShare}
@@ -310,6 +383,36 @@ export function CardDetailView({ card, onClose, onEdit, onDelete }: CardDetailVi
                       >
                         <Download className="mr-2 h-4 w-4" />
                         Download Image
+                      </button>
+                      
+                      <div className="px-3 py-2 border-t border-b border-gray-100 dark:border-gray-700 mt-1">
+                        <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" /> Branded Share
+                        </p>
+                      </div>
+                      <button
+                        className="w-full px-4 py-2 text-left hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center dark:text-gray-200 text-indigo-600 dark:text-indigo-400"
+                        onClick={handleBrandedShareEmail}
+                        disabled={isGeneratingShareCard}
+                      >
+                        {isGeneratingShareCard ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                        Share via Email
+                      </button>
+                      <button
+                        className="w-full px-4 py-2 text-left hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center dark:text-gray-200 text-indigo-600 dark:text-indigo-400"
+                        onClick={handleBrandedShareWhatsApp}
+                        disabled={isGeneratingShareCard}
+                      >
+                        {isGeneratingShareCard ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageCircle className="mr-2 h-4 w-4" />}
+                        Share via WhatsApp
+                      </button>
+                      <button
+                        className="w-full px-4 py-2 text-left hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center dark:text-gray-200 text-indigo-600 dark:text-indigo-400"
+                        onClick={handleBrandedShareDownload}
+                        disabled={isGeneratingShareCard}
+                      >
+                        {isGeneratingShareCard ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                        Download Branded Card
                       </button>
                     </div>
                   )}
