@@ -367,9 +367,11 @@ export function ManageCardsView({ setActiveTab }: ManageCardsViewProps) {
               card={selectedCard}
               onClose={() => setSelectedCard(null)}
               onDelete={handleDeleteCard}
-              onEdit={(updatedCard) => {
-                // Card updated by AppWrite hook — just close detail view
+              onEdit={async (updatedCard) => {
+                const { id, created_at, user_id, ...updates } = updatedCard
+                await updateCard(id, updates)
                 setSelectedCard(null);
+                toast.success('Card saved successfully')
               }}
             />
           )}
